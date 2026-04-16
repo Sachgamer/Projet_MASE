@@ -92,6 +92,7 @@ export default function ReportCreateView() {
                             value={formData.location}
                             onChange={handleChange}
                             required
+                            maxLength={100}
                             className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600"
                             placeholder="Lieu de l'incident..."
                         />
@@ -116,6 +117,7 @@ export default function ReportCreateView() {
                             value={formData.description}
                             onChange={handleChange}
                             required
+                            maxLength={500}
                             rows={4}
                             className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600"
                         ></textarea>
