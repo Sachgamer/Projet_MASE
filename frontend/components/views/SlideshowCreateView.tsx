@@ -61,6 +61,7 @@ export default function SlideshowCreateView() {
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         required
+                        maxLength={100}
                         className="mt-1 block w-full rounded-md bg-white/10 border-white/20 p-2 text-white"
                     />
                 </div>
@@ -71,6 +72,7 @@ export default function SlideshowCreateView() {
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         required
+                        maxLength={500}
                         rows={4}
                         className="mt-1 block w-full rounded-md bg-white/10 border-white/20 p-2 text-white"
                     />
