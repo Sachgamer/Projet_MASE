@@ -3,6 +3,7 @@ djangorestframework
 django-cors-headers
 python-dotenv
 Pillow
+whitenoise
 dj-rest-auth
 django-allauth
 drf-spectacular
