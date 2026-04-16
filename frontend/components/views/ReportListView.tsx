@@ -108,10 +108,10 @@ export default function ReportListView() {
                                     <span className="text-xs text-gray-500">{new Date(report.incident_date).toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between items-center mb-2">
-                                    <h3 className="text-xl font-bold">{report.location}</h3>
-                                    <span className="text-sm text-blue-400 font-medium italic">Par: {report.reporter_name}</span>
+                                    <h3 className="text-xl font-bold break-words max-w-full">{report.location}</h3>
+                                    <span className="text-sm text-blue-400 font-medium italic min-w-max ml-2">Par: {report.reporter_name}</span>
                                 </div>
-                                <p className="text-gray-300 mb-4">{report.description}</p>
+                                <p className="text-gray-300 mb-4 break-words whitespace-pre-wrap">{report.description}</p>
                                 
                                 {/* Affichage des médias (Image ou Vidéo) attachés au rapport */}
                                 {(report.image || report.video) && (
@@ -152,8 +152,8 @@ export default function ReportListView() {
                                     </span>
                                     <span className="text-[10px] text-gray-500">{new Date(report.incident_date).toLocaleString()}</span>
                                 </div>
-                                <h3 className="text-lg font-bold text-white">{report.location}</h3>
-                                <p className="text-sm text-gray-400 mb-4">{report.description}</p>
+                                <h3 className="text-lg font-bold text-white break-words">{report.location}</h3>
+                                <p className="text-sm text-gray-400 mb-4 break-words whitespace-pre-wrap">{report.description}</p>
                                 
                                 {(report.image || report.video) && (
                                     <div className="grid grid-cols-2 gap-2 mb-2 opacity-75 grayscale hover:grayscale-0 transition-all">
