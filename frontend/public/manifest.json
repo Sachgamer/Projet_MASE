@@ -1,0 +1,15 @@
+{
+  "name": "WebMASE",
+  "short_name": "WebMASE",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020c1b",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "/window.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}

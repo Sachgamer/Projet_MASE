@@ -1,0 +1,32 @@
+﻿.\venv\Scripts\python.e
+xe : System check 
+identified some issues:
+Au caractère Ligne:1 : 
+1
++ .\venv\Scripts\python
+.exe manage.py check 
+2>&1 | Out-File 
+-FilePath ' ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (System check    
+ identified some is    
+sues::String) [],     
+RemoteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+
+WARNINGS:
+?: (account.W001) 
+ACCOUNT_LOGIN_METHODS 
+conflicts with 
+ACCOUNT_SIGNUP_FIELDS
+
+System check 
+identified 1 issue (0 
+silenced).

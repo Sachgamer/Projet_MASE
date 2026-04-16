@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+ENV/
+env/
+
+# Django
+db.sqlite3
+local_settings.py
+media/
+staticfiles/
+
+# Environments
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/

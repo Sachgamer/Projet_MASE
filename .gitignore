@@ -1,0 +1,26 @@
+# Common
+.vscode/
+.DS_Store
+
+# Frontend
+frontend/.next/
+frontend/node_modules/
+frontend/lint_output.txt
+frontend/lint_results.txt
+frontend/output.txt
+frontend/startup.log
+frontend/stderr.log
+frontend/stdout.log
+
+# Backend
+backend/__pycache__/
+backend/*.py[cod]
+backend/env/
+backend/venv/
+backend/db.sqlite3
+backend/check_output.txt
+backend/media/
+backend/*.json
+tables_overview.md
+*.log
+script.ps1
