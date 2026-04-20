@@ -88,11 +88,7 @@ export default function SlideshowDetailView() {
 
         try {
             setAddingSlide(true);
-            await api.post('/api/slides/', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            await api.post('/api/slides/', formData);
             // Rafraîchissement des données après l'ajout
             const updated = await api.get(`/api/slideshows/${id}/`);
             setSlideshow(updated.data);

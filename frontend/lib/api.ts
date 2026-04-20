@@ -19,9 +19,6 @@ export const getBaseURL = () => {
 // Instance de communication (Axios) configurée pour l'API
 const api = axios.create({
     baseURL: getBaseURL(),
-    headers: {
-        'Content-Type': 'application/json',
-    },
 });
 
 // Intercepteur : ajoute automatiquement le jeton de sécurité à chaque requête
@@ -57,22 +54,15 @@ api.interceptors.response.use(
 
 // Fonctions pour simplifier l'envoi de données au serveur (API)
 export const getFiles = () => api.get('/api/files/');
-export const uploadFile = (formData: FormData) => api.post('/api/files/', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-});
+export const uploadFile = (formData: FormData) => api.post('/api/files/', formData);
 
 export const getReports = () => api.get('/api/reports/');
-export const createReport = (data: FormData) => api.post('/api/reports/', data, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-});
+export const createReport = (data: FormData) => api.post('/api/reports/', data);
 
 export const createChoice = (data: any) => api.post('/api/choices/', data);
 export const deleteReport = (id: number) => api.delete(`/api/reports/${id}/`);
 export const updateReport = (id: number, data: FormData | any) => {
-    const isFormData = data instanceof FormData;
-    return api.patch(`/api/reports/${id}/`, data, {
-        headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {},
-    });
+    return api.patch(`/api/reports/${id}/`, data);
 };
 
 export const updateQuiz = (id: number, data: any) => api.patch(`/api/quizzes/${id}/`, data);

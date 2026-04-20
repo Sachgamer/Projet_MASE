@@ -34,26 +34,35 @@ export default function ReportCreateView() {
         e.preventDefault();
         setError('');
 
-        const data = new FormData();
-        data.append('severity', formData.severity);
-        data.append('location', formData.location);
-        data.append('description', formData.description);
-        
-        // Conversion de la date locale en format ISO pour le backend
-        const incidentDate = new Date(formData.incident_date);
-        data.append('incident_date', incidentDate.toISOString());
-
-        // Ajout des fichiers médias si présents
-        if (image) data.append('image', image);
-        if (video) data.append('video', video);
-
         try {
+            const data = new FormData();
+            data.append('severity', formData.severity);
+            data.append('location', formData.location);
+            data.append('description', formData.description);
+            
+            // Validation et conversion de la date locale en format ISO pour le backend
+            if (!formData.incident_date) {
+                setError('Veuillez renseigner la date de l\'incident.');
+                return;
+            }
+            const incidentDate = new Date(formData.incident_date);
+            if (isNaN(incidentDate.getTime())) {
+                setError('Date invalide.');
+                return;
+            }
+            data.append('incident_date', incidentDate.toISOString());
+
+            // Ajout des fichiers médias si présents
+            if (image) data.append('image', image);
+            if (video) data.append('video', video);
+
             await createReport(data);
             // Redirection vers l'historique après succès
             setView('report-list');
         } catch (err: any) {
-            console.error('Erreur lors de la création du rapport:', err.message);
-            setError('Erreur lors de la création du rapport.');
+            console.error('Erreur lors de la création du rapport:', err.response?.data || err.message);
+            const backendError = err.response?.data ? JSON.stringify(err.response.data) : 'Erreur lors de la création du rapport.';
+            setError(backendError);
         }
     };
 

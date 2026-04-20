@@ -31,9 +31,7 @@ export default function SlideshowCreateView() {
                 formData.append('content', 'Présentation principale'); // Description par défaut
                 formData.append('order', '1');
 
-                await api.post('/api/slides/', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
-                });
+                await api.post('/api/slides/', formData);
             }
 
             // Redirection vers la vue détaillée pour ajouter d'autres slides ou un quiz

@@ -150,9 +150,7 @@ export default function ControleView() {
         }
 
         try {
-            const response = await api.post('/api/controls/inspections/', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            const response = await api.post('/api/controls/inspections/', formData);
             setLastInspectionId(response.data.id);
             setSuccess(true);
             setStep(4);

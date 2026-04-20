@@ -180,6 +180,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.36.109",
     "http://192.168.36.109:3000",
     "http://192.168.36.109:8000",
+    "https://192.168.36.109",
+    "https://192.168.36.109:3000",
+    "https://192.168.36.109:8000",
 ]
 
 # Auth
@@ -204,7 +207,7 @@ REST_AUTH = {
 
 # Autoriser l'IP Tailscale à valider les formulaires (login, etc.)
 # N'oublie pas le http:// et le port :8000
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000', 'http://localhost:3000', 'http://100.106.208.33:8000', 'http://100.106.208.33:3000', 'http://192.168.36.109', 'http://192.168.36.109:8000', 'http://192.168.36.109:3000'] 
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000', 'http://localhost:3000', 'http://100.106.208.33:8000', 'http://100.106.208.33:3000', 'http://192.168.36.109', 'http://192.168.36.109:8000', 'http://192.168.36.109:3000', 'https://192.168.36.109', 'https://192.168.36.109:3000', 'https://192.168.36.109:8000'] 
 
 # Configuration des Cookies Sécurisés
 # Configuration des Cookies (Désactivé pour le développement local sans HTTPS)
