@@ -4,14 +4,18 @@ import axios from 'axios';
 export const getBaseURL = () => {
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
-        const port = '8000'; // Port par défaut de l'API Django
         const protocol = window.location.protocol;
-        
-        // Gère les adresses locales et IPs courantes
-        if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.startsWith('192.168.') || hostname.startsWith('10.')) {
-            return `http://${hostname}:${port}`;
+
+        // En développement local (localhost), on contacte Django directement sur le port 8000
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return `http://${hostname}:8000`;
         }
-        return `${protocol}//${hostname}:${port}`;
+
+        // En production (IP réseau ou domaine) via Nginx :
+        // Les appels /api/ sont proxifiés par Nginx vers Django.
+        // On utilise la MÊME origine que la page (sans port fixe) pour éviter
+        // le blocage "Mixed Content" quand le site tourne en HTTPS.
+        return `${protocol}//${hostname}`;
     }
     return '';
 };
