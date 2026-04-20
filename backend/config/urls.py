@@ -35,7 +35,7 @@ router.register(r'choices', ChoiceViewSet)
 router.register(r'files', PersonalFileViewSet, basename='personal-file')
 router.register(r'reports', AccidentReportViewSet, basename='accident-report')
 
-from users.views import UserViewSet, CustomLoginView, Verify2FAView
+from users.views import UserViewSet, CustomLoginView, Verify2FAView, CustomLogoutView
 router.register(r'users', UserViewSet, basename='user')
 
 urlpatterns = [
@@ -46,6 +46,7 @@ urlpatterns = [
 
 
     path('auth/login/', CustomLoginView.as_view(), name='custom_login'),
+    path('auth/logout/', CustomLogoutView.as_view(), name='custom_logout'),
     path('auth/verify-2fa/', Verify2FAView.as_view(), name='verify_2fa'),
     path('auth/', include('dj_rest_auth.urls')),
     # path('auth/registration/', include('dj_rest_auth.registration.urls')), # Registration disabled

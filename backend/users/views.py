@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.authtoken.models import Token
 from dj_rest_auth.views import LoginView
 from .models import User
 from .serializers import UserSerializer, Verify2FASerializer
@@ -74,6 +75,18 @@ class Verify2FAView(APIView):
             }, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Déconnecte l'utilisateur en supprimant son token d'authentification
+class CustomLogoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        # Supprime le token de l'utilisateur pour invalider la session
+        try:
+            request.user.auth_token.delete()
+        except Token.DoesNotExist:
+            pass
+        return Response({'detail': 'Déconnecté avec succès.'}, status=status.HTTP_200_OK)
 
 # Permet d'afficher la liste des utilisateurs (réservé aux administrateurs)
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
