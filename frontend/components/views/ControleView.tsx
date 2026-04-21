@@ -154,9 +154,13 @@ export default function ControleView() {
             setLastInspectionId(response.data.id);
             setSuccess(true);
             setStep(4);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error submitting inspection:", error);
-            alert("Erreur lors de l'envoi de l'auto-contrôle.");
+            if (error.response?.status === 413) {
+                alert('Photo trop volumineuse. Veuillez réduire la taille de l\'image (max. 100 Mo).');
+            } else {
+                alert("Erreur lors de l'envoi de l'auto-contrôle.");
+            }
         } finally {
             setSubmitting(false);
         }

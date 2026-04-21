@@ -72,7 +72,11 @@ export default function FilesView() {
             loadFiles(); // Rafraîchit la liste après l'upload
         } catch (err: any) {
             console.error('Erreur lors du téléchargement du fichier:', err.message);
-            setError('Erreur lors du téléchargement du fichier.');
+            if (err.response?.status === 413) {
+                setError('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
+            } else {
+                setError('Erreur lors du téléchargement du fichier.');
+            }
         }
     };
 

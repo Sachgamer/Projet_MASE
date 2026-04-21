@@ -38,7 +38,11 @@ export default function SlideshowCreateView() {
             setView('slideshow-detail', { id: slideshowId });
         } catch (error: any) {
             console.error("Erreur lors de la création de la présentation", error);
-            alert('Erreur lors de la création. Veuillez réessayer.');
+            if (error.response?.status === 413) {
+                alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
+            } else {
+                alert('Erreur lors de la création. Veuillez réessayer.');
+            }
         } finally {
             setLoading(false);
         }
