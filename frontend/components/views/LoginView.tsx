@@ -85,18 +85,21 @@ export default function LoginView() {
             setError('Erreur réseau. Le serveur backend est peut-être éteint.');
         } else if (err.response) {
             const status = err.response.status;
-            const data = err.response.data;
-            const serverMsg = typeof data === 'object' ? JSON.stringify(data) : data;
             
             if (status === 403) {
-                setError(`Accès refusé (403).`);
+                setError(`Accès refusé.`);
             } else if (status === 400) {
-                setError(`Erreur: ${data.detail || serverMsg}`);
+                // Mauvaise requête : soit mauvais mdp, soit mauvais code
+                if (step === 'login') {
+                    setError('Identifiant ou mot de passe incorrect.');
+                } else {
+                    setError('Code de sécurité incorrect ou expiré.');
+                }
             } else {
                 setError(`Erreur serveur ${status}.`);
             }
         } else {
-            setError('Erreur inconnue: ' + err.message);
+            setError('Erreur réseau ou inconnue.');
         }
     }
 
