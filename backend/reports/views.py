@@ -30,5 +30,5 @@ class AccidentReportViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Enregistre le rapport avec l'utilisateur actuel comme auteur
-        # Par défaut, le rapport n'est pas "publié" tant qu'un admin ne le valide pas
-        serializer.save(reporter=self.request.user)
+        # Par défaut, on force le rapport à n'est pas "publié" tant qu'un admin ne le valide pas
+        serializer.save(reporter=self.request.user, published=False)
