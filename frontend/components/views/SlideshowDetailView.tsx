@@ -103,7 +103,7 @@ export default function SlideshowDetailView() {
                           !error.response;
 
             if (is413) {
-                alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
+                alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 200 Mo).');
             } else {
                 alert("Erreur lors de l'ajout du slide.");
             }

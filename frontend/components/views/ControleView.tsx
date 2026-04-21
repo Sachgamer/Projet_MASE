@@ -127,9 +127,9 @@ export default function ControleView() {
 
         // Vérification de la taille de la photo avant envoi
         if (photo) {
-            const MAX_SIZE = 100 * 1024 * 1024; // 100 Mo
+            const MAX_SIZE = 200 * 1024 * 1024; // 200 Mo
             if (photo.size > MAX_SIZE) {
-                alert('Photo trop volumineuse. Veuillez réduire la taille de l\'image (max. 100 Mo).');
+                alert('Photo trop volumineuse. Veuillez réduire la taille de l\'image (max. 200 Mo).');
                 setSubmitting(false);
                 return;
             }
@@ -166,8 +166,11 @@ export default function ControleView() {
             setStep(4);
         } catch (error: any) {
             console.error("Error submitting inspection:", error);
-            if (error.response?.status === 413) {
-                alert('Photo trop volumineuse. Veuillez réduire la taille de l\'image (max. 100 Mo).');
+            const is413 = error.response?.status === 413 || 
+                          (typeof error.response?.data === 'string' && error.response.data.includes('413 Request Entity Too Large')) ||
+                          !error.response;
+            if (is413) {
+                alert('Photo trop volumineuse. Veuillez réduire la taille de l\'image (max. 200 Mo).');
             } else {
                 alert("Erreur lors de l'envoi de l'auto-contrôle.");
             }

@@ -34,13 +34,13 @@ export default function ReportCreateView() {
         e.preventDefault();
         setError('');
 
-        const MAX_SIZE = 100 * 1024 * 1024; // 100 Mo
+        const MAX_SIZE = 200 * 1024 * 1024; // 200 Mo
         if (image && image.size > MAX_SIZE) {
-            setError('Fichier trop volumineux. Veuillez réduire la taille de votre image (max. 100 Mo).');
+            setError('Fichier trop volumineux. Veuillez réduire la taille de votre image (max. 200 Mo).');
             return;
         }
         if (video && video.size > MAX_SIZE) {
-            setError('Fichier trop volumineux. Veuillez réduire la taille de votre vidéo (max. 100 Mo).');
+            setError('Fichier trop volumineux. Veuillez réduire la taille de votre vidéo (max. 200 Mo).');
             return;
         }
 
@@ -76,7 +76,7 @@ export default function ReportCreateView() {
                           !err.response;
 
             if (is413) {
-                setError('Fichier trop volumineux. Veuillez réduire la taille de votre image ou vidéo (max. 100 Mo).');
+                setError('Fichier trop volumineux. Veuillez réduire la taille de votre image ou vidéo (max. 200 Mo).');
             } else if (err.response?.data) {
                 // Évite d'afficher le HTML brut ou de stringifier une string
                 const errorMsg = typeof err.response.data === 'string' 

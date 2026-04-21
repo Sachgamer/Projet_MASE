@@ -25,9 +25,9 @@ export default function SlideshowCreateView() {
 
             // 2. Si un fichier a été sélectionné, on le télécharge comme étant le premier slide
             if (file) {
-                const MAX_SIZE = 100 * 1024 * 1024; // 100 Mo
+                const MAX_SIZE = 200 * 1024 * 1024; // 200 Mo
                 if (file.size > MAX_SIZE) {
-                    alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
+                    alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 200 Mo).');
                     setLoading(false);
                     return;
                 }
@@ -49,7 +49,7 @@ export default function SlideshowCreateView() {
                           !error.response;
 
             if (is413) {
-                alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
+                alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 200 Mo).');
             } else {
                 alert('Erreur lors de la création. Veuillez réessayer.');
             }

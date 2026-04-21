@@ -51,10 +51,10 @@ export default function FilesView() {
     const handleUpload = async () => {
         if (!selectedFile) return;
 
-        const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 Mo (aligné avec la limite Nginx)
+        const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200 Mo (aligné avec la limite Nginx)
         
         if (selectedFile.size > MAX_FILE_SIZE) {
-            setError('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
+            setError('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 200 Mo).');
             setSelectedFile(null);
             const fileInput = document.getElementById('file-upload') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
@@ -77,7 +77,7 @@ export default function FilesView() {
                           !err.response;
 
             if (is413) {
-                setError('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
+                setError('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 200 Mo).');
             } else {
                 setError('Erreur lors du téléchargement du fichier.');
             }
