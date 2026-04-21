@@ -98,7 +98,11 @@ export default function SlideshowDetailView() {
             if (fileInput) fileInput.value = '';
         } catch (error: any) {
             console.error("Erreur lors de l'ajout du slide:", error.message);
-            if (error.response?.status === 413) {
+            const is413 = error.response?.status === 413 || 
+                          (typeof error.response?.data === 'string' && error.response.data.includes('413 Request Entity Too Large')) ||
+                          !error.response;
+
+            if (is413) {
                 alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
             } else {
                 alert("Erreur lors de l'ajout du slide.");

@@ -71,10 +71,18 @@ export default function ReportCreateView() {
             setView('report-list');
         } catch (err: any) {
             console.error('Erreur lors de la création du rapport:', err.response?.data || err.message);
-            if (err.response?.status === 413 || !err.response) {
+            const is413 = err.response?.status === 413 || 
+                          (typeof err.response?.data === 'string' && err.response.data.includes('413 Request Entity Too Large')) ||
+                          !err.response;
+
+            if (is413) {
                 setError('Fichier trop volumineux. Veuillez réduire la taille de votre image ou vidéo (max. 100 Mo).');
             } else if (err.response?.data) {
-                setError(JSON.stringify(err.response.data));
+                // Évite d'afficher le HTML brut ou de stringifier une string
+                const errorMsg = typeof err.response.data === 'string' 
+                    ? (err.response.data.includes('<html') ? 'Erreur serveur.' : err.response.data)
+                    : JSON.stringify(err.response.data);
+                setError(errorMsg);
             } else {
                 setError('Erreur lors de la création du rapport.');
             }

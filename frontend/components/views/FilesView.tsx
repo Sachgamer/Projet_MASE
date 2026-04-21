@@ -72,7 +72,11 @@ export default function FilesView() {
             loadFiles(); // Rafraîchit la liste après l'upload
         } catch (err: any) {
             console.error('Erreur lors du téléchargement du fichier:', err.message);
-            if (err.response?.status === 413 || !err.response) {
+            const is413 = err.response?.status === 413 || 
+                          (typeof err.response?.data === 'string' && err.response.data.includes('413 Request Entity Too Large')) ||
+                          !err.response;
+
+            if (is413) {
                 setError('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
             } else {
                 setError('Erreur lors du téléchargement du fichier.');
