@@ -25,6 +25,12 @@ export default function SlideshowCreateView() {
 
             // 2. Si un fichier a été sélectionné, on le télécharge comme étant le premier slide
             if (file) {
+                const MAX_SIZE = 100 * 1024 * 1024; // 100 Mo
+                if (file.size > MAX_SIZE) {
+                    alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
+                    setLoading(false);
+                    return;
+                }
                 const formData = new FormData();
                 formData.append('slideshow', slideshowId);
                 formData.append('file', file);
@@ -38,7 +44,7 @@ export default function SlideshowCreateView() {
             setView('slideshow-detail', { id: slideshowId });
         } catch (error: any) {
             console.error("Erreur lors de la création de la présentation", error);
-            if (error.response?.status === 413) {
+            if (error.response?.status === 413 || !error.response) {
                 alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
             } else {
                 alert('Erreur lors de la création. Veuillez réessayer.');

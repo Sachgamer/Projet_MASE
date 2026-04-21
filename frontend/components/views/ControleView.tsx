@@ -124,6 +124,16 @@ export default function ControleView() {
         setSubmitting(true);
         const formData = new FormData();
         formData.append('item', selectedItem.id.toString());
+
+        // Vérification de la taille de la photo avant envoi
+        if (photo) {
+            const MAX_SIZE = 100 * 1024 * 1024; // 100 Mo
+            if (photo.size > MAX_SIZE) {
+                alert('Photo trop volumineuse. Veuillez réduire la taille de l\'image (max. 100 Mo).');
+                setSubmitting(false);
+                return;
+            }
+        }
         const vehicleCheckpoints = ['Feux (Avant/Arrière/Signalisation)', 'Carrosserie', 'Propreté (Intérieur/Extérieur)', 'Documents techniques présents', 'État des pneus', 'Niveaux (Huile/Liquide de refroidissement)', 'Freins'];
 
         // Vérifie que tous les points de contrôle véhicule ont été répondus

@@ -34,6 +34,16 @@ export default function ReportCreateView() {
         e.preventDefault();
         setError('');
 
+        const MAX_SIZE = 100 * 1024 * 1024; // 100 Mo
+        if (image && image.size > MAX_SIZE) {
+            setError('Fichier trop volumineux. Veuillez réduire la taille de votre image (max. 100 Mo).');
+            return;
+        }
+        if (video && video.size > MAX_SIZE) {
+            setError('Fichier trop volumineux. Veuillez réduire la taille de votre vidéo (max. 100 Mo).');
+            return;
+        }
+
         try {
             const data = new FormData();
             data.append('severity', formData.severity);
@@ -61,8 +71,7 @@ export default function ReportCreateView() {
             setView('report-list');
         } catch (err: any) {
             console.error('Erreur lors de la création du rapport:', err.response?.data || err.message);
-            // Erreur 413 : fichier trop volumineux (limite Nginx dépassée)
-            if (err.response?.status === 413) {
+            if (err.response?.status === 413 || !err.response) {
                 setError('Fichier trop volumineux. Veuillez réduire la taille de votre image ou vidéo (max. 100 Mo).');
             } else if (err.response?.data) {
                 setError(JSON.stringify(err.response.data));
