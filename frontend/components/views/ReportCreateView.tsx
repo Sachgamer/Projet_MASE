@@ -61,8 +61,14 @@ export default function ReportCreateView() {
             setView('report-list');
         } catch (err: any) {
             console.error('Erreur lors de la création du rapport:', err.response?.data || err.message);
-            const backendError = err.response?.data ? JSON.stringify(err.response.data) : 'Erreur lors de la création du rapport.';
-            setError(backendError);
+            // Erreur 413 : fichier trop volumineux (limite Nginx dépassée)
+            if (err.response?.status === 413) {
+                setError('Fichier trop volumineux. Veuillez réduire la taille de votre image ou vidéo (max. 100 Mo).');
+            } else if (err.response?.data) {
+                setError(JSON.stringify(err.response.data));
+            } else {
+                setError('Erreur lors de la création du rapport.');
+            }
         }
     };
 

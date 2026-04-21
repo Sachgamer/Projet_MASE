@@ -98,7 +98,11 @@ export default function SlideshowDetailView() {
             if (fileInput) fileInput.value = '';
         } catch (error: any) {
             console.error("Erreur lors de l'ajout du slide:", error.message);
-            alert("Erreur lors de l'ajout du slide");
+            if (error.response?.status === 413) {
+                alert('Fichier trop volumineux. Veuillez réduire la taille du fichier (max. 100 Mo).');
+            } else {
+                alert("Erreur lors de l'ajout du slide.");
+            }
         } finally {
             setAddingSlide(false);
         }
