@@ -42,7 +42,13 @@ class InspectionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Enregistre le nouveau rapport dans la base de données
-        serializer.save()
+        inspection = serializer.save()
+        
+        # Récupère toutes les photos envoyées dans le champ 'photos'
+        photos = self.request.FILES.getlist('photos')
+        from .models import InspectionPhoto
+        for photo in photos:
+            InspectionPhoto.objects.create(inspection=inspection, image=photo)
 
     # Action spéciale pour générer un fichier PDF du rapport
     @action(detail=True, methods=['get'])

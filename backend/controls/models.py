@@ -41,8 +41,6 @@ class Inspection(models.Model):
     # Liste des points de contrôle spécifiques aux véhicules
     vehicle_checks = models.JSONField(default=dict, blank=True)
     
-    # Photo éventuelle du problème
-    photo = models.ImageField(upload_to='inspections/', blank=True, null=True)
     # Commentaire libre du technicien
     comments = models.TextField(blank=True, null=True)
     # Indique si l'administrateur a consulté ce rapport
@@ -50,3 +48,13 @@ class Inspection(models.Model):
 
     def __str__(self):
         return f"Inspection for {self.item} on {self.date.date()}"
+
+# Modèle pour stocker plusieurs photos pour une seule inspection
+class InspectionPhoto(models.Model):
+    inspection = models.ForeignKey(Inspection, on_delete=models.CASCADE, related_name='photos')
+    image = models.ImageField(upload_to='inspections/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo for {self.inspection} ({self.id})"
+

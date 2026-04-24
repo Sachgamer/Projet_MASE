@@ -53,11 +53,17 @@ def generate_inspection_pdf(inspection):
     c.drawString(80, 140, f"Technicien: {inspection.item.technician.username}")
     
     # 6. Photos (Overlay)
-    if inspection.photo:
-        img_path = inspection.photo.path
-        if os.path.exists(img_path):
-            # Place photo at (400, 350) as requested
-            c.drawImage(img_path, 400, 350, width=150, height=100, preserveAspectRatio=True)
+    photos = inspection.photos.all()
+    if photos.exists():
+        for idx, photo_obj in enumerate(photos[:3]): # Draw up to 3 photos on the first page
+            img_path = photo_obj.image.path
+            if os.path.exists(img_path):
+                # Place photos at different x offsets
+                x_pos = 400 - (idx * 50)
+                y_pos = 350 - (idx * 110)
+                # Keep them reasonably within the page boundaries
+                if y_pos > 50:
+                    c.drawImage(img_path, x_pos, y_pos, width=150, height=100, preserveAspectRatio=True)
 
     c.save()
     overlay_buffer.seek(0)

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import api, { getBaseURL, downloadInspectionPdf } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronRight, ChevronLeft, HardHat, Wrench, Truck, Plus, Save } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronRight, ChevronLeft, HardHat, Wrench, Truck, Plus, Save, X, Image as ImageIcon } from 'lucide-react';
 
 // Interface pour les utilisateurs (techniciens)
 interface UserItem {
@@ -33,7 +33,7 @@ export default function ControleView() {
     const [selectedItem, setSelectedItem] = useState<EquipmentItem | null>(null);
     const [defects, setDefects] = useState<Record<string, boolean>>({}); // Défauts cochés pour EPI/Équipement
     const [vehicleChecks, setVehicleChecks] = useState<Record<string, boolean>>({}); // Points de contrôle véhicule (Oui/Non)
-    const [photo, setPhoto] = useState<File | null>(null);
+    const [photos, setPhotos] = useState<File[]>([]);
     const [comments, setComments] = useState('');
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -116,8 +116,8 @@ export default function ControleView() {
 
         // Photo obligatoire si c'est un véhicule ou si des défauts sont détectés
         const isPhotoRequired = category === 'VEHICULE' || Object.values(defects).some(v => v);
-        if (isPhotoRequired && !photo) {
-            alert("Veuillez fournir une preuve visuelle (photo) obligatoire pour l'auto-contrôle.");
+        if (isPhotoRequired && photos.length === 0) {
+            alert("Veuillez fournir au moins une preuve visuelle (photo) obligatoire pour l'auto-contrôle.");
             return;
         }
 
@@ -125,11 +125,11 @@ export default function ControleView() {
         const formData = new FormData();
         formData.append('item', selectedItem.id.toString());
 
-        // Vérification de la taille de la photo avant envoi
-        if (photo) {
-            const MAX_SIZE = 200 * 1024 * 1024; // 200 Mo
+        // Vérification de la taille des photos avant envoi
+        const MAX_SIZE = 200 * 1024 * 1024; // 200 Mo par fichier (parce que limit globale sur Nginx)
+        for (const photo of photos) {
             if (photo.size > MAX_SIZE) {
-                alert('Photo trop volumineuse. Veuillez réduire la taille de l\'image (max. 200 Mo).');
+                alert(`La photo ${photo.name} est trop volumineuse. Veuillez réduire sa taille (max. 200 Mo).`);
                 setSubmitting(false);
                 return;
             }
@@ -155,9 +155,9 @@ export default function ControleView() {
         formData.append('defects', JSON.stringify(defects));
         formData.append('vehicle_checks', JSON.stringify(vehicleChecks));
         formData.append('comments', comments);
-        if (photo) {
-            formData.append('photo', photo);
-        }
+        photos.forEach(photo => {
+            formData.append('photos', photo);
+        });
 
         try {
             const response = await api.post('/api/controls/inspections/', formData);
@@ -207,7 +207,7 @@ export default function ControleView() {
         setSelectedItem(null);
         setDefects({});
         setVehicleChecks({});
-        setPhoto(null);
+        setPhotos([]);
         setComments('');
         setSuccess(false);
     };
@@ -474,34 +474,52 @@ export default function ControleView() {
                                 </div>
 
                                 <div className="space-y-6">
-                                    {/* Capture de photo (obligatoire en cas de défaut ou pour véhicule) */}
+                                    {/* Capture de photos (obligatoire en cas de défaut ou pour véhicule) */}
                                     <div className="space-y-2">
                                         <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Preuve visuelle {(category === 'VEHICULE' || Object.values(defects).some(v => v)) ? '(Requis)' : '(Optionnel)'}</p>
                                         <div
                                             onClick={() => document.getElementById('photo-upload')?.click()}
-                                            className={`relative border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all ${photo ? 'border-primary/50 bg-primary/5' : 'border-white/10 hover:border-white/20 bg-white/5'
-                                                }`}
+                                            className={`relative border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10`}
                                         >
                                             <input
                                                 id="photo-upload"
                                                 type="file"
                                                 accept="image/*"
+                                                multiple
                                                 className="hidden"
-                                                onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+                                                onChange={(e) => {
+                                                    const files = Array.from(e.target.files || []);
+                                                    // Add only image files
+                                                    const newPhotos = files.filter(f => f.type.startsWith('image/'));
+                                                    setPhotos(prev => [...prev, ...newPhotos]);
+                                                }}
                                             />
-                                            {photo ? (
-                                                <>
-                                                    <CheckCircle2 className="w-8 h-8 text-primary mb-2" />
-                                                    <p className="text-sm text-white font-medium">{photo.name}</p>
-                                                    <p className="text-xs text-gray-500 mt-1">Cliquer pour changer</p>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Camera className="w-8 h-8 text-gray-400 mb-2" />
-                                                    <p className="text-sm text-gray-400">Prendre une photo</p>
-                                                </>
-                                            )}
+                                            <Camera className="w-8 h-8 text-gray-400 mb-2" />
+                                            <p className="text-sm text-gray-400">Ajouter des photos</p>
+                                            <p className="text-xs text-gray-500 mt-1">Cliquez ici pour sélectionner des fichiers</p>
                                         </div>
+                                        
+                                        {/* Galerie de photos sélectionnées */}
+                                        {photos.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-4">
+                                                {photos.map((photoFile, idx) => (
+                                                    <div key={idx} className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20">
+                                                        <ImageIcon className="w-4 h-4 text-primary" />
+                                                        <span className="text-xs text-primary truncate max-w-[120px]">{photoFile.name}</span>
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setPhotos(prev => prev.filter((_, i) => i !== idx));
+                                                            }} 
+                                                            className="text-primary hover:text-white"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="space-y-2">
