@@ -20,56 +20,75 @@ def generate_inspection_pdf(inspection):
     # 2. Fill top info
     # Name (Technician)
     name = f"{inspection.item.technician.first_name} {inspection.item.technician.last_name}"
-    c.drawString(150, 667, name) # Lowered by 3 from 670 to 667
+    c.drawString(180, 667, name) 
     
     # Date of inspection
     date_str = inspection.date.strftime("%d/%m/%Y %H:%M")
-    c.drawString(100, 635, date_str) # Moved 5 right from 95 to 100
+    c.drawString(130, 647, date_str) 
     
-    # Next inspection date
-    try:
-        next_date = inspection.next_date.strftime("%d/%m/%Y")
-    except AttributeError:
-        next_date = "N/A"
-    c.drawString(75, 567, next_date) # Moved 15 left from 90 to 75
+    # Technical checks (Vehicle)
+    if inspection.item.category == 'VEHICULE' and inspection.vehicle_checks:
+        checks_y = {
+            'Feux (Avant/Arrière/Signalisation)': 606,
+            'Carrosserie': 591,
+            'Propreté (Intérieur/Extérieur)': 575,
+            'Documents techniques présents': 560,
+            'État des pneus': 545,
+            'Niveaux (Huile/Liquide de refroidissement)': 529,
+            'Freins': 514
+        }
+        for check_name, y_pos in checks_y.items():
+            val = inspection.vehicle_checks.get(check_name)
+            if val is True:
+                c.setFillColor(colors.green)
+                c.drawString(250, y_pos, "Valide")
+            elif val is False:
+                c.setFillColor(colors.red)
+                c.drawString(250, y_pos, "Non Valide")
+            c.setFillColor(colors.black)
+    elif inspection.item.category != 'VEHICULE' and inspection.defects:
+        y_pos = 606
+        for defect, is_present in inspection.defects.items():
+            if is_present:
+                c.setFillColor(colors.red)
+                c.drawString(250, y_pos, f"Défaut: {defect}")
+                y_pos -= 15
+        c.setFillColor(colors.black)
     
     # 3. Fill Table
-    y_table = 510 # Calibrated row y
-    c.drawString(220, y_table, inspection.item.type_name) # Type (x=220)
-    c.drawString(105, y_table, inspection.item.serial_number or "N/A") # S/N or Plaque (Moved 5 right from 100 to 105)
-    c.drawString(45, y_table, inspection.item.get_category_display()) # Désignation ("Véhicule") - Moved 5 right from 40 to 45
+    y_table = 465 
+    c.drawString(45, y_table, inspection.item.get_category_display()) # Type
+    c.drawString(105, y_table, inspection.item.serial_number or "N/A") # S/N
+    c.drawString(298, y_table, inspection.item.type_name) # Désignation
     
-    # Contrôle (Moved 5 right from 480 to 485, font size 8)
+    # Contrôle
     c.setFont("Helvetica", 8)
-    c.drawString(485, y_table, "CONFORME" if inspection.is_valid else "NON CONFORME")
-    c.setFont("Helvetica", 10) # Restore font size
+    c.drawString(502, y_table, "CONFORME" if inspection.is_valid else "NON CONFORME")
+    c.setFont("Helvetica", 10) 
     
-    # 4. Commentaire
-    if inspection.comments:
-        c.drawString(50, 450, inspection.comments[:1000]) # (x=50, y=450)
-        
-    # 5. Signatures (Placeholder text if no images)
-    c.setFont("Helvetica-Oblique", 8)
-    c.drawString(80, 140, f"Technicien: {inspection.item.technician.username}")
-    
-    # 6. Photos (Overlay)
+    # 4. Photos (Overlay)
     photos = inspection.photos.all()
     if photos.exists():
-        for idx, photo_obj in enumerate(photos[:3]): # Draw up to 3 photos on the first page
+        for idx, photo_obj in enumerate(photos[:3]): 
             img_path = photo_obj.image.path
             if os.path.exists(img_path):
-                # Place photos at different x offsets
-                x_pos = 400 - (idx * 50)
-                y_pos = 350 - (idx * 110)
-                # Keep them reasonably within the page boundaries
-                if y_pos > 50:
-                    c.drawImage(img_path, x_pos, y_pos, width=150, height=100, preserveAspectRatio=True)
+                x_pos = 40 + (idx * 160)
+                y_pos = 280
+                c.drawImage(img_path, x_pos, y_pos, width=150, height=100, preserveAspectRatio=True)
+
+    # 5. Commentaire
+    if inspection.comments:
+        c.drawString(40, 230, inspection.comments[:1000]) 
+        
+    # 6. Signatures 
+    c.setFont("Helvetica-Oblique", 8)
+    c.drawString(40, 100, f"Technicien: {name}")
 
     c.save()
     overlay_buffer.seek(0)
     
     # 7. Merge with Template
-    template_path = os.path.join(settings.BASE_DIR, "templates", "pdf", "report_template.pdf")
+    template_path = os.path.join(settings.BASE_DIR, "templates", "pdf", "report_template_2.pdf")
     
     if not os.path.exists(template_path):
         # Fallback to old generation or error if template missing
