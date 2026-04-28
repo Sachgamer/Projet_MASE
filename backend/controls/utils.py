@@ -57,13 +57,13 @@ def generate_inspection_pdf(inspection):
     
     # 3. Fill Table
     y_table = 465 
-    c.drawString(45, y_table, inspection.item.get_category_display()) # Type
-    c.drawString(105, y_table, inspection.item.serial_number or "N/A") # S/N
-    c.drawString(298, y_table, inspection.item.type_name) # Désignation
+    c.drawCentredString(60, y_table, inspection.item.get_category_display()) # Type
+    c.drawCentredString(145, y_table, inspection.item.serial_number or "N/A") # S/N
+    c.drawCentredString(350, y_table, inspection.item.type_name) # Désignation
     
     # Contrôle
     c.setFont("Helvetica", 8)
-    c.drawString(502, y_table, "CONFORME" if inspection.is_valid else "NON CONFORME")
+    c.drawCentredString(515, y_table, "CONFORME" if inspection.is_valid else "NON CONFORME")
     c.setFont("Helvetica", 10) 
     
     # 4. Photos (Overlay)
