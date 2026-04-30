@@ -57,9 +57,9 @@ def generate_inspection_pdf(inspection):
     
     # 3. Fill Table
     y_table = 465 
-    c.drawCentredString(65, y_table, inspection.item.get_category_display()) # Type
-    c.drawCentredString(187, y_table, inspection.item.serial_number or "N/A") # S/N
-    c.drawCentredString(380, y_table, inspection.item.type_name) # Désignation
+    c.drawCentredString(67, y_table, inspection.item.get_category_display()) # Type
+    c.drawCentredString(130, y_table, inspection.item.serial_number or "N/A") # S/N
+    c.drawCentredString(321, y_table, inspection.item.type_name) # Désignation
     
     # Contrôle
     c.setFont("Helvetica", 8)
