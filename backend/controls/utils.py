@@ -56,7 +56,7 @@ def generate_inspection_pdf(inspection):
         c.setFillColor(colors.black)
     
     # 3. Fill Table
-    y_table = 465 
+    y_table = 455 
     c.drawCentredString(67, y_table, inspection.item.get_category_display()) # Type
     c.drawCentredString(130, y_table, inspection.item.serial_number or "N/A") # S/N
     c.drawCentredString(321, y_table, inspection.item.type_name) # Désignation
