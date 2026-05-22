@@ -7,26 +7,26 @@ from pypdf import PdfReader, PdfWriter
 from django.conf import settings
 
 def generate_inspection_pdf(inspection):
-    # 1. Prepare the overlay with reportlab
+    # 1. preparation calque
     overlay_buffer = BytesIO()
     c = canvas.Canvas(overlay_buffer, pagesize=A4)
     
-    # helper for coordinates
-    # A4 is approx 595 x 842 points
+    # ref pixel feuille a4
+    # A4 est environ 595 x 842 pixels
     
-    # Set font
+    # police
     c.setFont("Helvetica", 10)
     
-    # 2. Fill top info
-    # Name (Technician)
+    # 2. Remplissage information du haut
+    # Nom tech
     name = f"{inspection.item.technician.first_name} {inspection.item.technician.last_name}"
     c.drawString(180, 667, name) 
     
-    # Date of inspection
+    # Date
     date_str = inspection.date.strftime("%d/%m/%Y %H:%M")
     c.drawString(130, 647, date_str) 
     
-    # Technical checks (Vehicle)
+    # Check technique du véhicule
     if inspection.item.category == 'VEHICULE' and inspection.vehicle_checks:
         checks_y = {
             'Feux (Avant/Arrière/Signalisation)': 606,
@@ -55,7 +55,7 @@ def generate_inspection_pdf(inspection):
                 y_pos -= 15
         c.setFillColor(colors.black)
     
-    # 3. Fill Table
+    # 3. Tableau
     y_table = 455 
     c.drawCentredString(67, y_table, inspection.item.get_category_display()) # Type
     c.drawCentredString(130, y_table, inspection.item.serial_number or "N/A") # S/N
@@ -66,7 +66,7 @@ def generate_inspection_pdf(inspection):
     c.drawCentredString(520, y_table, "CONFORME" if inspection.is_valid else "NON CONFORME")
     c.setFont("Helvetica", 10) 
     
-    # 4. Photos (Overlay)
+    # 4. Photos
     photos = inspection.photos.all()
     if photos.exists():
         for idx, photo_obj in enumerate(photos[:3]): 
@@ -74,7 +74,18 @@ def generate_inspection_pdf(inspection):
             if os.path.exists(img_path):
                 x_pos = 40 + (idx * 160)
                 y_pos = 280
-                c.drawImage(img_path, x_pos, y_pos, width=150, height=100, preserveAspectRatio=True)
+                try:
+                    c.drawImage(img_path, x_pos, y_pos, width=150, height=100, preserveAspectRatio=True)
+                except Exception:
+                    # En cas d'image corrompue ou non supportée, dessine un cadre rouge avec message d'erreur
+                    c.setStrokeColor(colors.red)
+                    c.rect(x_pos, y_pos, 150, 100, stroke=1, fill=0)
+                    c.setFont("Helvetica-Bold", 8)
+                    c.setFillColor(colors.red)
+                    c.drawCentredString(x_pos + 75, y_pos + 55, "Image corrompue")
+                    c.drawCentredString(x_pos + 75, y_pos + 40, "ou non supportée")
+                    c.setFillColor(colors.black)
+                    c.setFont("Helvetica", 10)
 
     # 5. Commentaire
     if inspection.comments:
@@ -87,22 +98,21 @@ def generate_inspection_pdf(inspection):
     c.save()
     overlay_buffer.seek(0)
     
-    # 7. Merge with Template
+    # 7. Fusion avec le template
     template_path = os.path.join(settings.BASE_DIR, "templates", "pdf", "report_template_2.pdf")
     
     if not os.path.exists(template_path):
-        # Fallback to old generation or error if template missing
-        # For now, let's just use the overlay alone if template missing (will be white background)
+        # En cas d'absence du template, retourne le document seul
         overlay_buffer.seek(0)
         return overlay_buffer
 
     reader = PdfReader(template_path)
     writer = PdfWriter()
     
-    # Get the first page of the template
+    # 1. Page du template
     page = reader.pages[0]
     
-    # Merge with the overlay
+    # 2. Fusion avec le document
     overlay_reader = PdfReader(overlay_buffer)
     overlay_page = overlay_reader.pages[0]
     page.merge_page(overlay_page)

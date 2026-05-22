@@ -38,10 +38,14 @@ class CustomLoginView(LoginView):
         # Indique au site qu'une validation 2FA est maintenant requise
         return Response({'detail': '2FA validation required', 'username': user.username}, status=status.HTTP_202_ACCEPTED)
 
+from rest_framework.throttling import ScopedRateThrottle
+
 # Gère la vérification du code 2FA reçu par l'utilisateur
 class Verify2FAView(APIView):
     # Autorise tout utilisateur à tenter la vérification
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'verify_2fa'
     
     def post(self, request):
         serializer = Verify2FASerializer(data=request.data)
@@ -54,14 +58,45 @@ class Verify2FAView(APIView):
             except User.DoesNotExist:
                 return Response({'detail': 'Bad request'}, status=status.HTTP_400_BAD_REQUEST)
                 
-            # Vérifie si le code est correct et non expiré
-            if user.two_factor_code != code:
-                return Response({'detail': 'Code invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+            from django.core.cache import cache
+            cache_key = f"2fa_attempts_{username}"
+            attempts = cache.get(cache_key, 0)
+            
+            # Si le code a déjà été invalidé ou expiré
+            if not user.two_factor_code:
+                return Response({'detail': 'Aucun code actif trouvé. Veuillez vous reconnecter.'}, status=status.HTTP_400_BAD_REQUEST)
                 
+            if attempts >= 3:
+                # Invalidation du code
+                user.two_factor_code = None
+                user.two_factor_code_expires_at = None
+                user.save()
+                return Response({'detail': 'Trop de tentatives infructueuses. Veuillez générer un nouveau code en vous reconnectant.'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            # Vérifie si le code est expiré d'abord
             if user.two_factor_code_expires_at and user.two_factor_code_expires_at < timezone.now():
-                return Response({'detail': 'Code expiré.'}, status=status.HTTP_400_BAD_REQUEST)
+                user.two_factor_code = None
+                user.two_factor_code_expires_at = None
+                user.save()
+                return Response({'detail': 'Code de sécurité expiré. Veuillez vous reconnecter.'}, status=status.HTTP_400_BAD_REQUEST)
                 
-            # Efface le code après usage
+            # Vérifie si le code est correct
+            if user.two_factor_code != code:
+                attempts += 1
+                cache.set(cache_key, attempts, timeout=600) # Expire après 10 min
+                
+                if attempts >= 3:
+                    # Invalidation immédiate après 3 échecs
+                    user.two_factor_code = None
+                    user.two_factor_code_expires_at = None
+                    user.save()
+                    cache.delete(cache_key)
+                    return Response({'detail': 'Trop de tentatives infructueuses. Ce code a été désactivé pour des raisons de sécurité.'}, status=status.HTTP_400_BAD_REQUEST)
+                    
+                return Response({'detail': f'Code de sécurité incorrect. Il vous reste {3 - attempts} tentative(s).'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            # Code correct : réinitialiser le compteur et effacer le code 2FA
+            cache.delete(cache_key)
             user.two_factor_code = None
             user.two_factor_code_expires_at = None
             user.save()

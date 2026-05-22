@@ -90,7 +90,10 @@ export default function LoginView() {
                 setError(`Accès refusé.`);
             } else if (status === 400) {
                 // Mauvaise requête : soit mauvais mdp, soit mauvais code
-                if (step === 'login') {
+                const detail = err.response.data?.detail;
+                if (detail) {
+                    setError(detail);
+                } else if (step === 'login') {
                     setError('Identifiant ou mot de passe incorrect.');
                 } else {
                     setError('Code de sécurité incorrect ou expiré.');

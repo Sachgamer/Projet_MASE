@@ -14,6 +14,18 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         # La modification nécessite d'être membre du personnel (admin)
         return request.user and request.user.is_staff
 
+class IsAdminOrCreateOnly(permissions.BasePermission):
+    """
+    Permet aux techniciens de lire et de créer des inspections,
+    mais réserve la modification/suppression aux administrateurs.
+    """
+    def has_permission(self, request, view):
+        # Lecture (GET, HEAD, OPTIONS) ou Création (POST) autorisées pour tout connecté
+        if request.method in permissions.SAFE_METHODS or request.method == 'POST':
+            return request.user and request.user.is_authenticated
+        # Modification / Suppression réservées aux administrateurs
+        return request.user and request.user.is_staff
+
 # Gère la liste des équipements (EPI, Véhicules, etc.)
 class EquipmentItemViewSet(viewsets.ModelViewSet):
     queryset = EquipmentItem.objects.all()
@@ -31,7 +43,7 @@ class EquipmentItemViewSet(viewsets.ModelViewSet):
 class InspectionViewSet(viewsets.ModelViewSet):
     queryset = Inspection.objects.all()
     serializer_class = InspectionSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrCreateOnly]
 
     def get_queryset(self):
         # Les admins voient tous les rapports d'inspection
