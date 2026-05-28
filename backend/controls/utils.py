@@ -6,6 +6,23 @@ from reportlab.pdfgen import canvas
 from pypdf import PdfReader, PdfWriter
 from django.conf import settings
 
+def remove_emojis(text):
+    if not text:
+        return ""
+    cleaned = []
+    for char in text:
+        try:
+            # ReportLab standard Helvetica supports cp1252 (WinAnsiEncoding)
+            char.encode('cp1252')
+            code = ord(char)
+            # Remove emojis and high range symbols
+            if code > 0xFFFF or (0x2300 <= code <= 0x27BF) or (0x2B00 <= code <= 0x2BFF):
+                continue
+            cleaned.append(char)
+        except UnicodeEncodeError:
+            continue
+    return "".join(cleaned)
+
 def generate_inspection_pdf(inspection):
     # 1. preparation calque
     overlay_buffer = BytesIO()
@@ -19,7 +36,8 @@ def generate_inspection_pdf(inspection):
     
     # 2. Remplissage information du haut
     # Nom tech
-    name = f"{inspection.item.technician.first_name} {inspection.item.technician.last_name}"
+    raw_name = f"{inspection.item.technician.first_name} {inspection.item.technician.last_name}"
+    name = remove_emojis(raw_name)
     c.drawString(180, 667, name) 
     
     # Date
@@ -51,15 +69,16 @@ def generate_inspection_pdf(inspection):
         for defect, is_present in inspection.defects.items():
             if is_present:
                 c.setFillColor(colors.red)
-                c.drawString(250, y_pos, f"Défaut: {defect}")
+                cleaned_defect = remove_emojis(defect)
+                c.drawString(250, y_pos, f"Défaut: {cleaned_defect}")
                 y_pos -= 15
         c.setFillColor(colors.black)
     
     # 3. Tableau
     y_table = 455 
-    c.drawCentredString(67, y_table, inspection.item.get_category_display()) # Type
-    c.drawCentredString(130, y_table, inspection.item.serial_number or "N/A") # S/N
-    c.drawCentredString(321, y_table, inspection.item.type_name) # Désignation
+    c.drawCentredString(67, y_table, remove_emojis(inspection.item.get_category_display())) # Type
+    c.drawCentredString(130, y_table, remove_emojis(inspection.item.serial_number or "N/A")) # S/N
+    c.drawCentredString(321, y_table, remove_emojis(inspection.item.type_name)) # Désignation
     
     # Contrôle
     c.setFont("Helvetica", 8)
@@ -89,7 +108,7 @@ def generate_inspection_pdf(inspection):
 
     # 5. Commentaire
     if inspection.comments:
-        c.drawString(45, 220, inspection.comments[:1000]) 
+        c.drawString(45, 220, remove_emojis(inspection.comments[:1000])) 
         
     # 6. Signatures 
     c.setFont("Helvetica-Oblique", 8)
