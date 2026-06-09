@@ -14,7 +14,11 @@ from .serializers import UserSerializer, Verify2FASerializer, BlockedMacAddressS
 class CustomLoginView(LoginView):
     # Traite la requête de connexion de l'utilisateur
     def post(self, request, *args, **kwargs):
-        mac_address = request.data.get('mac_address', '').upper()
+        mac_address = request.data.get('mac_address', '')
+        if isinstance(mac_address, str):
+            mac_address = mac_address.upper()
+        else:
+            mac_address = ''
         if mac_address and BlockedMacAddress.objects.filter(mac_address=mac_address, is_active=True).exists():
             return Response({
                 'detail': "Cette machine a été bloquée après trop de tentatives infructueuses. Contactez l'administrateur."
@@ -82,7 +86,11 @@ class Verify2FAView(APIView):
         if serializer.is_valid():
             username = serializer.validated_data['username']
             code = serializer.validated_data['code']
-            mac_address = serializer.validated_data.get('mac_address', '').upper()
+            mac_address = serializer.validated_data.get('mac_address', '')
+            if isinstance(mac_address, str):
+                mac_address = mac_address.upper()
+            else:
+                mac_address = ''
             
             try:
                 user = User.objects.get(username=username)
