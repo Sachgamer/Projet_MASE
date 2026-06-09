@@ -38,10 +38,24 @@ class CustomLoginView(LoginView):
                 cache.set(cache_key, attempts, timeout=600)  # Expire après 10 min
                 
                 if attempts >= 5:
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    user_obj = None
+                    username = request.data.get('username', '')
+                    if username:
+                        try:
+                            user_obj = User.objects.get(username=username)
+                        except User.DoesNotExist:
+                            try:
+                                user_obj = User.objects.get(email=username)
+                            except User.DoesNotExist:
+                                pass
+                    
                     BlockedMacAddress.objects.get_or_create(
                         mac_address=mac_address,
                         defaults={
-                            'reason': "Trop de tentatives de mot de passe infructueuses",
+                            'user': user_obj,
+                            'reason': f"Trop de tentatives de mot de passe infructueuses pour {username}" if username else "Trop de tentatives de mot de passe infructueuses",
                             'failed_attempts': 5,
                             'notes': f"Tentatives de mot de passe bloquées le {timezone.now().strftime('%d/%m/%Y à %H:%M')}"
                         }
@@ -122,6 +136,7 @@ class Verify2FAView(APIView):
                     BlockedMacAddress.objects.get_or_create(
                         mac_address=mac_address,
                         defaults={
+                            'user': user,
                             'reason': f'Trop de tentatives 2FA infructueuses pour l\'utilisateur {username}',
                             'failed_attempts': 5,
                             'notes': f'Tentatives bloquées le {timezone.now().strftime("%d/%m/%Y à %H:%M")}'
@@ -163,6 +178,7 @@ class Verify2FAView(APIView):
                         BlockedMacAddress.objects.get_or_create(
                             mac_address=mac_address,
                             defaults={
+                                'user': user,
                                 'reason': f'Trop de tentatives 2FA infructueuses pour l\'utilisateur {username}',
                                 'failed_attempts': 5,
                                 'notes': f'Tentatives bloquées le {timezone.now().strftime("%d/%m/%Y à %H:%M")}'

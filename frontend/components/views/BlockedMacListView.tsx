@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Shield, Trash2, Search, Clock, AlertCircle } from 'lucide-react';
+import { Loader2, Shield, Trash2, Search, Clock, AlertCircle, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Interface pour les adresses MAC bloquées
@@ -15,6 +15,10 @@ interface BlockedMac {
     failed_attempts: number;
     is_active: boolean;
     notes: string | null;
+    user: number | null;
+    username: string | null;
+    user_email: string | null;
+    user_full_name: string | null;
 }
 
 // Vue pour l'administrateur permettant de voir toutes les adresses MAC bloquées
@@ -61,7 +65,10 @@ export default function BlockedMacListView() {
         const searchInput = searchTerm.toLowerCase();
         return (
             mac.mac_address.toLowerCase().includes(searchInput) ||
-            mac.reason.toLowerCase().includes(searchInput)
+            mac.reason.toLowerCase().includes(searchInput) ||
+            (mac.username && mac.username.toLowerCase().includes(searchInput)) ||
+            (mac.user_email && mac.user_email.toLowerCase().includes(searchInput)) ||
+            (mac.user_full_name && mac.user_full_name.toLowerCase().includes(searchInput))
         );
     });
 
@@ -131,6 +138,24 @@ export default function BlockedMacListView() {
                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Raison du blocage</p>
                                     <p className="text-sm text-gray-300">{mac.reason}</p>
                                 </div>
+
+                                {mac.username && (
+                                    <div className="bg-white/5 border border-white/10 p-3 rounded-lg text-sm flex items-start gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <UserIcon className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Utilisateur concerné</p>
+                                            <p className="text-sm text-white font-medium">
+                                                {mac.user_full_name || mac.username}
+                                                <span className="text-gray-400 font-mono text-xs ml-2">(@{mac.username})</span>
+                                            </p>
+                                            {mac.user_email && (
+                                                <p className="text-xs text-gray-400">{mac.user_email}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-white/5 p-3 rounded-lg">

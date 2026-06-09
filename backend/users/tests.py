@@ -169,3 +169,35 @@ class MacAddressBlockingTests(APITestCase):
         # The cache should be cleared
         cache_key = f"failed_attempts_{self.mac_address}"
         self.assertIsNone(cache.get(cache_key))
+
+    def test_blocked_mac_associates_user_on_login_fail(self):
+        # 5 failed password attempts
+        for i in range(5):
+            self.client.post(self.login_url, {
+                'username': self.username,
+                'password': 'wrongpassword',
+                'mac_address': self.mac_address
+            })
+        
+        blocked_mac = BlockedMacAddress.objects.get(mac_address=self.mac_address)
+        self.assertEqual(blocked_mac.user, self.user)
+
+    def test_blocked_mac_associates_user_on_2fa_fail(self):
+        # Trigger 2FA
+        self.client.post(self.login_url, {
+            'username': self.username,
+            'password': self.password,
+            'mac_address': self.mac_address
+        })
+        
+        # 5 failed 2FA attempts
+        for i in range(5):
+            self.client.post(self.verify_2fa_url, {
+                'username': self.username,
+                'code': '000000',
+                'mac_address': self.mac_address
+            })
+        
+        blocked_mac = BlockedMacAddress.objects.get(mac_address=self.mac_address)
+        self.assertEqual(blocked_mac.user, self.user)
+

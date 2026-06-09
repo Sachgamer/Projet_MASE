@@ -11,6 +11,8 @@ class User(AbstractUser):
 
 # Modèle pour stocker les adresses MAC bloquées après 5 tentatives 2FA infructueuses
 class BlockedMacAddress(models.Model):
+    # Utilisateur concerné par le blocage
+    user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='blocked_mac_addresses')
     # Adresse MAC de la machine (format: AA:BB:CC:DD:EE:FF)
     mac_address = models.CharField(max_length=17, unique=True, db_index=True)
     # Date et heure du blocage

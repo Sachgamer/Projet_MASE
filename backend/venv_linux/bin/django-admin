@@ -1,4 +1,4 @@
-#!/home/sacha/Documents/Projet_MASE/Projet_MASE/Projet_MASE/backend/venv_linux/bin/python3
+#!/home/sacha/Documents/Projet_MASE/Projet_MASE/Projet_MASE/backend/venv_linux/bin/python
 import sys
 from django.core.management import execute_from_command_line
 if __name__ == '__main__':
