@@ -181,6 +181,7 @@ REST_FRAMEWORK = {
         'anon': '100/day',
         'user': '1000/day',
         'verify_2fa': '5/minute',
+        'dj_rest_auth': '60/minute',
     }
 }
 

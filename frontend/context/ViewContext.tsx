@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Liste des différentes pages disponibles sur le site
-type View = 'home' | 'dashboard' | 'login' | 'slideshow-detail' | 'slideshow-create' | 'files' | 'report-create' | 'report-list' | 'controle' | 'quiz' | 'quiz-manage' | 'auto-control-list';
+type View = 'home' | 'dashboard' | 'login' | 'slideshow-detail' | 'slideshow-create' | 'files' | 'report-create' | 'report-list' | 'controle' | 'quiz' | 'quiz-manage' | 'auto-control-list' | 'blocked-mac-list';
 
 interface ViewContextType {
     currentView: View; // Page actuellement affichée

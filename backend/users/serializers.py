@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from dj_rest_auth.serializers import UserDetailsSerializer
-from .models import User
+from .models import User, BlockedMacAddress
 
 # Convertit les données utilisateur au format JSON pour les envoyer au site
 class UserSerializer(serializers.ModelSerializer):
@@ -14,3 +14,12 @@ class UserSerializer(serializers.ModelSerializer):
 class Verify2FASerializer(serializers.Serializer):
     username = serializers.CharField()
     code = serializers.CharField(max_length=6)
+    mac_address = serializers.CharField(max_length=17, required=False, allow_blank=True)
+
+# Serializer pour les adresses MAC bloquées
+class BlockedMacAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlockedMacAddress
+        fields = ('id', 'mac_address', 'blocked_at', 'reason', 'failed_attempts', 'is_active', 'notes')
+        read_only_fields = ('id', 'blocked_at')
+

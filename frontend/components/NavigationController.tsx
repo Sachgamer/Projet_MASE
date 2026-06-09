@@ -13,6 +13,7 @@ import QuizManageView from '@/components/views/QuizManageView';
 import ReportCreateView from '@/components/views/ReportCreateView';
 import ReportListView from '@/components/views/ReportListView';
 import AutoControlListView from '@/components/views/AutoControlListView';
+import BlockedMacListView from '@/components/views/BlockedMacListView';
 import { useAuth } from '@/context/AuthContext';
 
 /**
@@ -58,6 +59,8 @@ export default function NavigationController() {
             return <ReportListView />;
         case 'auto-control-list':
             return <AutoControlListView />;
+        case 'blocked-mac-list':
+            return <BlockedMacListView />;
         default:
             return <HomeView />;
     }

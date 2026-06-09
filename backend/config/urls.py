@@ -35,8 +35,9 @@ router.register(r'choices', ChoiceViewSet)
 router.register(r'files', PersonalFileViewSet, basename='personal-file')
 router.register(r'reports', AccidentReportViewSet, basename='accident-report')
 
-from users.views import UserViewSet, CustomLoginView, Verify2FAView, CustomLogoutView
+from users.views import UserViewSet, BlockedMacAddressViewSet, CustomLoginView, Verify2FAView, CustomLogoutView
 router.register(r'users', UserViewSet, basename='user')
+router.register(r'blocked-macs', BlockedMacAddressViewSet, basename='blocked-mac')
 
 urlpatterns = [
     path('', RedirectView.as_view(url='/api/', permanent=False)),

@@ -18,7 +18,8 @@ import {
     ChevronDown,
     Menu,
     X,
-    User
+    User,
+    Shield
 } from 'lucide-react';
 
 // Composant Barre de Navigation : Présent sur toutes les pages après connexion
@@ -187,6 +188,18 @@ export default function Navbar() {
                                                         Rapports d'Auto-contrôle
                                                     </div>
                                                 </button>
+                                                <button 
+                                                    onClick={() => {
+                                                        setView('blocked-mac-list');
+                                                        setIsAdminOpen(false);
+                                                    }}
+                                                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-left text-gray-300 hover:text-white hover:bg-white/10 transition-colors bg-transparent border-0 cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Shield className="w-4 h-4 text-red-400" />
+                                                        MACs Bloquées
+                                                    </div>
+                                                </button>
                                                 <a href={`${getBaseURL()}/api/schema/swagger-ui/`} target="_blank" rel="noopener noreferrer" className="block text-decoration-none">
                                                     <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-left text-gray-300 hover:text-white hover:bg-white/10 transition-colors bg-transparent border-0 cursor-pointer">
                                                         <div className="flex items-center gap-3">
@@ -306,6 +319,16 @@ export default function Navbar() {
                                 >
                                     <CheckSquare className="w-5 h-5 text-orange-400" />
                                     Rapports d'Auto-contrôle
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setView('blocked-mac-list');
+                                        setIsMenuOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-4 px-4 py-4 text-lg font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-xl bg-transparent border-0 text-left"
+                                >
+                                    <Shield className="w-5 h-5 text-red-400" />
+                                    MACs Bloquées
                                 </button>
                                 <a href={`${getBaseURL()}/api/schema/swagger-ui/`} target="_blank" rel="noopener noreferrer" className="block w-full">
                                     <button className="w-full flex items-center gap-4 px-4 py-4 text-lg font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-xl bg-transparent border-0 text-left">

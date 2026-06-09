@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useView } from '@/context/ViewContext';
 import api from '@/lib/api';
+import { getMacAddress } from '@/lib/mac-utils';
 import { Button } from '@/components/ui/button';
 
 // Vue gérant la connexion des utilisateurs et la double authentification
@@ -33,7 +34,8 @@ export default function LoginView() {
         }
 
         try {
-            const response = await api.post('/auth/login/', { username, password });
+            const macAddress = await getMacAddress();
+            const response = await api.post('/auth/login/', { username, password, mac_address: macAddress });
             if (response.status === 202) {
                 // Si les identifiants sont bons, on passe à l'étape du code 2FA
                 setStep('2fa');
@@ -66,7 +68,14 @@ export default function LoginView() {
         }
 
         try {
-            const response = await api.post('/auth/verify-2fa/', { username, code: twoFactorCode });
+            // Récupère l'adresse MAC de la machine
+            const macAddress = await getMacAddress();
+            
+            const response = await api.post('/auth/verify-2fa/', { 
+                username, 
+                code: twoFactorCode,
+                mac_address: macAddress
+            });
             if (response.data.key) {
                 // Si le code est bon, on connecte l'utilisateur
                 await login(response.data.key);
@@ -87,7 +96,8 @@ export default function LoginView() {
             const status = err.response.status;
             
             if (status === 403) {
-                setError(`Accès refusé.`);
+                const detail = err.response.data?.detail;
+                setError(detail || `Accès refusé.`);
             } else if (status === 400) {
                 // Mauvaise requête : soit mauvais mdp, soit mauvais code
                 const detail = err.response.data?.detail;

@@ -7,17 +7,47 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from dj_rest_auth.views import LoginView
-from .models import User
-from .serializers import UserSerializer, Verify2FASerializer
+from .models import User, BlockedMacAddress
+from .serializers import UserSerializer, Verify2FASerializer, BlockedMacAddressSerializer
 
 # Gère la connexion personnalisée avec envoi de code 2FA par email
 class CustomLoginView(LoginView):
     # Traite la requête de connexion de l'utilisateur
     def post(self, request, *args, **kwargs):
+        mac_address = request.data.get('mac_address', '').upper()
+        if mac_address and BlockedMacAddress.objects.filter(mac_address=mac_address, is_active=True).exists():
+            return Response({
+                'detail': "Cette machine a été bloquée après trop de tentatives infructueuses. Contactez l'administrateur."
+            }, status=status.HTTP_403_FORBIDDEN)
+
         self.request = request
         self.serializer = self.get_serializer(data=self.request.data)
-        self.serializer.is_valid(raise_exception=True)
-        self.login()
+        
+        try:
+            self.serializer.is_valid(raise_exception=True)
+            self.login()
+        except Exception as e:
+            if mac_address:
+                from django.core.cache import cache
+                cache_key = f"failed_attempts_{mac_address}"
+                attempts = cache.get(cache_key, 0) + 1
+                cache.set(cache_key, attempts, timeout=600)  # Expire après 10 min
+                
+                if attempts >= 5:
+                    BlockedMacAddress.objects.get_or_create(
+                        mac_address=mac_address,
+                        defaults={
+                            'reason': "Trop de tentatives de mot de passe infructueuses",
+                            'failed_attempts': 5,
+                            'notes': f"Tentatives de mot de passe bloquées le {timezone.now().strftime('%d/%m/%Y à %H:%M')}"
+                        }
+                    )
+                    cache.delete(cache_key)
+                    return Response({
+                        'detail': "Trop de tentatives infructueuses. Votre machine a été bloquée. Contactez l'administrateur."
+                    }, status=status.HTTP_403_FORBIDDEN)
+            raise e
+
         user = self.user
         
         # Génère un code aléatoire à 6 chiffres
@@ -52,26 +82,50 @@ class Verify2FAView(APIView):
         if serializer.is_valid():
             username = serializer.validated_data['username']
             code = serializer.validated_data['code']
+            mac_address = serializer.validated_data.get('mac_address', '').upper()
             
             try:
                 user = User.objects.get(username=username)
             except User.DoesNotExist:
                 return Response({'detail': 'Bad request'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Vérifie si cette adresse MAC est bloquée
+            if mac_address and BlockedMacAddress.objects.filter(mac_address=mac_address, is_active=True).exists():
+                return Response({
+                    'detail': 'Cette machine a été bloquée après trop de tentatives infructueuses. Contactez l\'administrateur.'
+                }, status=status.HTTP_403_FORBIDDEN)
                 
             from django.core.cache import cache
-            cache_key = f"2fa_attempts_{username}"
+            cache_key = f"failed_attempts_{mac_address}" if mac_address else f"2fa_attempts_{username}"
             attempts = cache.get(cache_key, 0)
             
             # Si le code a déjà été invalidé ou expiré
             if not user.two_factor_code:
                 return Response({'detail': 'Aucun code actif trouvé. Veuillez vous reconnecter.'}, status=status.HTTP_400_BAD_REQUEST)
                 
-            if attempts >= 3:
-                # Invalidation du code
+            if attempts >= 5:
+                # Invalidation du code et blocage de la MAC après 5 tentatives
                 user.two_factor_code = None
                 user.two_factor_code_expires_at = None
                 user.save()
-                return Response({'detail': 'Trop de tentatives infructueuses. Veuillez générer un nouveau code en vous reconnectant.'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Ajoute la MAC à la liste noire si fournie
+                if mac_address:
+                    BlockedMacAddress.objects.get_or_create(
+                        mac_address=mac_address,
+                        defaults={
+                            'reason': f'Trop de tentatives 2FA infructueuses pour l\'utilisateur {username}',
+                            'failed_attempts': 5,
+                            'notes': f'Tentatives bloquées le {timezone.now().strftime("%d/%m/%Y à %H:%M")}'
+                        }
+                    )
+                
+                cache.delete(cache_key)
+                if mac_address:
+                    cache.delete(f"2fa_attempts_{username}")
+                return Response({
+                    'detail': 'Trop de tentatives infructueuses. Votre machine a été bloquée. Contactez l\'administrateur.'
+                }, status=status.HTTP_403_FORBIDDEN)
                 
             # Vérifie si le code est expiré d'abord
             if user.two_factor_code_expires_at and user.two_factor_code_expires_at < timezone.now():
@@ -85,18 +139,41 @@ class Verify2FAView(APIView):
                 attempts += 1
                 cache.set(cache_key, attempts, timeout=600) # Expire après 10 min
                 
-                if attempts >= 3:
-                    # Invalidation immédiate après 3 échecs
+                remaining = 5 - attempts
+                
+                if attempts >= 5:
+                    # Blocage de la MAC après 5 échecs
                     user.two_factor_code = None
                     user.two_factor_code_expires_at = None
                     user.save()
                     cache.delete(cache_key)
-                    return Response({'detail': 'Trop de tentatives infructueuses. Ce code a été désactivé pour des raisons de sécurité.'}, status=status.HTTP_400_BAD_REQUEST)
+                    if mac_address:
+                        cache.delete(f"2fa_attempts_{username}")
                     
-                return Response({'detail': f'Code de sécurité incorrect. Il vous reste {3 - attempts} tentative(s).'}, status=status.HTTP_400_BAD_REQUEST)
+                    # Ajoute la MAC à la liste noire
+                    if mac_address:
+                        BlockedMacAddress.objects.get_or_create(
+                            mac_address=mac_address,
+                            defaults={
+                                'reason': f'Trop de tentatives 2FA infructueuses pour l\'utilisateur {username}',
+                                'failed_attempts': 5,
+                                'notes': f'Tentatives bloquées le {timezone.now().strftime("%d/%m/%Y à %H:%M")}'
+                            }
+                        )
+                    
+                    return Response({
+                        'detail': 'Trop de tentatives infructueuses. Votre machine a été bloquée. Contactez l\'administrateur.'
+                    }, status=status.HTTP_403_FORBIDDEN)
+                    
+                return Response({
+                    'detail': f'Code de sécurité incorrect. Il vous reste {remaining} tentative(s).'
+                }, status=status.HTTP_400_BAD_REQUEST)
                 
             # Code correct : réinitialiser le compteur et effacer le code 2FA
             cache.delete(cache_key)
+            if mac_address:
+                cache.delete(f"2fa_attempts_{username}")
+                cache.delete(f"failed_attempts_{mac_address}")
             user.two_factor_code = None
             user.two_factor_code_expires_at = None
             user.save()
@@ -127,4 +204,11 @@ class CustomLogoutView(APIView):
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+
+
+# Permet de gérer les adresses MAC bloquées (réservé aux administrateurs)
+class BlockedMacAddressViewSet(viewsets.ModelViewSet):
+    queryset = BlockedMacAddress.objects.all().order_by('-blocked_at')
+    serializer_class = BlockedMacAddressSerializer
     permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
