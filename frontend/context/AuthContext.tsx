@@ -1,4 +1,9 @@
+/**
+ * @copyright (c) 2026 Sacha Degroote. Tous droits réservés.
+ * Propriété exclusive de Sacha Degroote. Toute reproduction ou distribution interdite.
+ */
 'use client';
+
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '@/lib/api';

@@ -2,6 +2,8 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "author": "Sacha Degroote",
+  "license": "proprietary",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",

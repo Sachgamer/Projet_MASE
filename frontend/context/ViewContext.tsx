@@ -1,4 +1,9 @@
+/**
+ * @copyright (c) 2026 Sacha. Tous droits réservés.
+ * Propriété exclusive de Sacha. Toute reproduction ou distribution interdite.
+ */
 'use client';
+
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 

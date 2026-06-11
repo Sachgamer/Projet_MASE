@@ -201,3 +201,65 @@ class MacAddressBlockingTests(APITestCase):
         blocked_mac = BlockedMacAddress.objects.get(mac_address=self.mac_address)
         self.assertEqual(blocked_mac.user, self.user)
 
+    def test_blocking_mac_sends_email_notification(self):
+        from django.core import mail
+        
+        # Clear outbox first
+        mail.outbox = []
+        
+        # We need an admin user with an email address
+        admin_email = "admin@example.com"
+        User.objects.create_superuser(
+            username="admin",
+            password="adminpassword",
+            email=admin_email
+        )
+        
+        # Trigger MAC address blocking by failing 5 logins
+        for i in range(5):
+            self.client.post(self.login_url, {
+                'username': self.username,
+                'password': 'wrongpassword',
+                'mac_address': self.mac_address
+            })
+            
+        # Verify MAC is blocked
+        self.assertTrue(BlockedMacAddress.objects.filter(mac_address=self.mac_address, is_active=True).exists())
+        
+        # Verify that an email was sent
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        
+        # Check recipients (should include admin email)
+        self.assertIn(admin_email, email.to)
+        
+        # Check email subject and body
+        self.assertIn("Adresse MAC bloquée", email.subject)
+        self.assertIn(self.mac_address, email.body)
+        self.assertIn(self.username, email.body)
+        self.assertIn(self.email, email.body)
+
+    def test_unblocking_and_reblocking_sends_new_email(self):
+        from django.core import mail
+        
+        # Create block
+        blocked_mac = BlockedMacAddress.objects.create(
+            mac_address=self.mac_address,
+            user=self.user,
+            is_active=False
+        )
+        
+        # Clear outbox
+        mail.outbox = []
+        
+        # Now reactivate (re-block) the MAC
+        blocked_mac.is_active = True
+        blocked_mac.save()
+        
+        # Verify email is sent on re-blocking
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertIn("Adresse MAC bloquée", email.subject)
+        self.assertIn(self.username, email.body)
+
+
