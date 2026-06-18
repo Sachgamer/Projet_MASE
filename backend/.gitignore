@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+venv_linux/
 ENV/
 env/
 
