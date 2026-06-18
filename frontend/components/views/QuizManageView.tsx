@@ -160,7 +160,7 @@ export default function QuizManageView() {
                             type="number"
                             value={passingScore}
                             onChange={(e) => setPassingScore(parseInt(e.target.value) || 0)}
-                            className="border rounded px-2 py-1 w-20 text-black"
+                            className="border rounded px-2 py-1 w-20 bg-white text-black border-gray-300"
                         />
                     </div>
                     <Button onClick={createQuiz}>Créer le Quiz</Button>
@@ -184,7 +184,7 @@ export default function QuizManageView() {
                         type="number"
                         value={passingScore}
                         onChange={(e) => setPassingScore(parseInt(e.target.value) || 0)}
-                        className="border rounded px-2 py-1 w-20 text-black"
+                        className="border rounded px-2 py-1 w-20 bg-white text-black border-gray-300"
                     />
                 </div>
                 <Button onClick={updateQuizSettings} variant="outline" className="text-white">Mettre à jour</Button>

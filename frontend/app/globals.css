@@ -1,24 +1,23 @@
 @import "tailwindcss";
 
 :root {
-  /* Very Dark Blue Background */
-  --background: #e2e5eb;
-  /* Light Gray/Blue Foreground */
-  --foreground: #ffffffa3;
+  /* Cream White Background */
+  --background: #faf7f0;
+  /* Dark Slate Foreground */
+  --foreground: #292524;
 
   /* Orange Accent */
   --primary: #f97316;
   --primary-foreground: #ffffff;
 
-  /* Secondary Dark Blue */
-  --secondary: #112240;
-  --secondary-foreground: #ffffff;
+  /* Secondary Light Warm Beige */
+  --secondary: #f4efe6;
+  --secondary-foreground: #292524;
 
-  --muted: #1e293b;
-  --muted-foreground: #b8a894;
+  --muted: #eaddcd;
+  --muted-foreground: #78716c;
 
-
-  --border: #1e293b;
+  --border: #e2dcd0;
   --input: #ffffff;
   --ring: #f97316;
 
@@ -85,4 +84,93 @@ body {
 
 .zoom-in {
   animation-name: zoom-in;
+}
+
+/* --- Surcharges Thème Clair (Blanc Crème) --- */
+
+/* 1. Remplacer text-white par la couleur de texte principale (foreground sombre),
+   sauf si l'élément se trouve sur un bouton ou fond coloré (ex: bg-primary, bg-destructive, etc.) */
+.text-white:not(.bg-primary):not(.bg-destructive):not(.bg-blue-600):not(.bg-green-600):not(.bg-red-600):not(.bg-orange-600):not(.bg-green-800):not(.bg-red-800):not(.bg-orange-500):not(.bg-green-500):not(.bg-red-500):not(.bg-blue-500):not(.bg-orange-600\/20) {
+  color: var(--foreground) !important;
+}
+
+/* Si un élément avec text-white est à l'intérieur d'un élément ayant un fond coloré, on préserve le texte blanc */
+.bg-primary .text-white,
+.bg-destructive .text-white,
+.bg-blue-600 .text-white,
+.bg-green-600 .text-white,
+.bg-red-600 .text-white,
+.bg-green-800 .text-white,
+.bg-red-800 .text-white,
+.bg-orange-600 .text-white,
+.bg-orange-500 .text-white,
+.bg-red-500 .text-white,
+.bg-green-500 .text-white,
+.bg-blue-500 .text-white {
+  color: #ffffff !important;
+}
+
+/* 2. Surcharges des classes de cartes transparentes (bg-white/5, bg-secondary/30, etc.)
+   pour qu'elles s'affichent correctement en clair avec une bordure visible */
+.bg-white\/5 {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+}
+.bg-secondary\/30 {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+}
+.bg-secondary\/50 {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+}
+.bg-secondary\/60 {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+}
+.bg-secondary\/95 {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+}
+.bg-secondary\/98 {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+}
+.bg-white\/10 {
+  background-color: var(--muted) !important;
+}
+.hover\:bg-white\/10:hover {
+  background-color: var(--muted) !important;
+}
+.hover\:bg-white\/5:hover {
+  background-color: var(--muted) !important;
+}
+
+/* Bordures blanches */
+.border-white\/10 {
+  border-color: var(--border) !important;
+}
+.border-white\/20 {
+  border-color: var(--border) !important;
+}
+.border-white\/5 {
+  border-color: var(--border) !important;
+}
+.border-border\/30 {
+  border-color: var(--border) !important;
+}
+.border-border\/40 {
+  border-color: var(--border) !important;
+}
+.border-border\/50 {
+  border-color: var(--border) !important;
+}
+
+/* inputs et selects */
+input::placeholder {
+  color: #78716c !important;
+}
+select option {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
 }
