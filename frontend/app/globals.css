@@ -174,3 +174,60 @@ select option {
   background-color: var(--background) !important;
   color: var(--foreground) !important;
 }
+
+/* Surcharges pour harmoniser les fonds gris foncé en tons crème et gris doux */
+.bg-gray-800 {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+}
+.bg-gray-800\/50 {
+  background-color: var(--secondary) !important;
+  border-color: var(--border) !important;
+}
+.bg-gray-750, .bg-gray-700 {
+  background-color: var(--input) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+.bg-gray-900\/50 {
+  background-color: rgba(244, 239, 230, 0.5) !important;
+  backdrop-filter: blur(4px);
+}
+.bg-gray-50 {
+  background-color: var(--secondary) !important;
+}
+
+/* Surcharges des bordures sombres en bordures claires de ton crème */
+.border-gray-700 {
+  border-color: var(--border) !important;
+}
+.border-gray-600 {
+  border-color: var(--border) !important;
+}
+
+/* Surcharges des couleurs de texte grises pour la lisibilité sur fond clair */
+.text-gray-450, .text-gray-400 {
+  color: var(--muted-foreground) !important;
+}
+.text-gray-300 {
+  color: var(--foreground) !important;
+}
+.text-gray-200 {
+  color: var(--foreground) !important;
+}
+.text-gray-500 {
+  color: var(--muted-foreground) !important;
+}
+.text-gray-600 {
+  color: var(--muted-foreground) !important;
+}
+
+/* Harmonisation du bouton gris */
+.bg-gray-700.hover\:bg-gray-600:hover {
+  background-color: var(--muted) !important;
+}
+
+/* Surbrillance au survol des liens de la barre de navigation */
+nav button:hover, nav a:hover {
+  color: var(--primary) !important;
+}
