@@ -19,7 +19,9 @@ import {
     Menu,
     X,
     User,
-    Shield
+    Shield,
+    Sun,
+    Moon
 } from 'lucide-react';
 
 // Composant Barre de Navigation : Présent sur toutes les pages après connexion
@@ -30,11 +32,24 @@ export default function Navbar() {
     const [isReportsOpen, setIsReportsOpen] = useState(false); // État du menu déroulant "Remontées"
     const [isAdminOpen, setIsAdminOpen] = useState(false); // État du menu déroulant "Admin"
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // Utilisé pour l'installation PWA
+    const [theme, setTheme] = useState<'light' | 'dark'>('light'); // État du thème Jour/Nuit
     
     const reportsRef = useRef<HTMLDivElement>(null);
     const adminRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        // Au chargement, récupérer le thème sauvegardé ou utiliser les préférences système
+        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+        
+        setTheme(initialTheme);
+        if (initialTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
         // Gère l'événement d'installation de l'application (PWA)
         const handleBeforeInstallPrompt = (e: any) => {
             e.preventDefault();
@@ -58,6 +73,17 @@ export default function Navbar() {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    const toggleTheme = () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+        if (newTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    };
 
     // Lance la procédure d'installation PWA si disponible
     const handleInstallClick = async () => {
@@ -146,6 +172,15 @@ export default function Navbar() {
 
                     {/* Section Droite : Auth, Install PWA, Administration */}
                     <div className="hidden md:flex md:items-center space-x-3">
+                        {/* Commutateur de thème Jour/Nuit */}
+                        <button
+                            onClick={toggleTheme}
+                            className="text-gray-300 hover:text-primary transition-colors bg-transparent border-0 cursor-pointer p-2 rounded-full flex items-center justify-center mr-2"
+                            title={theme === 'light' ? "Passer en mode sombre" : "Passer en mode clair"}
+                        >
+                            {theme === 'light' ? <Moon className="w-5 h-5 text-gray-400 hover:text-primary" /> : <Sun className="w-5 h-5 text-yellow-500 hover:text-yellow-400" />}
+                        </button>
+
                         {/* Bouton d'installation sur mobile/ordinateur (PWA) */}
                         {deferredPrompt && (
                             <Button
@@ -265,6 +300,17 @@ export default function Navbar() {
             {isMenuOpen && (
                 <div className="lg:hidden absolute top-16 left-0 w-full h-[calc(100vh-4rem)] bg-secondary/98 backdrop-blur-2xl border-b border-border shadow-2xl overflow-y-auto overscroll-contain flex flex-col">
                     <div className="px-4 py-6 space-y-6 flex-1 pb-12">
+                        {/* Commutateur de thème Jour/Nuit (Mobile) */}
+                        <div className="flex items-center justify-between px-4 py-4 rounded-xl bg-white/5 border border-white/10">
+                            <span className="text-lg font-medium text-gray-300">Mode {theme === 'light' ? 'sombre' : 'clair'}</span>
+                            <button
+                                onClick={toggleTheme}
+                                className="text-gray-300 hover:text-primary transition-colors bg-transparent border-0 cursor-pointer p-2 rounded-full flex items-center justify-center"
+                                title={theme === 'light' ? "Passer en mode sombre" : "Passer en mode clair"}
+                            >
+                                {theme === 'light' ? <Moon className="w-6 h-6 text-gray-400" /> : <Sun className="w-6 h-6 text-yellow-500" />}
+                            </button>
+                        </div>
                         {/* Option d'installation sur Mobile */}
                         {deferredPrompt && (
                             <button
