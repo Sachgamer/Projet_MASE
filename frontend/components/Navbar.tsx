@@ -33,21 +33,37 @@ export default function Navbar() {
     const [isAdminOpen, setIsAdminOpen] = useState(false); // État du menu déroulant "Admin"
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // Utilisé pour l'installation PWA
     const [theme, setTheme] = useState<'light' | 'dark'>('light'); // État du thème Jour/Nuit
+    const [mounted, setMounted] = useState(false); // Permet d'éviter les erreurs d'hydratation (Next.js)
     
     const reportsRef = useRef<HTMLDivElement>(null);
     const adminRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        // Au chargement, récupérer le thème sauvegardé ou utiliser les préférences système
-        const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const initialTheme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
+        setMounted(true);
+        let initialTheme: 'light' | 'dark' = 'light';
+        
+        try {
+            // Au chargement, récupérer le thème sauvegardé ou utiliser les préférences système
+            const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+            if (savedTheme === 'light' || savedTheme === 'dark') {
+                initialTheme = savedTheme;
+            } else {
+                const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                initialTheme = systemPrefersDark ? 'dark' : 'light';
+            }
+        } catch (e) {
+            console.error("Impossible de récupérer les préférences de thème:", e);
+        }
         
         setTheme(initialTheme);
-        if (initialTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
+        try {
+            if (initialTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        } catch (e) {
+            console.error("Impossible d'appliquer la classe sombre sur documentElement:", e);
         }
 
         // Gère l'événement d'installation de l'application (PWA)
@@ -77,11 +93,19 @@ export default function Navbar() {
     const toggleTheme = () => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
         setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        if (newTheme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
+        try {
+            localStorage.setItem('theme', newTheme);
+        } catch (e) {
+            console.error("Impossible de sauvegarder le thème:", e);
+        }
+        try {
+            if (newTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        } catch (e) {
+            console.error("Impossible d'ajouter/supprimer la classe sombre:", e);
         }
     };
 
@@ -176,9 +200,15 @@ export default function Navbar() {
                         <button
                             onClick={toggleTheme}
                             className="text-gray-300 hover:text-primary transition-colors bg-transparent border-0 cursor-pointer p-2 rounded-full flex items-center justify-center mr-2"
-                            title={theme === 'light' ? "Passer en mode sombre" : "Passer en mode clair"}
+                            title={!mounted ? "Passer en mode sombre" : (theme === 'light' ? "Passer en mode sombre" : "Passer en mode clair")}
                         >
-                            {theme === 'light' ? <Moon className="w-5 h-5 text-gray-400 hover:text-primary" /> : <Sun className="w-5 h-5 text-yellow-500 hover:text-yellow-400" />}
+                            {!mounted ? (
+                                <Moon className="w-5 h-5 text-gray-400 hover:text-primary" />
+                            ) : theme === 'light' ? (
+                                <Moon className="w-5 h-5 text-gray-400 hover:text-primary" />
+                            ) : (
+                                <Sun className="w-5 h-5 text-yellow-500 hover:text-yellow-400" />
+                            )}
                         </button>
 
                         {/* Bouton d'installation sur mobile/ordinateur (PWA) */}
@@ -302,13 +332,21 @@ export default function Navbar() {
                     <div className="px-4 py-6 space-y-6 flex-1 pb-12">
                         {/* Commutateur de thème Jour/Nuit (Mobile) */}
                         <div className="flex items-center justify-between px-4 py-4 rounded-xl bg-white/5 border border-white/10">
-                            <span className="text-lg font-medium text-gray-300">Mode {theme === 'light' ? 'sombre' : 'clair'}</span>
+                            <span className="text-lg font-medium text-gray-300 font-bold">
+                                Mode {!mounted ? 'Clair' : (theme === 'light' ? 'Clair' : 'Sombre')}
+                            </span>
                             <button
                                 onClick={toggleTheme}
                                 className="text-gray-300 hover:text-primary transition-colors bg-transparent border-0 cursor-pointer p-2 rounded-full flex items-center justify-center"
-                                title={theme === 'light' ? "Passer en mode sombre" : "Passer en mode clair"}
+                                title={!mounted ? "Passer en mode sombre" : (theme === 'light' ? "Passer en mode sombre" : "Passer en mode clair")}
                             >
-                                {theme === 'light' ? <Moon className="w-6 h-6 text-gray-400" /> : <Sun className="w-6 h-6 text-yellow-500" />}
+                                {!mounted ? (
+                                    <Moon className="w-6 h-6 text-gray-400" />
+                                ) : theme === 'light' ? (
+                                    <Moon className="w-6 h-6 text-gray-400" />
+                                ) : (
+                                    <Sun className="w-6 h-6 text-yellow-500" />
+                                )}
                             </button>
                         </div>
                         {/* Option d'installation sur Mobile */}
