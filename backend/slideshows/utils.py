@@ -133,6 +133,8 @@ def send_invitation_email(user, slideshow):
         
         user_name = f"{user.first_name} {user.last_name}".strip() or user.username
         theme = slideshow.title
+        creator = slideshow.creator
+        creator_name = f"{creator.first_name} {creator.last_name}".strip() or creator.username
         
         if slideshow.scheduled_date:
             # Affichage avec fuseau horaire si configuré
@@ -154,11 +156,11 @@ def send_invitation_email(user, slideshow):
             f"- Date de présence obligatoire : {date_str}\n\n"
             f"Veuillez vous connecter sur la plateforme WebMASE pour consulter la présentation et répondre au quiz associé.\n\n"
             f"Cordialement,\n"
-            f"L'équipe WebMASE"
+            f"{creator_name}"
         )
         
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@webmase.com')
-        
+            
         if user.email:
             send_mail(
                 subject,

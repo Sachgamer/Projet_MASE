@@ -221,6 +221,10 @@ class SlideshowInvitationEmailTestCase(APITestCase):
             self.assertIn("Consignes de sécurité en cas d'incendie.", email.body)
             # Vérifier que le format de date correct est inclus
             self.assertIn("Date de présence obligatoire :", email.body)
+            # Vérifier que l'adresse de l'expéditeur commence par noreply@
+            self.assertTrue(email.from_email.startswith("noreply@"))
+            # Vérifier la signature avec le nom du créateur de la causerie
+            self.assertIn("Cordialement,\ncreator", email.body)
 
     def test_update_slideshow_sends_emails_only_to_new_invites(self):
         # 1. Créer une causerie avec initialement user1 invité
