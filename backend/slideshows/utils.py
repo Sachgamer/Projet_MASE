@@ -127,39 +127,39 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
     return final_buffer
 
 def send_invitation_email(user, slideshow):
-    from django.core.mail import send_mail
-    from django.conf import settings
-    
-    user_name = f"{user.first_name} {user.last_name}".strip() or user.username
-    theme = slideshow.title
-    
-    if slideshow.scheduled_date:
-        # Affichage avec fuseau horaire si configuré
-        from django.utils import timezone
-        local_date = timezone.template_localtime(slideshow.scheduled_date)
-        date_str = local_date.strftime("%d/%m/%Y à %H:%M")
-    else:
-        date_str = "dès que possible"
+    try:
+        from django.core.mail import send_mail
+        from django.conf import settings
         
-    subject = f"[WebMASE] Invitation à la causerie : {theme}"
-    
-    message = (
-        f"Bonjour {user_name},\n\n"
-        f"Vous êtes invité à participer à la causerie sécurité suivante : {theme}.\n"
-        f"Votre présence est indiquée comme OBLIGATOIRE.\n\n"
-        f"Détails de la causerie :\n"
-        f"- Thème : {theme}\n"
-        f"- Description : {slideshow.description}\n"
-        f"- Date de présence obligatoire : {date_str}\n\n"
-        f"Veuillez vous connecter sur la plateforme WebMASE pour consulter la présentation et répondre au quiz associé.\n\n"
-        f"Cordialement,\n"
-        f"L'équipe WebMASE"
-    )
-    
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@webmase.com')
-    
-    if user.email:
-        try:
+        user_name = f"{user.first_name} {user.last_name}".strip() or user.username
+        theme = slideshow.title
+        
+        if slideshow.scheduled_date:
+            # Affichage avec fuseau horaire si configuré
+            from django.utils import timezone
+            local_date = timezone.template_localtime(slideshow.scheduled_date)
+            date_str = local_date.strftime("%d/%m/%Y à %H:%M")
+        else:
+            date_str = "dès que possible"
+            
+        subject = f"[WebMASE] Invitation à la causerie : {theme}"
+        
+        message = (
+            f"Bonjour {user_name},\n\n"
+            f"Vous êtes invité à participer à la causerie sécurité suivante : {theme}.\n"
+            f"Votre présence est indiquée comme OBLIGATOIRE.\n\n"
+            f"Détails de la causerie :\n"
+            f"- Thème : {theme}\n"
+            f"- Description : {slideshow.description}\n"
+            f"- Date de présence obligatoire : {date_str}\n\n"
+            f"Veuillez vous connecter sur la plateforme WebMASE pour consulter la présentation et répondre au quiz associé.\n\n"
+            f"Cordialement,\n"
+            f"L'équipe WebMASE"
+        )
+        
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@webmase.com')
+        
+        if user.email:
             send_mail(
                 subject,
                 message,
@@ -167,7 +167,7 @@ def send_invitation_email(user, slideshow):
                 [user.email],
                 fail_silently=False,
             )
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Erreur lors de l'envoi de l'email d'invitation à {user.email} : {e}")
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Erreur lors de la préparation ou de l'envoi de l'email d'invitation : {e}")
