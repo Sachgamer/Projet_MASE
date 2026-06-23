@@ -15,6 +15,15 @@ class QuestionSerializer(serializers.ModelSerializer):
         model = Question
         fields = ['id', 'quiz', 'text', 'order', 'choices']
 
+    def validate(self, attrs):
+        quiz = attrs.get('quiz')
+        if quiz:
+            # Si on crée une nouvelle question
+            if not self.instance:
+                if quiz.questions.count() >= 10:
+                    raise serializers.ValidationError({"quiz": "Un quiz ne peut pas contenir plus de 10 questions."})
+        return attrs
+
 # Transforme un Quiz (avec ses questions) en JSON
 class QuizSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)

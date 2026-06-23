@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api from '@/lib/api';
+import api, { downloadQuizPdf } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useView } from '@/context/ViewContext';
 
@@ -37,6 +37,8 @@ export default function QuizView() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0); // Index de la question en cours
     const [score, setScore] = useState(0); // Nombre de bonnes réponses
     const [showResults, setShowResults] = useState(false); // État affichant le score final
+    const [answers, setAnswers] = useState<{ question_id: number; choice_id: number }[]>([]);
+    const [downloading, setDownloading] = useState(false);
 
     useEffect(() => {
         // Récupère le quiz via l'API de la formation
@@ -56,8 +58,13 @@ export default function QuizView() {
     }, [id]);
 
     // Gère la réponse de l'utilisateur et passe à la question suivante
-    const handleAnswer = (isCorrect: boolean) => {
-        if (isCorrect) setScore(score + 1);
+    const handleAnswer = (choice: Choice) => {
+        if (quiz) {
+            const question = quiz.questions[currentQuestionIndex];
+            setAnswers(prev => [...prev, { question_id: question.id, choice_id: choice.id }]);
+        }
+
+        if (choice.is_correct) setScore(score + 1);
 
         if (currentQuestionIndex + 1 < (quiz?.questions.length || 0)) {
             setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -71,6 +78,19 @@ export default function QuizView() {
     if (!quiz) return <div className="p-8 text-white">Aucun quizz n'est disponible pour cette présentation.</div>;
     if (!quiz.questions || quiz.questions.length === 0) return <div className="p-8 text-white">Aucune question n'est disponible.</div>;
 
+    const handleDownloadPDF = async () => {
+        if (!quiz) return;
+        setDownloading(true);
+        try {
+            await downloadQuizPdf(quiz.id, answers, `Attestation_Quiz_${quiz.title.replace(/\s+/g, '_')}.pdf`);
+        } catch (error: any) {
+            console.error("Erreur de téléchargement du PDF:", error.message);
+            alert("Erreur lors du téléchargement du PDF récapitulatif.");
+        } finally {
+            setDownloading(false);
+        }
+    };
+
     // Affichage des résultats après la fin du quiz
     if (showResults) {
         const isPassed = score >= (quiz.passing_score || 0); // Vérifie si le score est suffisant
@@ -82,8 +102,16 @@ export default function QuizView() {
                     <h3 className="text-2xl font-bold mb-2">{isPassed ? 'Réussi !' : 'Échec'}</h3>
                     <p className="text-xl mb-4">{score} / {quiz.questions.length}</p>
                 </div>
-                <div className="flex justify-center gap-4">
-                    <Button onClick={() => { setShowResults(false); setCurrentQuestionIndex(0); setScore(0); }}>Recommencer</Button>
+                <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+                    <Button onClick={() => { setShowResults(false); setCurrentQuestionIndex(0); setScore(0); setAnswers([]); }}>Recommencer</Button>
+                    <Button 
+                        variant="secondary" 
+                        onClick={handleDownloadPDF} 
+                        disabled={downloading}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                    >
+                        {downloading ? 'Téléchargement...' : 'Télécharger la fiche de validation'}
+                    </Button>
                     <Button variant="outline" className="text-white" onClick={() => setView('dashboard')}>Tableau de bord</Button>
                 </div>
             </div>
@@ -106,7 +134,7 @@ export default function QuizView() {
                     {currentQuestion.choices.map((choice) => (
                         <button
                             key={choice.id}
-                            onClick={() => handleAnswer(choice.is_correct)}
+                            onClick={() => handleAnswer(choice)}
                             className="w-full text-left px-4 py-3 border rounded-md hover:bg-gray-100 transition-colors text-black"
                         >
                             {choice.text}

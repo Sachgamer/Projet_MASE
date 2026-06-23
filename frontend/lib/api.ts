@@ -90,4 +90,18 @@ export const downloadInspectionPdf = async (id: number, filename?: string) => {
     link.remove();
 };
 
+// Télécharge le PDF d'attestation/fiche de validation du quiz
+export const downloadQuizPdf = async (id: number, answers: any[], filename?: string) => {
+    const response = await api.post(`/api/quizzes/${id}/generate_pdf/`, { answers }, {
+        responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename || `Fiche_Quiz_${id}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+};
+
 export default api;

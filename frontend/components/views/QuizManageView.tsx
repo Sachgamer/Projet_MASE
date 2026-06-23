@@ -44,6 +44,7 @@ export default function QuizManageView() {
     const [option3, setOption3] = useState('');
     const [option4, setOption4] = useState('');
     const [correctOption, setCorrectOption] = useState<number>(0);
+    const isMaxQuestionsReached = quiz?.questions ? quiz.questions.length >= 10 : false;
 
     // Redirige vers la connexion si l'utilisateur n'est pas authentifié
     useEffect(() => {
@@ -212,6 +213,11 @@ export default function QuizManageView() {
             {/* Formulaire de création de question */}
             <div className="bg-white p-6 rounded-lg border text-black">
                 <h3 className="text-lg font-bold mb-4">Ajouter une question</h3>
+                {isMaxQuestionsReached && (
+                    <div className="p-3 bg-red-100 text-red-700 rounded mb-4 font-semibold text-sm">
+                        ⚠️ Ce quiz a déjà atteint le nombre maximum de 10 questions. Veuillez supprimer une question existante avant d'en ajouter une nouvelle.
+                    </div>
+                )}
                 <form onSubmit={addQuestion} className="space-y-4">
                     <div>
                         <label className="block text-sm font-bold">Question</label>
@@ -252,7 +258,7 @@ export default function QuizManageView() {
                             </div>
                         ))}
                     </div>
-                    <Button type="submit">Ajouter</Button>
+                    <Button type="submit" disabled={isMaxQuestionsReached}>Ajouter</Button>
                 </form>
             </div>
         </div>
