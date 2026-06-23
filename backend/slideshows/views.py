@@ -90,7 +90,7 @@ class SlideshowViewSet(viewsets.ModelViewSet):
                     'score': s.score,
                     'total_questions': s.total_questions,
                     'is_passed': s.is_passed,
-                    'submitted_at': s.submitted_at.strftime("%d/%m/%Y %H:%M") if s.submitted_at else None
+                    'submitted_at': timezone.localtime(s.submitted_at).strftime("%d/%m/%Y %H:%M") if s.submitted_at else None
                 }
                 
         report_data = []
@@ -197,7 +197,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         )
         
         user_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username
-        date_str = timezone.now().strftime("%d/%m/%Y %H:%M")
+        date_str = timezone.localtime().strftime("%d/%m/%Y %H:%M")
         causerie_title = quiz.slideshow.title
         
         buffer = generate_quiz_pdf(
@@ -210,7 +210,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             qa_pairs=qa_pairs
         )
         
-        filename = f"Fiche_Quiz_{quiz.id}_{timezone.now().strftime('%Y%m%d')}.pdf"
+        filename = f"Fiche_Quiz_{quiz.id}_{timezone.localtime().strftime('%Y%m%d')}.pdf"
         return FileResponse(buffer, as_attachment=True, filename=filename)
 
 # Gère les questions d'un quiz

@@ -166,7 +166,11 @@ export default function SlideshowDetailView() {
             setEditDescription(slideshow.description);
             setEditIsPublic(slideshow.is_public);
             setEditInvitedUsers(slideshow.invited_users || []);
-            setEditScheduledDate(slideshow.scheduled_date ? slideshow.scheduled_date.substring(0, 16) : '');
+            setEditScheduledDate(
+                slideshow.scheduled_date
+                    ? new Date(slideshow.scheduled_date).toLocaleString('sv-SE', { timeZone: 'Europe/Paris' }).replace(' ', 'T').substring(0, 16)
+                    : ''
+            );
             setEditing(true);
         }
     };

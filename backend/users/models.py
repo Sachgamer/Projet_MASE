@@ -3,8 +3,8 @@
 # Propriété exclusive de Sacha. Toute reproduction ou distribution interdite.
 
 from django.contrib.auth.models import AbstractUser
-
 from django.db import models
+from django.utils import timezone
 
 # Modèle Utilisateur personnalisé pour l'application
 class User(AbstractUser):
@@ -37,7 +37,7 @@ class BlockedMacAddress(models.Model):
         verbose_name_plural = "MACs Adresses Bloquées"
 
     def __str__(self):
-        return f"{self.mac_address} - {self.blocked_at.strftime('%d/%m/%Y %H:%M') if self.blocked_at else ''}"
+        return f"{self.mac_address} - {timezone.localtime(self.blocked_at).strftime('%d/%m/%Y %H:%M') if self.blocked_at else ''}"
 
     def send_blocking_email(self):
         from django.core.mail import send_mail
@@ -74,7 +74,7 @@ class BlockedMacAddress(models.Model):
         else:
             user_details = "- Aucun utilisateur existant associé."
 
-        blocked_time = self.blocked_at.strftime('%d/%m/%Y à %H:%M') if self.blocked_at else timezone.now().strftime('%d/%m/%Y à %H:%M')
+        blocked_time = timezone.localtime(self.blocked_at).strftime('%d/%m/%Y à %H:%M') if self.blocked_at else timezone.localtime().strftime('%d/%m/%Y à %H:%M')
 
         subject = f"[WebMASE] Alerte : Adresse MAC bloquée - {self.mac_address}"
         message = (

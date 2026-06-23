@@ -67,5 +67,7 @@ class InspectionViewSet(viewsets.ModelViewSet):
     def generate_pdf(self, request, pk=None):
         inspection = self.get_object()
         buffer = generate_inspection_pdf(inspection)
-        filename = f"Rapport_AutoControle_{inspection.id}_{inspection.date.strftime('%Y%m%d')}.pdf"
+        from django.utils import timezone
+        local_date = timezone.localtime(inspection.date) if inspection.date else timezone.localtime()
+        filename = f"Rapport_AutoControle_{inspection.id}_{local_date.strftime('%Y%m%d')}.pdf"
         return FileResponse(buffer, as_attachment=True, filename=filename)

@@ -74,7 +74,7 @@ class Inspection(models.Model):
             return
 
         technician_name = f"{self.item.technician.first_name} {self.item.technician.last_name}".strip() or self.item.technician.username
-        inspection_time = self.date.strftime('%d/%m/%Y à %H:%M') if self.date else timezone.now().strftime('%d/%m/%Y à %H:%M')
+        inspection_time = timezone.localtime(self.date).strftime('%d/%m/%Y à %H:%M') if self.date else timezone.localtime().strftime('%d/%m/%Y à %H:%M')
 
         # Formate les détails des défauts
         defects_details = ""

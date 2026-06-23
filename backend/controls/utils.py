@@ -41,7 +41,9 @@ def generate_inspection_pdf(inspection):
     c.drawString(180, 667, name) 
     
     # Date
-    date_str = inspection.date.strftime("%d/%m/%Y %H:%M")
+    from django.utils import timezone
+    local_date = timezone.localtime(inspection.date) if inspection.date else timezone.localtime()
+    date_str = local_date.strftime("%d/%m/%Y %H:%M")
     c.drawString(130, 647, date_str) 
     
     # Check technique du véhicule

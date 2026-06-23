@@ -57,7 +57,7 @@ class CustomLoginView(LoginView):
                             'user': user_obj,
                             'reason': f"Trop de tentatives de mot de passe infructueuses pour {username}" if username else "Trop de tentatives de mot de passe infructueuses",
                             'failed_attempts': 5,
-                            'notes': f"Tentatives de mot de passe bloquées le {timezone.now().strftime('%d/%m/%Y à %H:%M')}"
+                            'notes': f"Tentatives de mot de passe bloquées le {timezone.localtime().strftime('%d/%m/%Y à %H:%M')}"
                         }
                     )
                     cache.delete(cache_key)
@@ -139,7 +139,7 @@ class Verify2FAView(APIView):
                             'user': user,
                             'reason': f'Trop de tentatives 2FA infructueuses pour l\'utilisateur {username}',
                             'failed_attempts': 5,
-                            'notes': f'Tentatives bloquées le {timezone.now().strftime("%d/%m/%Y à %H:%M")}'
+                            'notes': f'Tentatives bloquées le {timezone.localtime().strftime("%d/%m/%Y à %H:%M")}'
                         }
                     )
                 
@@ -181,7 +181,7 @@ class Verify2FAView(APIView):
                                 'user': user,
                                 'reason': f'Trop de tentatives 2FA infructueuses pour l\'utilisateur {username}',
                                 'failed_attempts': 5,
-                                'notes': f'Tentatives bloquées le {timezone.now().strftime("%d/%m/%Y à %H:%M")}'
+                                'notes': f'Tentatives bloquées le {timezone.localtime().strftime("%d/%m/%Y à %H:%M")}'
                             }
                         )
                     
