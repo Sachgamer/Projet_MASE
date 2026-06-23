@@ -22,6 +22,8 @@ interface Slideshow {
     description: string;
     creator: string;
     slides: Slide[];
+    is_public: boolean;
+    invited_users: number[];
 }
 
 // Vue détaillée d'une causerie (visionneuse de slides + gestion admin)
@@ -115,12 +117,53 @@ export default function SlideshowDetailView() {
     const [editing, setEditing] = useState(false);
     const [editTitle, setEditTitle] = useState('');
     const [editDescription, setEditDescription] = useState('');
+    const [editIsPublic, setEditIsPublic] = useState(true);
+    const [editInvitedUsers, setEditInvitedUsers] = useState<number[]>([]);
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+    const [userSearch, setUserSearch] = useState('');
+    const [participantsReport, setParticipantsReport] = useState<any[] | null>(null);
+    const [loadingReport, setLoadingReport] = useState(false);
+    const [activeTab, setActiveTab] = useState<'slides' | 'report'>('slides');
 
-    // Ouvre le mode édition du titre/description
+    // Fetch users for invitation management
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const response = await api.get('/api/users/');
+                setAllUsers(response.data.results || response.data);
+            } catch (error) {
+                console.error("Erreur de récupération des utilisateurs:", error);
+            }
+        };
+        fetchUsers();
+    }, []);
+
+    // Fetch participation report when tab changes to 'report'
+    useEffect(() => {
+        if (activeTab === 'report' && id) {
+            fetchReport();
+        }
+    }, [activeTab, id]);
+
+    const fetchReport = async () => {
+        setLoadingReport(true);
+        try {
+            const response = await api.get(`/api/slideshows/${id}/participants_report/`);
+            setParticipantsReport(response.data);
+        } catch (error) {
+            console.error("Erreur de chargement du rapport de participation:", error);
+        } finally {
+            setLoadingReport(false);
+        }
+    };
+
+    // Ouvre le mode édition du titre/description et des invitations
     const handleEditClick = () => {
         if (slideshow) {
             setEditTitle(slideshow.title);
             setEditDescription(slideshow.description);
+            setEditIsPublic(slideshow.is_public);
+            setEditInvitedUsers(slideshow.invited_users || []);
             setEditing(true);
         }
     };
@@ -132,11 +175,16 @@ export default function SlideshowDetailView() {
             if (slideshow) {
                 await api.patch(`/api/slideshows/${slideshow.id}/`, {
                     title: editTitle,
-                    description: editDescription
+                    description: editDescription,
+                    is_public: editIsPublic,
+                    invited_users: editInvitedUsers
                 });
                 const updated = await api.get(`/api/slideshows/${id}/`);
                 setSlideshow(updated.data);
                 setEditing(false);
+                if (activeTab === 'report') {
+                    fetchReport();
+                }
             }
         } catch (error: any) {
             console.error("Erreur lors de la mise à jour de la présentation:", error.message);
@@ -194,32 +242,106 @@ export default function SlideshowDetailView() {
 
             {/* Modal d'édition du titre et de la description */}
             {editing && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg w-full max-w-md text-black">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-lg w-full max-w-lg text-black overflow-y-auto max-h-[90vh] shadow-xl">
                         <h2 className="text-xl font-bold mb-4">Modifier la causerie</h2>
                         <form onSubmit={handleUpdateSlideshow} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium">Titre</label>
+                                <label className="block text-sm font-medium text-gray-700">Titre</label>
                                 <input
                                     type="text"
                                     value={editTitle}
                                     onChange={(e) => setEditTitle(e.target.value)}
-                                    className="w-full border rounded p-2"
+                                    className="w-full border border-gray-300 rounded p-2 text-black mt-1"
                                     required
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium">Description</label>
+                                <label className="block text-sm font-medium text-gray-700">Description</label>
                                 <textarea
                                     value={editDescription}
                                     onChange={(e) => setEditDescription(e.target.value)}
-                                    className="w-full border rounded p-2"
+                                    className="w-full border border-gray-300 rounded p-2 text-black mt-1"
                                     rows={3}
                                     required
                                 />
                             </div>
-                            <div className="flex justify-end gap-2">
-                                <Button type="button" variant="outline" className="text-white" onClick={() => setEditing(false)}>Annuler</Button>
+
+                            {/* Choix de la visibilité */}
+                            <div className="space-y-1">
+                                <label className="block text-sm font-semibold text-gray-700">Visibilité de la causerie</label>
+                                <div className="flex gap-4 mt-1">
+                                    <label className="flex items-center gap-2 border border-gray-200 p-2.5 rounded-lg cursor-pointer flex-1 hover:bg-gray-50 transition-colors">
+                                        <input
+                                            type="radio"
+                                            name="editIsPublicRadio"
+                                            checked={editIsPublic === true}
+                                            onChange={() => setEditIsPublic(true)}
+                                            className="text-blue-600 focus:ring-0"
+                                        />
+                                        <div>
+                                            <span className="font-bold text-xs block text-gray-800">Publique</span>
+                                            <span className="text-[10px] text-gray-500">Visible par tout le monde.</span>
+                                        </div>
+                                    </label>
+                                    <label className="flex items-center gap-2 border border-gray-200 p-2.5 rounded-lg cursor-pointer flex-1 hover:bg-gray-50 transition-colors">
+                                        <input
+                                            type="radio"
+                                            name="editIsPublicRadio"
+                                            checked={editIsPublic === false}
+                                            onChange={() => setEditIsPublic(false)}
+                                            className="text-blue-600 focus:ring-0"
+                                        />
+                                        <div>
+                                            <span className="font-bold text-xs block text-gray-800">Privée</span>
+                                            <span className="text-[10px] text-gray-500">Uniquement pour les invités.</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Liste d'invitation des utilisateurs */}
+                            <div className="space-y-1">
+                                <label className="block text-sm font-semibold text-gray-700">
+                                    Gérer les participants {editIsPublic ? "(Optionnel - présence obligatoire)" : "(Obligatoire pour voir la causerie)"}
+                                </label>
+                                <input
+                                    type="text"
+                                    placeholder="Rechercher un utilisateur..."
+                                    value={userSearch}
+                                    onChange={(e) => setUserSearch(e.target.value)}
+                                    className="w-full border border-gray-300 rounded p-2 text-sm mt-1 text-black"
+                                />
+                                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1 bg-gray-50 mt-1">
+                                    {allUsers.filter(u => 
+                                        u.username.toLowerCase().includes(userSearch.toLowerCase()) ||
+                                        `${u.first_name} ${u.last_name}`.toLowerCase().includes(userSearch.toLowerCase())
+                                    ).map((u) => {
+                                        const name = `${u.first_name} ${u.last_name}`.trim() || u.username;
+                                        const isChecked = editInvitedUsers.includes(u.id);
+                                        return (
+                                            <label key={u.id} className="flex items-center gap-3 py-1.5 px-2 hover:bg-gray-200 rounded-md cursor-pointer transition-colors">
+                                                <input 
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={() => {
+                                                        if (isChecked) {
+                                                            setEditInvitedUsers(editInvitedUsers.filter(id => id !== u.id));
+                                                        } else {
+                                                            setEditInvitedUsers([...editInvitedUsers, u.id]);
+                                                        }
+                                                    }}
+                                                    className="rounded border-gray-300 text-blue-600 focus:ring-0"
+                                                />
+                                                <span className="text-sm font-medium text-black">{name} <span className="text-gray-500 font-normal">({u.username})</span></span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-3 border-t border-gray-100 mt-4">
+                                <Button type="button" variant="outline" className="text-black border-gray-300 hover:bg-gray-100" onClick={() => setEditing(false)}>Annuler</Button>
                                 <Button type="submit">Sauvegarder</Button>
                             </div>
                         </form>
@@ -241,8 +363,27 @@ export default function SlideshowDetailView() {
                 )}
             </div>
 
-            <div className="space-y-8">
-                {slideshow.slides.length === 0 ? (
+            {/* Onglets pour les créateurs/admins */}
+            {isOwner && (
+                <div className="flex gap-4 border-b border-white/10 mb-6">
+                    <button
+                        onClick={() => setActiveTab('slides')}
+                        className={`pb-2 px-2 text-sm font-medium border-b-2 transition-all ${activeTab === 'slides' ? 'border-blue-500 text-blue-400 font-bold' : 'border-transparent text-gray-400 hover:text-white'}`}
+                    >
+                        Diapositives
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('report')}
+                        className={`pb-2 px-2 text-sm font-medium border-b-2 transition-all ${activeTab === 'report' ? 'border-blue-500 text-blue-400 font-bold' : 'border-transparent text-gray-400 hover:text-white'}`}
+                    >
+                        Suivi des participants
+                    </button>
+                </div>
+            )}
+
+            {(!isOwner || activeTab === 'slides') ? (
+                <div className="space-y-8">
+                    {slideshow.slides.length === 0 ? (
                     <p className="text-gray-500 italic">Aucune diapositive pour le moment.</p>
                 ) : (
                     <div className="flex flex-col items-center">
@@ -320,7 +461,74 @@ export default function SlideshowDetailView() {
                         </div>
                     </div>
                 )}
-            </div>
+                </div>
+            ) : (
+                <div className="bg-white/5 border border-white/10 rounded-lg p-6 text-white space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold">Suivi des participants</h2>
+                        <Button size="sm" variant="outline" className="text-white border-white/10 hover:bg-white/5" onClick={fetchReport}>
+                            Rafraîchir
+                        </Button>
+                    </div>
+                    
+                    {loadingReport ? (
+                        <p className="text-sm text-gray-400 italic">Chargement du suivi...</p>
+                    ) : !participantsReport || participantsReport.length === 0 ? (
+                        <p className="text-sm text-gray-400 italic">Aucun participant invité pour cette causerie.</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-white/10 text-gray-400 text-xs uppercase tracking-wider">
+                                        <th className="py-3 px-4">Utilisateur</th>
+                                        <th className="py-3 px-4">Adresse Email</th>
+                                        <th className="py-3 px-4">Quiz Complété</th>
+                                        <th className="py-3 px-4">Score</th>
+                                        <th className="py-3 px-4">Statut</th>
+                                        <th className="py-3 px-4">Date de validation</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {participantsReport.map((participant) => (
+                                        <tr key={participant.id} className="border-b border-white/5 hover:bg-white/5 transition-colors text-sm">
+                                            <td className="py-3 px-4 font-semibold">{participant.fullname} <span className="text-gray-400 font-normal">({participant.username})</span></td>
+                                            <td className="py-3 px-4 text-gray-300">{participant.email || 'N/A'}</td>
+                                            <td className="py-3 px-4">
+                                                {participant.quiz_status.completed ? (
+                                                    <span className="bg-green-800/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-xs font-semibold">Oui</span>
+                                                ) : (
+                                                    <span className="bg-red-800/30 text-red-400 border border-red-500/20 px-2 py-0.5 rounded text-xs font-semibold">Non</span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                {participant.quiz_status.completed ? (
+                                                    <span>{participant.quiz_status.score} / {participant.quiz_status.total_questions}</span>
+                                                ) : (
+                                                    <span className="text-gray-500">-</span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-4">
+                                                {participant.quiz_status.completed ? (
+                                                    participant.quiz_status.is_passed ? (
+                                                        <span className="text-green-400 font-bold">Réussi</span>
+                                                    ) : (
+                                                        <span className="text-red-400 font-bold">Échoué</span>
+                                                    )
+                                                ) : (
+                                                    <span className="text-yellow-500 italic">En attente</span>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-4 text-gray-400">
+                                                {participant.quiz_status.submitted_at || '-'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Section Administrateur : Ajout de diapositives et accès à la gestion du quiz */}
             {isOwner && (

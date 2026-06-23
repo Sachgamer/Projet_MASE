@@ -224,11 +224,11 @@ class CustomLogoutView(APIView):
             pass
         return Response({'detail': 'Déconnecté avec succès.'}, status=status.HTTP_200_OK)
 
-# Permet d'afficher la liste des utilisateurs (réservé aux administrateurs)
+# Permet d'afficher la liste des utilisateurs
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
 
 
 # Permet de gérer les adresses MAC bloquées (réservé aux administrateurs)

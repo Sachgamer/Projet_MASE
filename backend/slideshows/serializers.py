@@ -1,5 +1,8 @@
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
 from .models import Slideshow, Slide, Quiz, Question, Choice
+
+User = get_user_model()
 
 # Transforme les choix de réponse en JSON
 class ChoiceSerializer(serializers.ModelSerializer):
@@ -43,8 +46,9 @@ class SlideshowSerializer(serializers.ModelSerializer):
     slides = SlideSerializer(many=True, read_only=True)
     quiz = QuizSerializer(read_only=True)
     creator = serializers.ReadOnlyField(source='creator.username')
+    invited_users = serializers.PrimaryKeyRelatedField(many=True, queryset=User.objects.all(), required=False)
 
     class Meta:
         model = Slideshow
-        fields = ['id', 'title', 'description', 'creator', 'created_at', 'slides', 'quiz']
+        fields = ['id', 'title', 'description', 'creator', 'created_at', 'slides', 'quiz', 'is_public', 'invited_users']
         read_only_fields = ['creator', 'created_at']

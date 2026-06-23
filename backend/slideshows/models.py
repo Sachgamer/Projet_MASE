@@ -8,6 +8,10 @@ class Slideshow(models.Model):
     # Utilisateur qui a créé la formation
     creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Indique si la causerie est publique ou privée
+    is_public = models.BooleanField(default=True)
+    # Utilisateurs invités à cette causerie (leur présence est obligatoire)
+    invited_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='invited_slideshows', blank=True)
 
     def __str__(self):
         return self.title
@@ -59,3 +63,19 @@ class Choice(models.Model):
 
     def __str__(self):
         return self.text
+
+# Représente la soumission et le résultat d'un quiz pour un utilisateur donné
+class QuizSubmission(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='quiz_submissions')
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='submissions')
+    score = models.PositiveIntegerField()
+    total_questions = models.PositiveIntegerField()
+    is_passed = models.BooleanField(default=False)
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-submitted_at']
+        unique_together = ('user', 'quiz')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.quiz.title} ({self.score}/{self.total_questions})"
