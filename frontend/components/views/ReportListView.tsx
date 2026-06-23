@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getReports, deleteReport, updateReport, getBaseURL } from '@/lib/api';
+import { getReports, deleteReport, updateReport, getBaseURL, downloadAccidentPdf } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useView } from '@/context/ViewContext';
 import { Button } from '@/components/ui/button';
@@ -128,13 +128,16 @@ export default function ReportListView() {
                                     </div>
                                 )}
 
-                                {/* Boutons d'administration (Supprimer / Valider) */}
-                                {(user?.is_staff || user?.is_superuser) && (
-                                    <div className="flex gap-4 border-t border-gray-700 pt-4">
-                                        <Button variant="destructive" size="sm" onClick={() => handleDelete(report.id)}>Supprimer</Button>
-                                        <Button className="bg-green-600" size="sm" onClick={() => handleValidate(report.id)}>Valider</Button>
-                                    </div>
-                                )}
+                                {/* Boutons d'action et d'administration */}
+                                <div className="flex flex-wrap gap-4 border-t border-gray-700 pt-4">
+                                    {(user?.is_staff || user?.is_superuser) && (
+                                        <>
+                                            <Button variant="destructive" size="sm" onClick={() => handleDelete(report.id)}>Supprimer</Button>
+                                            <Button className="bg-green-600" size="sm" onClick={() => handleValidate(report.id)}>Valider</Button>
+                                        </>
+                                    )}
+                                    <Button className="bg-blue-600" size="sm" onClick={() => downloadAccidentPdf(report.id)}>Télécharger PDF</Button>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -169,11 +172,12 @@ export default function ReportListView() {
                                     </div>
                                 )}
 
-                                {(user?.is_staff || user?.is_superuser) && (
-                                    <div className="flex gap-2 border-t border-gray-700/50 pt-2">
+                                <div className="flex flex-wrap gap-2 border-t border-gray-700/50 pt-2">
+                                    {(user?.is_staff || user?.is_superuser) && (
                                         <Button variant="destructive" size="sm" className="h-7 text-[10px]" onClick={() => handleDelete(report.id)}>Supprimer</Button>
-                                    </div>
-                                )}
+                                    )}
+                                    <Button className="bg-blue-600 h-7 text-[10px]" onClick={() => downloadAccidentPdf(report.id)}>Télécharger PDF</Button>
+                                </div>
                             </div>
                         ))}
                         {reports.filter(r => r.published).length === 0 && (

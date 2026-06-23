@@ -1,7 +1,10 @@
 from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
 from django.db.models import Q
+from django.http import FileResponse
 from .models import AccidentReport
 from .serializers import AccidentReportSerializer
+from .utils import generate_accident_pdf
 
 # Définit qui peut voir ou créer des rapports d'accident
 class IsAdminOrReadOnly(permissions.BasePermission):
@@ -32,3 +35,12 @@ class AccidentReportViewSet(viewsets.ModelViewSet):
         # Enregistre le rapport avec l'utilisateur actuel comme auteur
         # Par défaut, on force le rapport à n'est pas "publié" tant qu'un admin ne le valide pas
         serializer.save(reporter=self.request.user, published=False)
+
+    @action(detail=True, methods=['get'])
+    def generate_pdf(self, request, pk=None):
+        report = self.get_object()
+        buffer = generate_accident_pdf(report)
+        from django.utils import timezone
+        local_date = timezone.localtime(report.created_at) if report.created_at else timezone.localtime()
+        filename = f"Rapport_Accident_{report.id}_{local_date.strftime('%Y%m%d')}.pdf"
+        return FileResponse(buffer, as_attachment=True, filename=filename)
