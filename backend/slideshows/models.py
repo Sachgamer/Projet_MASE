@@ -12,6 +12,8 @@ class Slideshow(models.Model):
     is_public = models.BooleanField(default=True)
     # Utilisateurs invités à cette causerie (leur présence est obligatoire)
     invited_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='invited_slideshows', blank=True)
+    # Date et heure de présence obligatoire pour la causerie
+    scheduled_date = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         return self.title

@@ -18,6 +18,7 @@ export default function SlideshowCreateView() {
     const [invitedUsers, setInvitedUsers] = useState<number[]>([]);
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [userSearch, setUserSearch] = useState('');
+    const [scheduledDate, setScheduledDate] = useState('');
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -36,12 +37,13 @@ export default function SlideshowCreateView() {
         e.preventDefault();
         setLoading(true);
         try {
-            // 1. Création de l'entité Slideshow (Titre + Description + Visibilité + Invitations)
+            // 1. Création de l'entité Slideshow (Titre + Description + Visibilité + Invitations + Date de présence)
             const response = await api.post('/api/slideshows/', { 
                 title, 
                 description,
                 is_public: isPublic,
-                invited_users: invitedUsers
+                invited_users: invitedUsers,
+                scheduled_date: scheduledDate ? new Date(scheduledDate).toISOString() : null
             });
             const slideshowId = response.data.id;
 
@@ -109,6 +111,16 @@ export default function SlideshowCreateView() {
                         maxLength={500}
                         rows={4}
                         className="mt-1 block w-full rounded-md bg-white/10 border-white/20 p-2 text-white"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="scheduledDate" className="block text-sm font-medium">Date de présence obligatoire (Optionnel)</label>
+                    <input
+                        type="datetime-local"
+                        id="scheduledDate"
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                        className="mt-1 block w-full rounded-md bg-white/10 border-white/20 p-2 text-white text-sm"
                     />
                 </div>
                 {/* Choix de la visibilité */}

@@ -7,7 +7,7 @@ from django.http import FileResponse
 from django.utils import timezone
 from .models import Slideshow, Quiz, Slide, Question, Choice
 from .serializers import SlideshowSerializer, QuizSerializer, SlideSerializer, QuestionSerializer, ChoiceSerializer
-from .utils import generate_quiz_pdf
+from .utils import generate_quiz_pdf, send_invitation_email
 
 # Permission qui permet la modification seulement au créateur de l'élément (ou à un admin)
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -53,7 +53,22 @@ class SlideshowViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         # Enregistre le créateur lors de la création
-        serializer.save(creator=self.request.user)
+        slideshow = serializer.save(creator=self.request.user)
+        # Envoyer l'email d'invitation à chaque utilisateur invité
+        for user in slideshow.invited_users.all():
+            send_invitation_email(user, slideshow)
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        # Conserver la liste des IDs des invités actuels avant la mise à jour
+        old_invited_ids = set(instance.invited_users.values_list('id', flat=True))
+        
+        slideshow = serializer.save()
+        
+        # Envoyer l'email aux nouveaux invités uniquement
+        for user in slideshow.invited_users.all():
+            if user.id not in old_invited_ids:
+                send_invitation_email(user, slideshow)
 
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def participants_report(self, request, pk=None):

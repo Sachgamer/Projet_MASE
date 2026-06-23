@@ -24,6 +24,7 @@ interface Slideshow {
     slides: Slide[];
     is_public: boolean;
     invited_users: number[];
+    scheduled_date: string | null;
 }
 
 // Vue détaillée d'une causerie (visionneuse de slides + gestion admin)
@@ -119,6 +120,7 @@ export default function SlideshowDetailView() {
     const [editDescription, setEditDescription] = useState('');
     const [editIsPublic, setEditIsPublic] = useState(true);
     const [editInvitedUsers, setEditInvitedUsers] = useState<number[]>([]);
+    const [editScheduledDate, setEditScheduledDate] = useState('');
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [userSearch, setUserSearch] = useState('');
     const [participantsReport, setParticipantsReport] = useState<any[] | null>(null);
@@ -164,6 +166,7 @@ export default function SlideshowDetailView() {
             setEditDescription(slideshow.description);
             setEditIsPublic(slideshow.is_public);
             setEditInvitedUsers(slideshow.invited_users || []);
+            setEditScheduledDate(slideshow.scheduled_date ? slideshow.scheduled_date.substring(0, 16) : '');
             setEditing(true);
         }
     };
@@ -177,7 +180,8 @@ export default function SlideshowDetailView() {
                     title: editTitle,
                     description: editDescription,
                     is_public: editIsPublic,
-                    invited_users: editInvitedUsers
+                    invited_users: editInvitedUsers,
+                    scheduled_date: editScheduledDate ? new Date(editScheduledDate).toISOString() : null
                 });
                 const updated = await api.get(`/api/slideshows/${id}/`);
                 setSlideshow(updated.data);
@@ -264,6 +268,15 @@ export default function SlideshowDetailView() {
                                     className="w-full border border-gray-300 rounded p-2 text-black mt-1"
                                     rows={3}
                                     required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Date de présence obligatoire</label>
+                                <input
+                                    type="datetime-local"
+                                    value={editScheduledDate}
+                                    onChange={(e) => setEditScheduledDate(e.target.value)}
+                                    className="w-full border border-gray-300 rounded p-2 text-black mt-1"
                                 />
                             </div>
 
@@ -353,6 +366,11 @@ export default function SlideshowDetailView() {
                 <div>
                     <h1 className="text-3xl font-bold">{slideshow.title}</h1>
                     <p className="text-gray-400 mt-2">{slideshow.description}</p>
+                    {slideshow.scheduled_date && (
+                        <p className="text-sm text-yellow-400 mt-1 font-semibold">
+                            Date de présence obligatoire : {new Date(slideshow.scheduled_date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                        </p>
+                    )}
                     <p className="text-sm text-gray-500 mt-1">Créé par {slideshow.creator}</p>
                 </div>
                 {isOwner && (

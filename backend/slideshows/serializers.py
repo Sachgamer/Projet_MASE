@@ -50,5 +50,5 @@ class SlideshowSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Slideshow
-        fields = ['id', 'title', 'description', 'creator', 'created_at', 'slides', 'quiz', 'is_public', 'invited_users']
+        fields = ['id', 'title', 'description', 'creator', 'created_at', 'slides', 'quiz', 'is_public', 'invited_users', 'scheduled_date']
         read_only_fields = ['creator', 'created_at']
