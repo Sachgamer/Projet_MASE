@@ -105,7 +105,6 @@ export default function QuizView() {
                 <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
                     <Button onClick={() => { setShowResults(false); setCurrentQuestionIndex(0); setScore(0); setAnswers([]); }}>Recommencer</Button>
                     <Button 
-                        variant="secondary" 
                         onClick={handleDownloadPDF} 
                         disabled={downloading}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
