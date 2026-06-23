@@ -159,7 +159,7 @@ def send_invitation_email(user, slideshow):
             f"{creator_name}"
         )
         
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@webmase.com')
+        from_email = 'noreply@webmase.com'
             
         if user.email:
             send_mail(

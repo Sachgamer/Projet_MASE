@@ -91,7 +91,7 @@ class BlockedMacAddress(models.Model):
             f"L'équipe WebMASE"
         )
 
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@webmase.com')
+        from_email = 'noreply@webmase.com'
         
         try:
             send_mail(
