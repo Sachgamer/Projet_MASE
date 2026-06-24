@@ -107,13 +107,56 @@ export default function ReportCreateView() {
         }
         setGeolocating(true);
         navigator.geolocation.getCurrentPosition(
-            (position) => {
+            async (position) => {
                 const { latitude, longitude } = position.coords;
-                setFormData(prev => ({
-                    ...prev,
-                    location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (Chantier extérieur)`
-                }));
-                setGeolocating(false);
+                try {
+                    // Appel à l'API de géocodage inverse Nominatim (OpenStreetMap)
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+                        {
+                            headers: {
+                                'Accept-Language': 'fr-FR,fr;q=0.9',
+                                'User-Agent': 'WebMASE-App'
+                            }
+                        }
+                    );
+                    if (!response.ok) throw new Error("Erreur de réponse de l'API de géocodage");
+                    const data = await response.json();
+                    
+                    // Extraire une adresse lisible et concise
+                    let addressString = '';
+                    if (data.address) {
+                        const road = data.address.road || data.address.pedestrian || data.address.suburb || '';
+                        const city = data.address.city || data.address.town || data.address.village || '';
+                        
+                        if (road && city) {
+                            addressString = `${road}, ${city}`;
+                        } else {
+                            addressString = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                        }
+                    } else {
+                        addressString = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                    }
+
+                    // Limiter la longueur de l'adresse pour ne pas dépasser la taille max de l'input (200 caractères)
+                    if (addressString.length > 180) {
+                        addressString = addressString.substring(0, 177) + '...';
+                    }
+
+                    setFormData(prev => ({
+                        ...prev,
+                        location: addressString
+                    }));
+                } catch (err) {
+                    console.error("Erreur de géocodage inverse:", err);
+                    // Repli sur les coordonnées GPS en cas d'erreur réseau/API
+                    setFormData(prev => ({
+                        ...prev,
+                        location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (Chantier extérieur)`
+                    }));
+                } finally {
+                    setGeolocating(false);
+                }
             },
             (err) => {
                 console.error("Erreur de géolocalisation:", err);
