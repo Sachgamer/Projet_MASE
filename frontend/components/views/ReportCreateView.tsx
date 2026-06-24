@@ -33,8 +33,7 @@ interface PreviewFile {
 export default function ReportCreateView() {
     const { setView } = useView();
     
-    // Étape active (1: Lieu & Date, 2: Détails, 3: Médias & Envoi)
-    const [step, setStep] = useState(1);
+    // Formulaire consolidé sur une page unique
     
     // État local pour les champs textuels du formulaire
     const [formData, setFormData] = useState({
@@ -741,19 +740,10 @@ export default function ReportCreateView() {
         }
     };
 
-    // Validations d'étape
-    const isStep1Valid = formData.location.trim().length > 0 && formData.incident_date !== '';
-    const isStep2Valid = formData.description.trim().length >= 10;
-
-    const nextStep = () => {
-        if (step === 1 && !isStep1Valid) return;
-        if (step === 2 && !isStep2Valid) return;
-        setStep(prev => prev + 1);
-    };
-
-    const prevStep = () => {
-        setStep(prev => prev - 1);
-    };
+    // Validation globale du formulaire
+    const isFormValid = formData.location.trim().length > 0 && 
+                        formData.incident_date !== '' && 
+                        formData.description.trim().length >= 10;
 
     // Explications et couleurs pour les niveaux de gravité
     const getSeverityDetails = (sev: string) => {
@@ -829,412 +819,269 @@ export default function ReportCreateView() {
                     </button>
                 </div>
 
-                {/* Indicateur d'Étapes */}
-                <div className="flex justify-between items-center mb-8 relative">
-                    <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-border -translate-y-1/2 z-0" />
-                    {[1, 2, 3].map((s) => (
-                        <div 
-                            key={s} 
-                            className={`relative z-10 flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm transition-all duration-300 border ${
-                                step === s 
-                                    ? 'bg-blue-600 border-blue-500 text-white ring-4 ring-blue-500/25 scale-110' 
-                                    : step > s 
-                                        ? 'bg-green-600 border-green-500 text-white' 
-                                        : 'bg-secondary dark:bg-muted border-border text-muted-foreground'
-                             }`}
-                        >
-                            {step > s ? <Check className="w-4 h-4" /> : s}
-                        </div>
-                    ))}
-                </div>
-
-                {error && (
-                    <div className="bg-red-500/10 border border-red-500/25 text-red-600 dark:text-red-200 p-4 rounded-xl mb-6 flex items-center gap-2 animate-in fade-in duration-200">
-                        <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                        <span className="text-sm font-medium">{error}</span>
-                    </div>
-                )}
-
+                {/* Indicateur d'Étapes supprimé - Formulaire en page unique */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     
-                    <AnimatePresence mode="wait">
-                        
-                        {/* ÉTAPE 1 : QUAND & OÙ */}
-                        {step === 1 && (
-                            <motion.div
-                                key="step1"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.2 }}
-                                className="space-y-6"
-                            >
-                                <div className="p-4 bg-secondary/60 dark:bg-secondary/40 border border-border/60 rounded-2xl">
-                                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-1">
-                                        <MapPin className="w-4 h-4 text-blue-500" />
-                                        Informations géographiques & temporelles
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground">Renseignez précisément où et quand s'est déroulé l'événement sur vos chantiers.</p>
-                                </div>
-
-                                {/* Lieu de l'incident */}
-                                <div className="relative">
-                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
-                                        <span>Lieu ou Nom du Chantier *</span>
-                                        <div className="flex flex-wrap gap-2 justify-end">
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsMapOpen(true)}
-                                                className="text-xs text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 flex items-center gap-1 cursor-pointer bg-green-500/10 hover:bg-green-500/20 px-2.5 py-1 rounded-lg border border-green-500/20"
-                                            >
-                                                <MapPin className="w-3 h-3" />
-                                                Choisir sur la carte
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleGeolocate}
-                                                disabled={geolocating}
-                                                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded-lg border border-blue-500/20"
-                                            >
-                                                <Navigation className={`w-3 h-3 ${geolocating ? 'animate-spin' : ''}`} />
-                                                {geolocating ? 'Géolocalisation...' : 'Me géolocaliser'}
-                                            </button>
-                                        </div>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="location"
-                                        value={formData.location}
-                                        onChange={handleChange}
-                                        required
-                                        maxLength={200}
-                                        autoComplete="off"
-                                        className="w-full p-3 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-muted-foreground text-sm"
-                                        placeholder="Ex: Chantier X - Autoroute A13, PK 24..."
-                                    />
-                                    
-                                    {locationAccuracy && locationAccuracy > 50 && !isManualTyping && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsMapOpen(true)}
-                                            className="w-full text-left text-[10px] text-orange-600 dark:text-orange-400 mt-1.5 flex items-center justify-between gap-1 bg-orange-500/10 border border-orange-500/25 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-orange-500/15 transition-all"
-                                        >
-                                            <span className="flex items-center gap-1">
-                                                ⚠️ Position approximative (+/- {Math.round(locationAccuracy)}m).
-                                            </span>
-                                            <span className="font-bold underline flex items-center gap-0.5">
-                                                Ajuster sur la carte ➔
-                                            </span>
-                                        </button>
-                                    )}
-
-                                    {/* Menu de suggestions (Nominatim Autocomplete) */}
-                                    {showSuggestions && suggestions.length > 0 && (
-                                        <div className="absolute z-[110] left-0 right-0 mt-1 bg-secondary border border-border rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border/40 backdrop-blur-md">
-                                            {suggestions.map((suggestion, idx) => {
-                                                const name = suggestion.name || '';
-                                                const road = suggestion.address?.road || '';
-                                                const city = suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || '';
-                                                return (
-                                                    <button
-                                                        key={idx}
-                                                        type="button"
-                                                        onClick={() => handleSelectSuggestion(suggestion)}
-                                                        className="w-full text-left p-3 hover:bg-muted/50 transition-colors text-xs text-foreground cursor-pointer flex flex-col gap-0.5 border-none bg-transparent"
-                                                    >
-                                                        {name && name !== road && (
-                                                            <span className="font-bold text-primary">{name}</span>
-                                                        )}
-                                                        <span className="text-foreground/90">
-                                                            {road ? `${road}, ` : ''}{city}
-                                                        </span>
-                                                        <span className="text-[10px] text-muted-foreground truncate">
-                                                            {suggestion.display_name}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Date & Heure */}
-                                <div>
-                                    <label className="block text-sm font-bold mb-2 flex items-center gap-1.5 text-foreground">
-                                        <Calendar className="w-4 h-4 text-blue-500" />
-                                        Date & Heure de l'incident *
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        name="incident_date"
-                                        value={formData.incident_date}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full p-3 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
-                                    />
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* ÉTAPE 2 : DÉTAILS DE L'INCIDENT */}
-                        {step === 2 && (
-                            <motion.div
-                                key="step2"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.2 }}
-                                className="space-y-6"
-                            >
-                                {/* Type de Remontée */}
-                                <div>
-                                    <label className="block text-sm font-bold mb-2 text-foreground">
-                                        Type de Remontée (Catégorie) *
-                                    </label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {[
-                                            { id: 'dangerous_situation', label: 'Situation dangereuse', color: 'border-yellow-500/30 dark:border-yellow-500/20 hover:border-yellow-500 text-yellow-600 dark:text-yellow-400' },
-                                            { id: 'near_miss', label: 'Presque accident', color: 'border-orange-500/30 dark:border-orange-500/20 hover:border-orange-500 text-orange-600 dark:text-orange-400' },
-                                            { id: 'accident', label: 'Accident', color: 'border-red-500/30 dark:border-red-500/20 hover:border-red-500 text-red-600 dark:text-red-400' },
-                                            { id: 'fatal_accident', label: 'Accident mortel', color: 'border-red-700/30 dark:border-red-900/40 hover:border-red-600 text-red-700 dark:text-red-500 bg-red-500/5 dark:bg-red-950/10' }
-                                        ].map((cat) => {
-                                            const isSelected = formData.incident_type === cat.id;
-                                            return (
-                                                <button
-                                                    key={cat.id}
-                                                    type="button"
-                                                    onClick={() => setFormData(prev => ({ ...prev, incident_type: cat.id }))}
-                                                    className={`p-3 rounded-xl border text-left text-sm font-semibold transition-all duration-200 flex justify-between items-center cursor-pointer ${
-                                                        isSelected 
-                                                            ? 'bg-blue-600 border-blue-500 text-white shadow-lg scale-[1.02]' 
-                                                            : `bg-input text-foreground border-border hover:bg-secondary/40 ${cat.color}`
-                                                    }`}
-                                                >
-                                                    <span>{cat.label}</span>
-                                                    {isSelected && <Check className="w-4 h-4 text-white" />}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                    <p className="text-[11px] text-muted-foreground mt-2 italic bg-secondary/55 p-2 rounded-lg border border-border/50">
-                                        💡 {activeCategory.desc}
-                                    </p>
-                                </div>
-
-                                {/* Niveau de Gravité */}
-                                <div>
-                                    <label className="block text-sm font-bold mb-2 text-foreground">
-                                        Niveau de Gravité estimé *
-                                    </label>
-                                    <div className="grid grid-cols-4 gap-2">
-                                        {[
-                                            { id: 'low', label: 'Faible', color: 'hover:border-green-500/40 hover:bg-green-500/5 dark:hover:bg-green-500/10', activeColor: 'bg-green-600 border-green-500' },
-                                            { id: 'medium', label: 'Moyen', color: 'hover:border-yellow-500/40 hover:bg-yellow-500/5 dark:hover:bg-yellow-500/10', activeColor: 'bg-yellow-600 border-yellow-500' },
-                                            { id: 'high', label: 'Élevé', color: 'hover:border-orange-500/40 hover:bg-orange-500/5 dark:hover:bg-orange-500/10', activeColor: 'bg-orange-600 border-orange-500' },
-                                            { id: 'critical', label: 'Critique', color: 'hover:border-red-500/40 hover:bg-red-500/5 dark:hover:bg-red-500/10', activeColor: 'bg-red-600 border-red-500' }
-                                        ].map((g) => {
-                                            const isSelected = formData.severity === g.id;
-                                            return (
-                                                <button
-                                                    key={g.id}
-                                                    type="button"
-                                                    onClick={() => setFormData(prev => ({ ...prev, severity: g.id }))}
-                                                    className={`py-2 px-1 rounded-lg border text-center text-xs font-bold transition-all cursor-pointer ${
-                                                        isSelected 
-                                                            ? `${g.activeColor} text-white shadow-md scale-105` 
-                                                            : `bg-input border-border text-foreground hover:bg-secondary/40 ${g.color}`
-                                                    }`}
-                                                >
-                                                    {g.label}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                    <p className="text-[11px] text-muted-foreground mt-2 italic bg-secondary/55 p-2 rounded-lg border border-border/50">
-                                        📌 {activeSeverity.desc}
-                                    </p>
-                                </div>
-
-                                {/* Description détaillée */}
-                                <div>
-                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
-                                        <span>Explication détaillée (Qu'est-ce qu'il s'est passé ?) *</span>
-                                        <span className={`text-xs ${formData.description.length >= 450 ? 'text-red-500 font-bold' : 'text-muted-foreground'}`}>
-                                            {formData.description.length} / 500
-                                        </span>
-                                    </label>
-                                    <div className="relative">
-                                        <span className="absolute top-3 left-3 text-muted-foreground pointer-events-none">
-                                            <FileText className="w-4 h-4" />
-                                        </span>
-                                        <textarea
-                                            name="description"
-                                            value={formData.description}
-                                            onChange={handleChange}
-                                            required
-                                            maxLength={500}
-                                            rows={5}
-                                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-muted-foreground text-sm"
-                                            placeholder="Décrivez précisément les faits, les équipements concernés, les mesures immédiates de protection prises..."
-                                        />
-                                    </div>
-                                    <span className="text-[10px] text-muted-foreground">Minimum 10 caractères. Soyez le plus factuel possible.</span>
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {/* ÉTAPE 3 : MÉDIAS ET ENVOI */}
-                        {step === 3 && (
-                            <motion.div
-                                key="step3"
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.2 }}
-                                className="space-y-6"
-                            >
-                                <div className="p-4 bg-secondary/60 dark:bg-secondary/40 border border-border/60 rounded-2xl">
-                                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-1">
-                                        <Camera className="w-4 h-4 text-blue-500" />
-                                        Preuves & médias joints (Facultatif)
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground">Ajoutez des photos ou des vidéos pour documenter la remontée d'accident. Limite globale de 200 Mo par fichier.</p>
-                                </div>
-
-                                {/* Zone Drag & Drop */}
-                                <div
-                                    onDragOver={handleDragOver}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={handleDrop}
-                                    onClick={() => document.getElementById('media-upload-form')?.click()}
-                                    className={`p-8 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all ${
-                                        isDragOver 
-                                            ? 'bg-blue-500/10 dark:bg-blue-600/10 border-blue-500 scale-[1.01]' 
-                                            : 'bg-secondary/30 dark:bg-secondary/20 border-border hover:border-primary hover:bg-secondary/50'
-                                    }`}
-                                >
-                                    <input
-                                        id="media-upload-form"
-                                        type="file"
-                                        multiple
-                                        accept="image/*,video/*"
-                                        onChange={(e) => {
-                                            if (e.target.files) {
-                                                addFiles(Array.from(e.target.files));
-                                            }
+                    {/* 1. TYPE DE REMONTÉE (CATÉGORIE) */}
+                    <div className="space-y-3">
+                        <label className="block text-sm font-bold text-foreground">
+                            Type de Remontée (Catégorie) *
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {[
+                                { id: 'dangerous_situation', label: 'Situation dangereuse', color: 'border-yellow-500/30 dark:border-yellow-500/20 hover:border-yellow-500 text-yellow-600 dark:text-yellow-400' },
+                                { id: 'near_miss', label: 'Presque accident', color: 'border-orange-500/30 dark:border-orange-500/20 hover:border-orange-500 text-orange-600 dark:text-orange-400' },
+                                { id: 'accident', label: 'Accident', color: 'border-red-500/30 dark:border-red-500/20 hover:border-red-500 text-red-600 dark:text-red-400' },
+                                { id: 'fatal_accident', label: 'Accident mortel', color: 'border-red-700/30 dark:border-red-900/40 hover:border-red-600 text-red-700 dark:text-red-500 bg-red-500/5 dark:bg-red-950/10' }
+                            ].map((cat) => {
+                                const isSelected = formData.incident_type === cat.id;
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        type="button"
+                                        onClick={() => {
+                                            const severityMapping: Record<string, string> = {
+                                                dangerous_situation: 'low',
+                                                near_miss: 'medium',
+                                                accident: 'high',
+                                                fatal_accident: 'critical'
+                                            };
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                incident_type: cat.id,
+                                                severity: severityMapping[cat.id] || 'low'
+                                            }));
                                         }}
-                                        className="hidden"
-                                    />
-                                    
-                                    <div className="flex flex-col items-center justify-center gap-3">
-                                        <div className="p-3 bg-input border border-border rounded-full text-muted-foreground">
-                                            <Paperclip className="w-6 h-6 text-blue-500" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-foreground">Faites glisser des fichiers ou cliquez pour importer</p>
-                                            <p className="text-xs text-muted-foreground mt-1">Formats acceptés : Photos (PNG, JPEG) et Vidéos (MP4, MOV)</p>
-                                        </div>
-                                    </div>
+                                        className={`p-3 rounded-xl border text-left text-sm font-semibold transition-all duration-200 flex justify-between items-center cursor-pointer ${
+                                            isSelected 
+                                                ? 'bg-blue-600 border-blue-500 text-white shadow-lg scale-[1.02]' 
+                                                : `bg-input text-foreground border-border hover:bg-secondary/40 ${cat.color}`
+                                        }`}
+                                    >
+                                        <span>{cat.label}</span>
+                                        {isSelected && <Check className="w-4 h-4 text-white" />}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground italic bg-secondary/55 p-2 rounded-lg border border-border/50">
+                            💡 {activeCategory.desc}
+                        </p>
+                    </div>
+
+                    {/* 2. INFOS GÉOGRAPHIQUES ET TEMPORELLES */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Lieu de l'incident */}
+                        <div className="relative">
+                            <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
+                                <span>Lieu ou Nom du Chantier *</span>
+                                <div className="flex flex-wrap gap-2 justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsMapOpen(true)}
+                                        className="text-[10px] text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 flex items-center gap-0.5 cursor-pointer bg-green-500/10 hover:bg-green-500/20 px-2 py-0.5 rounded-lg border border-green-500/20"
+                                    >
+                                        <MapPin className="w-2.5 h-2.5" />
+                                        Carte
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleGeolocate}
+                                        disabled={geolocating}
+                                        className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-0.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-blue-500/10 hover:bg-blue-500/20 px-2 py-0.5 rounded-lg border border-blue-500/20"
+                                    >
+                                        <Navigation className={`w-2.5 h-2.5 ${geolocating ? 'animate-spin' : ''}`} />
+                                        GPS
+                                    </button>
                                 </div>
+                            </label>
+                            <input
+                                type="text"
+                                name="location"
+                                value={formData.location}
+                                onChange={handleChange}
+                                required
+                                maxLength={200}
+                                autoComplete="off"
+                                className="w-full p-2.5 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-muted-foreground text-sm"
+                                placeholder="Ex: Chantier X - Autoroute A13..."
+                            />
+                            
+                            {locationAccuracy && locationAccuracy > 50 && !isManualTyping && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsMapOpen(true)}
+                                    className="w-full text-left text-[10px] text-orange-600 dark:text-orange-400 mt-1.5 flex items-center justify-between gap-1 bg-orange-500/10 border border-orange-500/25 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-orange-500/15 transition-all"
+                                >
+                                    <span className="flex items-center gap-1">
+                                        ⚠️ Précision (+/- {Math.round(locationAccuracy)}m).
+                                    </span>
+                                    <span className="font-bold underline">
+                                        Ajuster ➔
+                                    </span>
+                                </button>
+                            )}
 
-                                {/* Prévisualisations des miniatures */}
-                                {attachedFiles.length > 0 && (
-                                    <div className="space-y-3">
-                                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fichiers sélectionnés ({attachedFiles.length})</h4>
-                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                                            {attachedFiles.map((fileObj, idx) => (
-                                                <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-border bg-secondary flex items-center justify-center shadow-md">
-                                                    {fileObj.type === 'image' ? (
-                                                        <img src={fileObj.url} className="object-cover w-full h-full" alt="Miniature" />
-                                                    ) : (
-                                                        <div className="flex flex-col items-center justify-center p-2 text-center w-full h-full">
-                                                            <Video className="w-8 h-8 text-blue-500" />
-                                                            <span className="text-[9px] text-muted-foreground truncate w-full mt-1">{fileObj.file.name}</span>
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {/* Hover overlay de suppression */}
-                                                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-200">
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => { e.stopPropagation(); removeFile(idx); }}
-                                                            className="p-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white transition-colors cursor-pointer border-none"
-                                                            title="Supprimer le fichier"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Récapitulatif condensé */}
-                                <div className="p-4 bg-secondary/50 dark:bg-secondary/40 border border-border rounded-2xl space-y-2 text-xs text-foreground">
-                                    <h4 className="font-bold text-muted-foreground uppercase text-[10px] tracking-widest">Récapitulatif</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <span className="text-muted-foreground">Lieu :</span> {formData.location}
-                                        </div>
-                                        <div>
-                                            <span className="text-muted-foreground">Type d'incident :</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{activeCategory.label}</span>
-                                        </div>
-                                        <div>
-                                            <span className="text-muted-foreground">Gravité :</span> <span className="font-semibold text-orange-600 dark:text-orange-400">{activeSeverity.label}</span>
-                                        </div>
-                                        <div>
-                                            <span className="text-muted-foreground">Date :</span> {formData.incident_date ? new Date(formData.incident_date).toLocaleString('fr-FR') : ''}
-                                        </div>
-                                    </div>
+                            {/* Menu de suggestions (Nominatim Autocomplete) */}
+                            {showSuggestions && suggestions.length > 0 && (
+                                <div className="absolute z-[110] left-0 right-0 mt-1 bg-secondary border border-border rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border/40 backdrop-blur-md">
+                                    {suggestions.map((suggestion, idx) => {
+                                        const name = suggestion.name || '';
+                                        const road = suggestion.address?.road || '';
+                                        const city = suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || '';
+                                        return (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() => handleSelectSuggestion(suggestion)}
+                                                className="w-full text-left p-3 hover:bg-muted/50 transition-colors text-xs text-foreground cursor-pointer flex flex-col gap-0.5 border-none bg-transparent"
+                                            >
+                                                {name && name !== road && (
+                                                    <span className="font-bold text-primary">{name}</span>
+                                                )}
+                                                <span className="text-foreground/90">
+                                                    {road ? `${road}, ` : ''}{city}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground truncate">
+                                                    {suggestion.display_name}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-                            </motion.div>
-                        )}
-                        
-                    </AnimatePresence>
+                            )}
+                        </div>
 
-                    {/* Pied de formulaire : Boutons de navigation */}
-                    <div className="flex gap-4 border-t border-border pt-6 mt-6">
-                        {step > 1 && (
-                            <button
-                                type="button"
-                                onClick={prevStep}
-                                disabled={isSubmitting}
-                                className="flex-1 py-3 px-4 bg-secondary hover:bg-muted text-foreground font-bold rounded-xl border border-border transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
-                            >
-                                <ArrowLeft className="w-4 h-4" />
-                                Précédent
-                            </button>
-                        )}
+                        {/* Date & Heure */}
+                        <div>
+                            <label className="block text-sm font-bold mb-2 flex items-center gap-1.5 text-foreground">
+                                <Calendar className="w-4 h-4 text-blue-500" />
+                                Date & Heure de l'incident *
+                            </label>
+                            <input
+                                type="datetime-local"
+                                name="incident_date"
+                                value={formData.incident_date}
+                                onChange={handleChange}
+                                required
+                                className="w-full p-2.5 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
+                            />
+                        </div>
+                    </div>
+
+                    {/* 3. EXPLICATION DÉTAILLÉE */}
+                    <div>
+                        <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
+                            <span>Explication détaillée (Qu'est-ce qu'il s'est passé ?) *</span>
+                            <span className={`text-xs ${formData.description.length >= 450 ? 'text-red-500 font-bold' : 'text-muted-foreground'}`}>
+                                {formData.description.length} / 500
+                            </span>
+                        </label>
+                        <div className="relative">
+                            <span className="absolute top-3 left-3 text-muted-foreground pointer-events-none">
+                                <FileText className="w-4 h-4" />
+                            </span>
+                            <textarea
+                                name="description"
+                                value={formData.description}
+                                onChange={handleChange}
+                                required
+                                maxLength={500}
+                                rows={4}
+                                className="w-full pl-10 pr-4 py-3 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-muted-foreground text-sm"
+                                placeholder="Décrivez précisément les faits, les équipements concernés, les mesures immédiates de protection prises..."
+                            />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">Minimum 10 caractères. Soyez le plus factuel possible.</span>
+                    </div>
+
+                    {/* 4. PREUVES ET MÉDIAS JOINTS */}
+                    <div className="space-y-3">
+                        <label className="block text-sm font-bold text-foreground">
+                            Photos & Vidéos de preuve (Facultatif)
+                        </label>
                         
-                        {step < 3 ? (
-                            <button
-                                type="button"
-                                onClick={nextStep}
-                                disabled={(step === 1 && !isStep1Valid) || (step === 2 && !isStep2Valid)}
-                                className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-secondary dark:disabled:bg-secondary disabled:border-border disabled:text-muted-foreground text-white font-bold rounded-xl border-none transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                            >
-                                Continuer
-                                <ArrowRight className="w-4 h-4" />
-                            </button>
-                        ) : (
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className="flex-1 py-3 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:opacity-50 text-white font-bold rounded-xl border-none transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg uppercase tracking-wider"
-                            >
-                                {isSubmitting ? (
-                                    <>
-                                        Enregistrement en cours...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Send className="w-4 h-4" />
-                                        Envoyer la remontée
-                                    </>
-                                )}
-                            </button>
+                        {/* Zone Drag & Drop */}
+                        <div
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            onClick={() => document.getElementById('media-upload-form')?.click()}
+                            className={`p-6 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all ${
+                                isDragOver 
+                                    ? 'bg-blue-500/10 dark:bg-blue-600/10 border-blue-500 scale-[1.01]' 
+                                    : 'bg-secondary/30 dark:bg-secondary/20 border-border hover:border-primary hover:bg-secondary/50'
+                            }`}
+                        >
+                            <input
+                                id="media-upload-form"
+                                type="file"
+                                multiple
+                                accept="image/*,video/*"
+                                onChange={(e) => {
+                                    if (e.target.files) {
+                                        addFiles(Array.from(e.target.files));
+                                    }
+                                }}
+                                className="hidden"
+                            />
+                            
+                            <div className="flex flex-col items-center justify-center gap-2">
+                                <Paperclip className="w-5 h-5 text-blue-500 animate-pulse" />
+                                <div>
+                                    <p className="text-xs font-bold text-foreground">Glissez vos photos/vidéos ici ou cliquez pour importer</p>
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">Formats : Images (PNG, JPEG) et Vidéos (MP4, MOV)</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Prévisualisations des miniatures */}
+                        {attachedFiles.length > 0 && (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-3">
+                                {attachedFiles.map((fileObj, idx) => (
+                                    <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-border bg-secondary flex items-center justify-center shadow-md">
+                                        {fileObj.type === 'image' ? (
+                                            <img src={fileObj.url} className="object-cover w-full h-full" alt="Miniature" />
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center p-2 text-center w-full h-full">
+                                                <Video className="w-8 h-8 text-blue-500" />
+                                                <span className="text-[9px] text-muted-foreground truncate w-full mt-1">{fileObj.file.name}</span>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Hover overlay de suppression */}
+                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-200">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); removeFile(idx); }}
+                                                className="p-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white transition-colors cursor-pointer border-none"
+                                                title="Supprimer le fichier"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         )}
+                    </div>
+
+                    {/* Pied de formulaire : Bouton de validation */}
+                    <div className="border-t border-border pt-4 mt-6">
+                        <button
+                            type="submit"
+                            disabled={isSubmitting || !isFormValid}
+                            className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl border-none transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg uppercase tracking-wider"
+                        >
+                            {isSubmitting ? (
+                                <>Enregistrement en cours...</>
+                            ) : (
+                                <>
+                                    <Send className="w-4 h-4" />
+                                    Envoyer la remontée
+                                </>
+                            )}
+                        </button>
                     </div>
                 </form>
             </div>
