@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createReport } from '@/lib/api';
 import { useView } from '@/context/ViewContext';
 import { Button } from '@/components/ui/button';
