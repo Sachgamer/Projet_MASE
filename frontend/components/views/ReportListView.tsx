@@ -24,7 +24,8 @@ import {
     AlertTriangle, 
     ArrowUpDown, 
     ChevronDown, 
-    ChevronUp 
+    ChevronUp,
+    FileText
 } from 'lucide-react';
 
 // Interfaces représentant les photos et les remontées
