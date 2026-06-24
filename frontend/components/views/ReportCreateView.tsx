@@ -57,6 +57,13 @@ export default function ReportCreateView() {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // États pour le support du géocodage et de l'autocomplétion
+    const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [searchingSuggestions, setSearchingSuggestions] = useState(false);
+    const [isManualTyping, setIsManualTyping] = useState(false);
+
     // Vérifie si un brouillon existe dans le localStorage au montage
     useEffect(() => {
         const draft = localStorage.getItem('report_create_draft');
@@ -78,6 +85,40 @@ export default function ReportCreateView() {
             attachedFiles.forEach(file => URL.revokeObjectURL(file.url));
         };
     }, []);
+
+    // Recherche d'adresses en temps réel pour l'autocomplétion (Nominatim OpenStreetMap)
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (formData.location.trim().length > 3 && isManualTyping) {
+                setSearchingSuggestions(true);
+                try {
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(formData.location)}&countrycodes=fr&limit=5&addressdetails=1`,
+                        {
+                            headers: {
+                                'Accept-Language': 'fr-FR,fr;q=0.9',
+                                'User-Agent': 'WebMASE-App'
+                            }
+                        }
+                    );
+                    if (response.ok) {
+                        const data = await response.json();
+                        setSuggestions(data);
+                        setShowSuggestions(data.length > 0);
+                    }
+                } catch (err) {
+                    console.error("Erreur de recherche d'adresses:", err);
+                } finally {
+                    setSearchingSuggestions(false);
+                }
+            } else {
+                setSuggestions([]);
+                setShowSuggestions(false);
+            }
+        }, 500); // Debounce de 500ms
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [formData.location, isManualTyping]);
 
     // Restaure les données du brouillon
     const restoreDraft = () => {
@@ -106,9 +147,14 @@ export default function ReportCreateView() {
             return;
         }
         setGeolocating(true);
+        setLocationAccuracy(null);
         navigator.geolocation.getCurrentPosition(
             async (position) => {
-                const { latitude, longitude } = position.coords;
+                const { latitude, longitude, accuracy } = position.coords;
+                if (accuracy) {
+                    setLocationAccuracy(accuracy);
+                }
+                setIsManualTyping(false);
                 try {
                     // Appel à l'API de géocodage inverse Nominatim (OpenStreetMap)
                     const response = await fetch(
@@ -167,8 +213,44 @@ export default function ReportCreateView() {
         );
     };
 
+    // Sélection d'une adresse suggérée
+    const handleSelectSuggestion = (suggestion: any) => {
+        let addressString = '';
+        if (suggestion.address) {
+            const name = suggestion.name || '';
+            const road = suggestion.address.road || suggestion.address.pedestrian || suggestion.address.suburb || '';
+            const city = suggestion.address.city || suggestion.address.town || suggestion.address.village || '';
+            
+            // Si c'est un point d'intérêt nommé (magasin, entreprise) différent du nom de rue
+            if (name && name !== road) {
+                addressString = `${name} - ${road}, ${city}`;
+            } else if (road && city) {
+                addressString = `${road}, ${city}`;
+            } else {
+                addressString = suggestion.display_name;
+            }
+        } else {
+            addressString = suggestion.display_name;
+        }
+
+        if (addressString.length > 180) {
+            addressString = addressString.substring(0, 177) + '...';
+        }
+
+        setIsManualTyping(false);
+        setFormData(prev => ({
+            ...prev,
+            location: addressString
+        }));
+        setShowSuggestions(false);
+        setSuggestions([]);
+    };
+
     // Met à jour les champs de saisie standards
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        if (e.target.name === 'location') {
+            setIsManualTyping(true);
+        }
         setFormData({
             ...formData,
             [e.target.name]: e.target.value,
@@ -440,7 +522,7 @@ export default function ReportCreateView() {
                                 </div>
 
                                 {/* Lieu de l'incident */}
-                                <div>
+                                <div className="relative">
                                     <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
                                         <span>Lieu ou Nom du Chantier *</span>
                                         <button
@@ -460,9 +542,45 @@ export default function ReportCreateView() {
                                         onChange={handleChange}
                                         required
                                         maxLength={200}
+                                        autoComplete="off"
                                         className="w-full p-3 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-muted-foreground text-sm"
                                         placeholder="Ex: Chantier X - Autoroute A13, PK 24..."
                                     />
+                                    
+                                    {locationAccuracy && locationAccuracy > 50 && !isManualTyping && (
+                                        <p className="text-[10px] text-orange-600 dark:text-orange-400 mt-1.5 flex items-center gap-1 bg-orange-500/10 border border-orange-500/25 px-2.5 py-1 rounded-lg">
+                                            ⚠️ Position approximative (+/- {Math.round(locationAccuracy)}m). Vous pouvez saisir directement "Goron" pour autocompléter.
+                                        </p>
+                                    )}
+
+                                    {/* Menu de suggestions (Nominatim Autocomplete) */}
+                                    {showSuggestions && suggestions.length > 0 && (
+                                        <div className="absolute z-[110] left-0 right-0 mt-1 bg-secondary border border-border rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border/40 backdrop-blur-md">
+                                            {suggestions.map((suggestion, idx) => {
+                                                const name = suggestion.name || '';
+                                                const road = suggestion.address?.road || '';
+                                                const city = suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || '';
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onClick={() => handleSelectSuggestion(suggestion)}
+                                                        className="w-full text-left p-3 hover:bg-muted/50 transition-colors text-xs text-foreground cursor-pointer flex flex-col gap-0.5 border-none bg-transparent"
+                                                    >
+                                                        {name && name !== road && (
+                                                            <span className="font-bold text-primary">{name}</span>
+                                                        )}
+                                                        <span className="text-foreground/90">
+                                                            {road ? `${road}, ` : ''}{city}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground truncate">
+                                                            {suggestion.display_name}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Date & Heure */}
