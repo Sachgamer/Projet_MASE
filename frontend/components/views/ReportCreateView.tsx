@@ -76,6 +76,9 @@ export default function ReportCreateView() {
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
     const mapContainerRef = useRef<HTMLDivElement>(null);
+    const [mapLayerType, setMapLayerType] = useState<'streets' | 'satellite'>('streets');
+    const streetsLayerRef = useRef<any>(null);
+    const satelliteLayerRef = useRef<any>(null);
 
     // Chargement dynamique de Leaflet depuis le CDN
     useEffect(() => {
@@ -145,8 +148,20 @@ export default function ReportCreateView() {
             if (formData.location.trim().length > 3 && isManualTyping) {
                 setSearchingSuggestions(true);
                 try {
+                    let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(formData.location)}&countrycodes=fr&limit=5&addressdetails=1`;
+                    
+                    // Si des coordonnées de géolocalisation ou de carte sont déjà connues, prioriser la zone locale
+                    if (mapCoords) {
+                        const offset = 0.15;
+                        const left = mapCoords.lng - offset;
+                        const right = mapCoords.lng + offset;
+                        const bottom = mapCoords.lat - offset;
+                        const top = mapCoords.lat + offset;
+                        url += `&viewbox=${left},${top},${right},${bottom}`;
+                    }
+
                     const response = await fetch(
-                        `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(formData.location)}&countrycodes=fr&limit=5&addressdetails=1`,
+                        url,
                         {
                             headers: {
                                 'Accept-Language': 'fr-FR,fr;q=0.9',
@@ -171,7 +186,7 @@ export default function ReportCreateView() {
         }, 500); // Debounce de 500ms
 
         return () => clearTimeout(delayDebounceFn);
-    }, [formData.location, isManualTyping]);
+    }, [formData.location, isManualTyping, mapCoords]);
 
     // Restaure les données du brouillon
     const restoreDraft = () => {
@@ -244,6 +259,7 @@ export default function ReportCreateView() {
         // Déterminer les coordonnées initiales de centrage
         let initialLat = 51.0348;
         let initialLng = 2.3768;
+        let hasCoords = false;
 
         // Essayer de lire depuis formData.location si elle contient des coordonnées lat/lng
         const coordRegex = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/;
@@ -251,19 +267,16 @@ export default function ReportCreateView() {
         if (match) {
             initialLat = parseFloat(match[1]);
             initialLng = parseFloat(match[2]);
+            hasCoords = true;
         } else if (mapCoords) {
             initialLat = mapCoords.lat;
             initialLng = mapCoords.lng;
+            hasCoords = true;
         }
 
-        // Créer l'instance de la carte
+        // Créer l'instance de la carte immédiatement
         const map = L.map(mapContainerRef.current).setView([initialLat, initialLng], 15);
         mapRef.current = map;
-
-        // Ajouter la couche de tuiles OpenStreetMap
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
 
         // Ajouter le marqueur déplaçable
         const marker = L.marker([initialLat, initialLng], {
@@ -274,6 +287,28 @@ export default function ReportCreateView() {
         // Effectuer un géocodage inverse initial
         setMapCoords({ lat: initialLat, lng: initialLng });
         reverseGeocode(initialLat, initialLng);
+
+        // Si aucune coordonnée n'était pré-enregistrée, interroger immédiatement le GPS de l'appareil
+        // et centrer automatiquement la carte dessus une fois résolu.
+        if (!hasCoords && navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude, accuracy } = position.coords;
+                    if (accuracy) {
+                        setLocationAccuracy(accuracy);
+                    }
+                    const resolvedCoords = { lat: latitude, lng: longitude };
+                    setMapCoords(resolvedCoords);
+                    map.setView([latitude, longitude], 16);
+                    marker.setLatLng([latitude, longitude]);
+                    reverseGeocode(latitude, longitude);
+                },
+                (err) => {
+                    console.warn("Géolocalisation automatique au démarrage de la carte échouée:", err);
+                },
+                { enableHighAccuracy: true, timeout: 6000 }
+            );
+        }
 
         // Événement clic sur la carte pour déplacer le marqueur
         map.on('click', (e: any) => {
@@ -290,27 +325,99 @@ export default function ReportCreateView() {
             reverseGeocode(position.lat, position.lng);
         });
 
+        // Écouter le redimensionnement de la fenêtre pour rafraîchir constamment le rendu de la carte
+        const handleResize = () => {
+            if (mapRef.current) {
+                mapRef.current.invalidateSize();
+            }
+        };
+        window.addEventListener('resize', handleResize);
+
         // Invalidation de la taille pour s'assurer que Leaflet s'affiche correctement
         setTimeout(() => {
             map.invalidateSize();
         }, 200);
 
         return () => {
+            window.removeEventListener('resize', handleResize);
             if (mapRef.current) {
                 mapRef.current.remove();
                 mapRef.current = null;
             }
             markerRef.current = null;
+            streetsLayerRef.current = null;
+            satelliteLayerRef.current = null;
         };
     }, [isMapOpen, leafletLoaded]);
 
-    // Recherche de lieux au sein du modal de carte (Nominatim)
+    // Gestion dynamique du basculement des couches de tuiles (Plan vs Satellite)
+    useEffect(() => {
+        if (!mapRef.current || !isMapOpen) return;
+        const L = (window as any).L;
+        if (!L) return;
+
+        // Supprimer l'ancienne couche si existante
+        if (streetsLayerRef.current) {
+            mapRef.current.removeLayer(streetsLayerRef.current);
+            streetsLayerRef.current = null;
+        }
+        if (satelliteLayerRef.current) {
+            mapRef.current.removeLayer(satelliteLayerRef.current);
+            satelliteLayerRef.current = null;
+        }
+
+        const isDarkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+        const tileStyle = isDarkMode ? 'dark_all' : 'rastertiles/voyager';
+
+        if (mapLayerType === 'streets') {
+            streetsLayerRef.current = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${tileStyle}/{z}/{x}/{y}` + (L.Browser.retina ? '@2x.png' : '.png'), {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(mapRef.current);
+        } else {
+            satelliteLayerRef.current = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19
+            }).addTo(mapRef.current);
+        }
+    }, [mapLayerType, isMapOpen, leafletLoaded]);
+
+    // Mise à jour automatique de l'infobulle (popup) sur le marqueur pour afficher l'adresse en direct
+    useEffect(() => {
+        if (markerRef.current && mapAddress) {
+            markerRef.current.bindPopup(
+                `<div style="font-family: inherit; font-size: 11px; font-weight: 700; color: #1e293b; text-align: center; max-width: 180px;">
+                    ${mapAddress}
+                 </div>`,
+                {
+                    closeButton: false,
+                    autoClose: false,
+                    closeOnClick: false
+                }
+            ).openPopup();
+        }
+    }, [mapAddress]);
+
+    // Recherche de lieux au sein du modal de carte (avec zone de géolocalisation pour prioriser les résultats locaux)
     const handleMapSearch = async () => {
         if (!mapSearchQuery.trim()) return;
         setIsSearchingMap(true);
         try {
+            let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(mapSearchQuery)}&countrycodes=fr&limit=5&addressdetails=1`;
+            
+            // Si des coordonnées de carte/GPS sont définies, ajouter un biais géographique de proximité (viewbox)
+            if (mapCoords) {
+                const offset = 0.15; // Rayon de ~15-20km autour des coordonnées actuelles
+                const left = mapCoords.lng - offset;
+                const right = mapCoords.lng + offset;
+                const bottom = mapCoords.lat - offset;
+                const top = mapCoords.lat + offset;
+                url += `&viewbox=${left},${top},${right},${bottom}`;
+            }
+            
             const response = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(mapSearchQuery)}&countrycodes=fr&limit=5&addressdetails=1`,
+                url,
                 {
                     headers: {
                         'Accept-Language': 'fr-FR,fr;q=0.9',
@@ -1163,7 +1270,7 @@ export default function ReportCreateView() {
                         </div>
 
                         {/* Barre de recherche dans le modal */}
-                        <div className="relative flex gap-2">
+                        <div className="relative flex flex-col sm:flex-row gap-2">
                             <div className="relative flex-grow">
                                 <input
                                     type="text"
@@ -1191,14 +1298,42 @@ export default function ReportCreateView() {
                                     </button>
                                 )}
                             </div>
-                            <button
-                                type="button"
-                                onClick={handleMapSearch}
-                                disabled={isSearchingMap}
-                                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1"
-                            >
-                                {isSearchingMap ? '...' : 'Rechercher'}
-                            </button>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleMapSearch}
+                                    disabled={isSearchingMap}
+                                    className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1 flex-grow sm:flex-grow-0"
+                                >
+                                    {isSearchingMap ? '...' : 'Rechercher'}
+                                </button>
+                                
+                                {/* Sélecteur de type de carte (Plan / Satellite) */}
+                                <div className="flex items-center bg-secondary border border-border rounded-xl p-0.5 shadow-sm">
+                                    <button
+                                        type="button"
+                                        onClick={() => setMapLayerType('streets')}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                            mapLayerType === 'streets'
+                                                ? 'bg-blue-600 text-white shadow'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        }`}
+                                    >
+                                        Plan
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setMapLayerType('satellite')}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                            mapLayerType === 'satellite'
+                                                ? 'bg-blue-600 text-white shadow'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                        }`}
+                                    >
+                                        Satellite
+                                    </button>
+                                </div>
+                            </div>
 
                             {/* Suggestions de recherche */}
                             {mapSearchSuggestions.length > 0 && (
