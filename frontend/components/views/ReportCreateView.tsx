@@ -281,7 +281,7 @@ export default function ReportCreateView() {
             case 'medium': return { label: 'Moyenne', desc: 'Dégât matériel léger ou incident corporel mineur sans arrêt.', border: 'border-l-yellow-500', glow: 'shadow-[0_0_20px_rgba(234,179,8,0.15)] focus-within:ring-yellow-500/50' };
             case 'high': return { label: 'Élevée', desc: 'Accident avec arrêt de travail ou dégât matériel notable.', border: 'border-l-orange-500', glow: 'shadow-[0_0_20px_rgba(249,115,22,0.2)] focus-within:ring-orange-500/50' };
             case 'critical': return { label: 'Critique', desc: 'Accident très grave, hospitalisation urgente ou décès.', border: 'border-l-red-600 shadow-[inset_4px_0_0_0_rgba(239,68,68,0.5)]', glow: 'shadow-[0_0_25px_rgba(239,68,68,0.25)] focus-within:ring-red-500/50' };
-            default: return { label: sev, desc: '', border: 'border-l-gray-750 dark:border-l-gray-700', glow: '' };
+            default: return { label: sev, desc: '', border: 'border-l-border', glow: '' };
         }
     };
 
@@ -300,7 +300,7 @@ export default function ReportCreateView() {
     const activeCategory = getCategoryDetails(formData.incident_type);
 
     return (
-        <div className="max-w-2xl mx-auto py-8 px-4 text-gray-900 dark:text-white">
+        <div className="max-w-2xl mx-auto py-8 px-4 text-foreground">
             
             {/* Bannière de Restauration de Brouillon */}
             {hasDraft && (
@@ -308,8 +308,8 @@ export default function ReportCreateView() {
                     <div className="flex items-start gap-3">
                         <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                         <div>
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Brouillon en cours trouvé</h4>
-                            <p className="text-xs text-gray-600 dark:text-blue-200">Vous avez un rapport non validé enregistré localement.</p>
+                            <h4 className="text-sm font-bold text-foreground">Brouillon en cours trouvé</h4>
+                            <p className="text-xs text-muted-foreground">Vous avez un rapport non validé enregistré localement.</p>
                         </div>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
@@ -321,7 +321,7 @@ export default function ReportCreateView() {
                         </button>
                         <button 
                             onClick={discardDraft}
-                            className="px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer w-full sm:w-auto text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                            className="px-3 py-1.5 bg-input dark:bg-secondary hover:bg-secondary dark:hover:bg-muted text-xs font-semibold rounded-lg border border-border cursor-pointer w-full sm:w-auto text-foreground hover:text-primary transition-colors"
                         >
                             Ignorer
                         </button>
@@ -330,19 +330,19 @@ export default function ReportCreateView() {
             )}
 
             {/* Container Principal du Formulaire */}
-            <div className={`bg-white dark:bg-gray-800/80 backdrop-blur-md p-6 md:p-8 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700/50 transition-all duration-300 border-l-4 ${activeSeverity.border} ${activeSeverity.glow}`}>
+            <div className={`bg-secondary/50 dark:bg-secondary/80 backdrop-blur-md p-6 md:p-8 rounded-3xl shadow-2xl border border-border transition-all duration-300 border-l-4 ${activeSeverity.border} ${activeSeverity.glow}`}>
                 
                 {/* En-tête */}
-                <div className="mb-8 border-b border-gray-200 dark:border-gray-700/60 pb-6 flex justify-between items-center">
+                <div className="mb-8 border-b border-border pb-6 flex justify-between items-center">
                     <div>
                         <h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent uppercase">
                             Déclarer une remontée
                         </h1>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Formulaire de sécurité obligatoire conforme aux normes MASE.</p>
+                        <p className="text-xs text-muted-foreground mt-1">Formulaire de sécurité obligatoire conforme aux normes MASE.</p>
                     </div>
                     <button
                         onClick={() => setView('report-list')}
-                        className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-350 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/50 px-3 py-1.5 rounded-lg transition-all cursor-pointer bg-transparent"
+                        className="text-xs text-muted-foreground hover:text-primary border border-border hover:bg-secondary px-3 py-1.5 rounded-lg transition-all cursor-pointer bg-transparent"
                     >
                         Retour historique
                     </button>
@@ -350,7 +350,7 @@ export default function ReportCreateView() {
 
                 {/* Indicateur d'Étapes */}
                 <div className="flex justify-between items-center mb-8 relative">
-                    <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-gray-200 dark:bg-gray-700 -translate-y-1/2 z-0" />
+                    <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-border -translate-y-1/2 z-0" />
                     {[1, 2, 3].map((s) => (
                         <div 
                             key={s} 
@@ -359,7 +359,7 @@ export default function ReportCreateView() {
                                     ? 'bg-blue-600 border-blue-500 text-white ring-4 ring-blue-500/25 scale-110' 
                                     : step > s 
                                         ? 'bg-green-600 border-green-500 text-white' 
-                                        : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400'
+                                        : 'bg-secondary dark:bg-muted border-border text-muted-foreground'
                              }`}
                         >
                             {step > s ? <Check className="w-4 h-4" /> : s}
@@ -388,17 +388,17 @@ export default function ReportCreateView() {
                                 transition={{ duration: 0.2 }}
                                 className="space-y-6"
                             >
-                                <div className="p-4 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl">
-                                    <h3 className="text-sm font-bold text-gray-800 dark:text-gray-300 flex items-center gap-2 mb-1">
+                                <div className="p-4 bg-secondary/60 dark:bg-secondary/40 border border-border/60 rounded-2xl">
+                                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-1">
                                         <MapPin className="w-4 h-4 text-blue-500" />
                                         Informations géographiques & temporelles
                                     </h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Renseignez précisément où et quand s'est déroulé l'événement sur vos chantiers.</p>
+                                    <p className="text-xs text-muted-foreground">Renseignez précisément où et quand s'est déroulé l'événement sur vos chantiers.</p>
                                 </div>
 
                                 {/* Lieu de l'incident */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center text-gray-800 dark:text-white">
+                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
                                         <span>Lieu ou Nom du Chantier *</span>
                                         <button
                                             type="button"
@@ -417,14 +417,14 @@ export default function ReportCreateView() {
                                         onChange={handleChange}
                                         required
                                         maxLength={200}
-                                        className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900/60 text-gray-950 dark:text-white border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400 dark:placeholder-gray-500 text-sm"
+                                        className="w-full p-3 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-muted-foreground text-sm"
                                         placeholder="Ex: Chantier X - Autoroute A13, PK 24..."
                                     />
                                 </div>
 
                                 {/* Date & Heure */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 flex items-center gap-1.5 text-gray-800 dark:text-white">
+                                    <label className="block text-sm font-bold mb-2 flex items-center gap-1.5 text-foreground">
                                         <Calendar className="w-4 h-4 text-blue-500" />
                                         Date & Heure de l'incident *
                                     </label>
@@ -434,7 +434,7 @@ export default function ReportCreateView() {
                                         value={formData.incident_date}
                                         onChange={handleChange}
                                         required
-                                        className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900/60 text-gray-950 dark:text-white border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                        className="w-full p-3 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
                                     />
                                 </div>
                             </motion.div>
@@ -452,7 +452,7 @@ export default function ReportCreateView() {
                             >
                                 {/* Type de Remontée */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 text-gray-800 dark:text-white">
+                                    <label className="block text-sm font-bold mb-2 text-foreground">
                                         Type de Remontée (Catégorie) *
                                     </label>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -471,7 +471,7 @@ export default function ReportCreateView() {
                                                     className={`p-3 rounded-xl border text-left text-sm font-semibold transition-all duration-200 flex justify-between items-center cursor-pointer ${
                                                         isSelected 
                                                             ? 'bg-blue-600 border-blue-500 text-white shadow-lg scale-[1.02]' 
-                                                            : `bg-gray-50 dark:bg-gray-900/60 text-gray-700 dark:text-gray-300 ${cat.color}`
+                                                            : `bg-input text-foreground border-border hover:bg-secondary/40 ${cat.color}`
                                                     }`}
                                                 >
                                                     <span>{cat.label}</span>
@@ -480,14 +480,14 @@ export default function ReportCreateView() {
                                             );
                                         })}
                                     </div>
-                                    <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-2 italic bg-gray-50 dark:bg-gray-900/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700/20">
+                                    <p className="text-[11px] text-muted-foreground mt-2 italic bg-secondary/55 p-2 rounded-lg border border-border/50">
                                         💡 {activeCategory.desc}
                                     </p>
                                 </div>
 
                                 {/* Niveau de Gravité */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 text-gray-800 dark:text-white">
+                                    <label className="block text-sm font-bold mb-2 text-foreground">
                                         Niveau de Gravité estimé *
                                     </label>
                                     <div className="grid grid-cols-4 gap-2">
@@ -506,7 +506,7 @@ export default function ReportCreateView() {
                                                     className={`py-2 px-1 rounded-lg border text-center text-xs font-bold transition-all cursor-pointer ${
                                                         isSelected 
                                                             ? `${g.activeColor} text-white shadow-md scale-105` 
-                                                            : `bg-gray-50 dark:bg-gray-900/60 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 ${g.color}`
+                                                            : `bg-input border-border text-foreground hover:bg-secondary/40 ${g.color}`
                                                     }`}
                                                 >
                                                     {g.label}
@@ -514,21 +514,21 @@ export default function ReportCreateView() {
                                             );
                                         })}
                                     </div>
-                                    <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-2 italic bg-gray-50 dark:bg-gray-900/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700/20">
+                                    <p className="text-[11px] text-muted-foreground mt-2 italic bg-secondary/55 p-2 rounded-lg border border-border/50">
                                         📌 {activeSeverity.desc}
                                     </p>
                                 </div>
 
                                 {/* Description détaillée */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center text-gray-800 dark:text-white">
+                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
                                         <span>Explication détaillée (Qu'est-ce qu'il s'est passé ?) *</span>
-                                        <span className={`text-xs ${formData.description.length >= 450 ? 'text-red-500 font-bold' : 'text-gray-500 dark:text-gray-400'}`}>
+                                        <span className={`text-xs ${formData.description.length >= 450 ? 'text-red-500 font-bold' : 'text-muted-foreground'}`}>
                                             {formData.description.length} / 500
                                         </span>
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute top-3 left-3 text-gray-400 pointer-events-none">
+                                        <span className="absolute top-3 left-3 text-muted-foreground pointer-events-none">
                                             <FileText className="w-4 h-4" />
                                         </span>
                                         <textarea
@@ -538,11 +538,11 @@ export default function ReportCreateView() {
                                             required
                                             maxLength={500}
                                             rows={5}
-                                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900/60 text-gray-950 dark:text-white border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400 dark:placeholder-gray-500 text-sm"
+                                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-muted-foreground text-sm"
                                             placeholder="Décrivez précisément les faits, les équipements concernés, les mesures immédiates de protection prises..."
                                         />
                                     </div>
-                                    <span className="text-[10px] text-gray-500">Minimum 10 caractères. Soyez le plus factuel possible.</span>
+                                    <span className="text-[10px] text-muted-foreground">Minimum 10 caractères. Soyez le plus factuel possible.</span>
                                 </div>
                             </motion.div>
                         )}
@@ -557,12 +557,12 @@ export default function ReportCreateView() {
                                 transition={{ duration: 0.2 }}
                                 className="space-y-6"
                             >
-                                <div className="p-4 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl">
-                                    <h3 className="text-sm font-bold text-gray-800 dark:text-gray-300 flex items-center gap-2 mb-1">
+                                <div className="p-4 bg-secondary/60 dark:bg-secondary/40 border border-border/60 rounded-2xl">
+                                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-1">
                                         <Camera className="w-4 h-4 text-blue-500" />
                                         Preuves & médias joints (Facultatif)
                                     </h3>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Ajoutez des photos ou des vidéos pour documenter la remontée d'accident. Limite globale de 200 Mo par fichier.</p>
+                                    <p className="text-xs text-muted-foreground">Ajoutez des photos ou des vidéos pour documenter la remontée d'accident. Limite globale de 200 Mo par fichier.</p>
                                 </div>
 
                                 {/* Zone Drag & Drop */}
@@ -574,7 +574,7 @@ export default function ReportCreateView() {
                                     className={`p-8 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all ${
                                         isDragOver 
                                             ? 'bg-blue-500/10 dark:bg-blue-600/10 border-blue-500 scale-[1.01]' 
-                                            : 'bg-gray-50 dark:bg-gray-900/40 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-900/60'
+                                            : 'bg-secondary/30 dark:bg-secondary/20 border-border hover:border-primary hover:bg-secondary/50'
                                     }`}
                                 >
                                     <input
@@ -591,12 +591,12 @@ export default function ReportCreateView() {
                                     />
                                     
                                     <div className="flex flex-col items-center justify-center gap-3">
-                                        <div className="p-3 bg-white dark:bg-gray-850 border border-gray-250 dark:border-gray-700 rounded-full text-gray-500">
+                                        <div className="p-3 bg-input border border-border rounded-full text-muted-foreground">
                                             <Paperclip className="w-6 h-6 text-blue-500" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold text-gray-900 dark:text-white">Faites glisser des fichiers ou cliquez pour importer</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formats acceptés : Photos (PNG, JPEG) et Vidéos (MP4, MOV)</p>
+                                            <p className="text-sm font-bold text-foreground">Faites glisser des fichiers ou cliquez pour importer</p>
+                                            <p className="text-xs text-muted-foreground mt-1">Formats acceptés : Photos (PNG, JPEG) et Vidéos (MP4, MOV)</p>
                                         </div>
                                     </div>
                                 </div>
@@ -604,16 +604,16 @@ export default function ReportCreateView() {
                                 {/* Prévisualisations des miniatures */}
                                 {attachedFiles.length > 0 && (
                                     <div className="space-y-3">
-                                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fichiers sélectionnés ({attachedFiles.length})</h4>
+                                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fichiers sélectionnés ({attachedFiles.length})</h4>
                                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                                             {attachedFiles.map((fileObj, idx) => (
-                                                <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-center shadow-md">
+                                                <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-border bg-secondary flex items-center justify-center shadow-md">
                                                     {fileObj.type === 'image' ? (
                                                         <img src={fileObj.url} className="object-cover w-full h-full" alt="Miniature" />
                                                     ) : (
                                                         <div className="flex flex-col items-center justify-center p-2 text-center w-full h-full">
                                                             <Video className="w-8 h-8 text-blue-500" />
-                                                            <span className="text-[9px] text-gray-500 dark:text-gray-400 truncate w-full mt-1">{fileObj.file.name}</span>
+                                                            <span className="text-[9px] text-muted-foreground truncate w-full mt-1">{fileObj.file.name}</span>
                                                         </div>
                                                     )}
                                                     
@@ -635,20 +635,20 @@ export default function ReportCreateView() {
                                 )}
 
                                 {/* Récapitulatif condensé */}
-                                <div className="p-4 bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-2xl space-y-2 text-xs text-gray-600 dark:text-gray-300">
-                                    <h4 className="font-bold text-gray-400 dark:text-gray-500 uppercase text-[10px] tracking-widest">Récapitulatif</h4>
+                                <div className="p-4 bg-secondary/50 dark:bg-secondary/40 border border-border rounded-2xl space-y-2 text-xs text-foreground">
+                                    <h4 className="font-bold text-muted-foreground uppercase text-[10px] tracking-widest">Récapitulatif</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <span className="text-gray-400 dark:text-gray-500">Lieu :</span> {formData.location}
+                                            <span className="text-muted-foreground">Lieu :</span> {formData.location}
                                         </div>
                                         <div>
-                                            <span className="text-gray-400 dark:text-gray-500">Type d'incident :</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{activeCategory.label}</span>
+                                            <span className="text-muted-foreground">Type d'incident :</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{activeCategory.label}</span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-400 dark:text-gray-500">Gravité :</span> <span className="font-semibold text-orange-600 dark:text-orange-400">{activeSeverity.label}</span>
+                                            <span className="text-muted-foreground">Gravité :</span> <span className="font-semibold text-orange-600 dark:text-orange-400">{activeSeverity.label}</span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-400 dark:text-gray-500">Date :</span> {formData.incident_date ? new Date(formData.incident_date).toLocaleString('fr-FR') : ''}
+                                            <span className="text-muted-foreground">Date :</span> {formData.incident_date ? new Date(formData.incident_date).toLocaleString('fr-FR') : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -658,13 +658,13 @@ export default function ReportCreateView() {
                     </AnimatePresence>
 
                     {/* Pied de formulaire : Boutons de navigation */}
-                    <div className="flex gap-4 border-t border-gray-200 dark:border-gray-700/60 pt-6 mt-6">
+                    <div className="flex gap-4 border-t border-border pt-6 mt-6">
                         {step > 1 && (
                             <button
                                 type="button"
                                 onClick={prevStep}
                                 disabled={isSubmitting}
-                                className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-850 dark:text-white font-bold rounded-xl border border-gray-300 dark:border-gray-600 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                                className="flex-1 py-3 px-4 bg-secondary hover:bg-muted text-foreground font-bold rounded-xl border border-border transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                             >
                                 <ArrowLeft className="w-4 h-4" />
                                 Précédent
@@ -676,7 +676,7 @@ export default function ReportCreateView() {
                                 type="button"
                                 onClick={nextStep}
                                 disabled={(step === 1 && !isStep1Valid) || (step === 2 && !isStep2Valid)}
-                                className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:border-gray-200 dark:disabled:border-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500 text-white font-bold rounded-xl border-none transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                                className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-secondary dark:disabled:bg-secondary disabled:border-border disabled:text-muted-foreground text-white font-bold rounded-xl border-none transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md"
                             >
                                 Continuer
                                 <ArrowRight className="w-4 h-4" />
