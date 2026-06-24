@@ -169,10 +169,18 @@ export default function ReportCreateView() {
                             accept="image/*,video/*"
                             onChange={(e) => {
                                 const files = Array.from(e.target.files || []);
+                                const newImages: File[] = [];
                                 files.forEach(file => {
-                                    if (file.type.startsWith('image/')) setImage(file);
-                                    if (file.type.startsWith('video/')) setVideo(file);
+                                    if (file.type.startsWith('image/')) {
+                                        newImages.push(file);
+                                    }
+                                    if (file.type.startsWith('video/')) {
+                                        setVideo(file);
+                                    }
                                 });
+                                if (newImages.length > 0) {
+                                    setImages(prev => [...prev, ...newImages]);
+                                }
                             }}
                             className="hidden"
                         />
@@ -180,29 +188,37 @@ export default function ReportCreateView() {
                             <button
                                 type="button"
                                 onClick={() => document.getElementById('media-upload')?.click()}
-                                className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg border border-gray-600 transition-all shadow-lg"
+                                className="flex items-center gap-2 px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg border border-gray-600 transition-all shadow-lg cursor-pointer"
                             >
                                 <Paperclip className="w-5 h-5 text-red-500" />
                                 Ajouter des médias
                             </button>
 
                             {/* Prévisualisation des noms de fichiers sélectionnés */}
-                            {(image || video) && (
+                            {(images.length > 0 || video) && (
                                 <div className="flex flex-wrap gap-2">
-                                    {image && (
-                                        <div className="flex items-center gap-2 bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">
+                                    {images.map((img, index) => (
+                                        <div key={index} className="flex items-center gap-2 bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">
                                             <ImageIcon className="w-4 h-4 text-red-400" />
-                                            <span className="text-xs text-red-400 truncate max-w-[150px]">{image.name}</span>
-                                            <button type="button" onClick={() => setImage(null)} className="text-red-500 hover:text-white">
+                                            <span className="text-xs text-red-400 truncate max-w-[150px]">{img.name}</span>
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setImages(prev => prev.filter((_, i) => i !== index))} 
+                                                className="text-red-500 hover:text-white cursor-pointer"
+                                            >
                                                 <X className="w-3 h-3" />
                                             </button>
                                         </div>
-                                    )}
+                                    ))}
                                     {video && (
                                         <div className="flex items-center gap-2 bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">
                                             <Video className="w-4 h-4 text-blue-400" />
                                             <span className="text-xs text-blue-400 truncate max-w-[150px]">{video.name}</span>
-                                            <button type="button" onClick={() => setVideo(null)} className="text-blue-500 hover:text-white">
+                                            <button 
+                                                type="button" 
+                                                onClick={() => setVideo(null)} 
+                                                className="text-blue-500 hover:text-white cursor-pointer"
+                                            >
                                                 <X className="w-3 h-3" />
                                             </button>
                                         </div>
