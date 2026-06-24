@@ -100,7 +100,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 import sys
-if 'test' in sys.argv:
+if 'test' in sys.argv or os.environ.get('USE_SQLITE') == 'True':
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

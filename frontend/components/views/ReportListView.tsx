@@ -38,6 +38,7 @@ interface AccidentReportPhoto {
 interface AccidentReport {
     id: number;
     severity: string;
+    incident_type: string;
     location: string;
     description: string;
     incident_date: string;
@@ -64,6 +65,7 @@ export default function ReportListView() {
     // États pour les filtres, la recherche et le tri
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedSeverity, setSelectedSeverity] = useState('all');
+    const [selectedCategory, setSelectedCategory] = useState('all');
     const [sortBy, setSortBy] = useState('date-desc');
     const [activeTab, setActiveTab] = useState('to-validate'); // 'to-validate', 'validated', 'all'
     
@@ -193,6 +195,17 @@ export default function ReportListView() {
         }
     };
 
+    // Utilitaire pour obtenir le label et le style selon la catégorie d'incident
+    const getCategoryDetails = (category: string) => {
+        switch (category) {
+            case 'dangerous_situation': return { color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20', label: 'Situation dangereuse' };
+            case 'near_miss': return { color: 'bg-orange-500/10 text-orange-400 border-orange-500/20', label: 'Presque accident' };
+            case 'accident': return { color: 'bg-red-500/10 text-red-400 border-red-500/20', label: 'Accident' };
+            case 'fatal_accident': return { color: 'bg-red-900/20 text-red-500 border-red-900/30 bg-red-950/20', label: 'Accident mortel' };
+            default: return { color: 'bg-gray-500/10 text-gray-400 border-gray-500/20', label: category };
+        }
+    };
+
     // Calcul de l'importance pour le tri
     const getSeverityWeight = (severity: string) => {
         switch (severity) {
@@ -241,6 +254,11 @@ export default function ReportListView() {
         .filter(r => {
             if (selectedSeverity === 'all') return true;
             return r.severity === selectedSeverity;
+        })
+        // 3b. Catégorie d'incident
+        .filter(r => {
+            if (selectedCategory === 'all') return true;
+            return r.incident_type === selectedCategory;
         })
         // 4. Tri
         .sort((a, b) => {
@@ -345,6 +363,22 @@ export default function ReportListView() {
                 </div>
                 
                 <div className="flex flex-wrap gap-3 items-center">
+                    {/* Catégorie */}
+                    <div className="flex items-center gap-2 bg-gray-900/40 border border-gray-700 rounded-lg px-3 py-1.5">
+                        <Filter className="w-4 h-4 text-gray-400" />
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => { setSelectedCategory(e.target.value); setCurrentPage(1); }}
+                            className="bg-transparent border-none text-sm text-white focus:outline-none cursor-pointer"
+                        >
+                            <option value="all" className="bg-gray-800">Toutes les catégories</option>
+                            <option value="dangerous_situation" className="bg-gray-800">Situation dangereuse</option>
+                            <option value="near_miss" className="bg-gray-800">Presque accident</option>
+                            <option value="accident" className="bg-gray-800">Accident</option>
+                            <option value="fatal_accident" className="bg-gray-800">Accident mortel</option>
+                        </select>
+                    </div>
+
                     {/* Gravité */}
                     <div className="flex items-center gap-2 bg-gray-900/40 border border-gray-700 rounded-lg px-3 py-1.5">
                         <Filter className="w-4 h-4 text-gray-400" />
@@ -440,6 +474,9 @@ export default function ReportListView() {
                                             <div className="flex flex-wrap gap-2 items-center">
                                                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase border ${severityInfo.color}`}>
                                                     {severityInfo.label}
+                                                </span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getCategoryDetails(report.incident_type).color}`}>
+                                                    {getCategoryDetails(report.incident_type).label}
                                                 </span>
                                                 {!report.published ? (
                                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-500/10 text-orange-400 border border-orange-500/20 flex items-center gap-1">
@@ -663,15 +700,15 @@ export default function ReportListView() {
                     </div>
                     <h3 className="text-lg font-bold text-white mb-1">Aucune remontée trouvée</h3>
                     <p className="text-sm text-gray-400 max-w-sm">
-                        {searchQuery || selectedSeverity !== 'all' 
+                        {searchQuery || selectedSeverity !== 'all' || selectedCategory !== 'all'
                             ? "Aucun rapport ne correspond à vos filtres de recherche." 
                             : activeTab === 'to-validate' 
                                 ? "Toutes les remontées d'accidents ont été validées." 
                                 : "Aucune remontée déclarée pour le moment."}
                     </p>
-                    {(searchQuery || selectedSeverity !== 'all') && (
+                    {(searchQuery || selectedSeverity !== 'all' || selectedCategory !== 'all') && (
                         <button
-                            onClick={() => { setSearchQuery(''); setSelectedSeverity('all'); }}
+                            onClick={() => { setSearchQuery(''); setSelectedSeverity('all'); setSelectedCategory('all'); }}
                             className="mt-4 text-xs font-semibold text-blue-400 hover:text-blue-300 border border-blue-500/20 px-3 py-1.5 rounded-lg bg-blue-500/10 cursor-pointer"
                         >
                             Réinitialiser les filtres

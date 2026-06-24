@@ -14,6 +14,6 @@ class AccidentReportSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AccidentReport
-        fields = ['id', 'severity', 'location', 'description', 'incident_date', 'image', 'video', 'published', 'created_at', 'reporter', 'reporter_name', 'photos']
+        fields = ['id', 'severity', 'incident_type', 'location', 'description', 'incident_date', 'image', 'video', 'published', 'created_at', 'reporter', 'reporter_name', 'photos']
         # L'utilisateur ne peut pas changer l'auteur lui-même
         read_only_fields = ['id', 'created_at', 'reporter']

@@ -10,10 +10,19 @@ class AccidentReport(models.Model):
         ('critical', 'Critique'),
     ]
 
+    INCIDENT_TYPE_CHOICES = [
+        ('dangerous_situation', 'Situation dangereuse'),
+        ('near_miss', 'Presque accident'),
+        ('accident', 'Accident'),
+        ('fatal_accident', 'Accident mortel'),
+    ]
+
     # Utilisateur qui a signalé l'incident
     reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='accident_reports')
     # Niveau de gravité de l'accident
     severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES)
+    # Type de remontée/incident
+    incident_type = models.CharField(max_length=50, choices=INCIDENT_TYPE_CHOICES, default='dangerous_situation')
     # Lieu de l'incident
     location = models.CharField(max_length=255)
     # Explication détaillée de ce qu'il s'est passé
