@@ -281,7 +281,7 @@ export default function ReportCreateView() {
             case 'medium': return { label: 'Moyenne', desc: 'Dégât matériel léger ou incident corporel mineur sans arrêt.', border: 'border-l-yellow-500', glow: 'shadow-[0_0_20px_rgba(234,179,8,0.15)] focus-within:ring-yellow-500/50' };
             case 'high': return { label: 'Élevée', desc: 'Accident avec arrêt de travail ou dégât matériel notable.', border: 'border-l-orange-500', glow: 'shadow-[0_0_20px_rgba(249,115,22,0.2)] focus-within:ring-orange-500/50' };
             case 'critical': return { label: 'Critique', desc: 'Accident très grave, hospitalisation urgente ou décès.', border: 'border-l-red-600 shadow-[inset_4px_0_0_0_rgba(239,68,68,0.5)]', glow: 'shadow-[0_0_25px_rgba(239,68,68,0.25)] focus-within:ring-red-500/50' };
-            default: return { label: sev, desc: '', border: 'border-l-gray-700', glow: '' };
+            default: return { label: sev, desc: '', border: 'border-l-gray-750 dark:border-l-gray-700', glow: '' };
         }
     };
 
@@ -300,28 +300,28 @@ export default function ReportCreateView() {
     const activeCategory = getCategoryDetails(formData.incident_type);
 
     return (
-        <div className="max-w-2xl mx-auto py-8 px-4 text-white">
+        <div className="max-w-2xl mx-auto py-8 px-4 text-gray-900 dark:text-white">
             
             {/* Bannière de Restauration de Brouillon */}
             {hasDraft && (
-                <div className="mb-6 p-4 bg-blue-900/60 backdrop-blur-md rounded-2xl border border-blue-500/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/60 backdrop-blur-md rounded-2xl border border-blue-200 dark:border-blue-500/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-300">
                     <div className="flex items-start gap-3">
-                        <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                        <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                         <div>
-                            <h4 className="text-sm font-bold text-white">Brouillon en cours trouvé</h4>
-                            <p className="text-xs text-blue-200">Vous avez un rapport non validé enregistré localement.</p>
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Brouillon en cours trouvé</h4>
+                            <p className="text-xs text-gray-600 dark:text-blue-200">Vous avez un rapport non validé enregistré localement.</p>
                         </div>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
                         <button 
                             onClick={restoreDraft}
-                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-xs font-semibold rounded-lg shadow cursor-pointer w-full sm:w-auto"
+                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg shadow cursor-pointer w-full sm:w-auto border-0"
                         >
                             Restaurer
                         </button>
                         <button 
                             onClick={discardDraft}
-                            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold rounded-lg border border-gray-700 cursor-pointer w-full sm:w-auto text-gray-300 hover:text-white"
+                            className="px-3 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs font-semibold rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer w-full sm:w-auto text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                         >
                             Ignorer
                         </button>
@@ -330,19 +330,19 @@ export default function ReportCreateView() {
             )}
 
             {/* Container Principal du Formulaire */}
-            <div className={`bg-gray-800/80 backdrop-blur-md p-6 md:p-8 rounded-3xl shadow-2xl border border-gray-700/50 transition-all duration-300 border-l-4 ${activeSeverity.border} ${activeSeverity.glow}`}>
+            <div className={`bg-white dark:bg-gray-800/80 backdrop-blur-md p-6 md:p-8 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700/50 transition-all duration-300 border-l-4 ${activeSeverity.border} ${activeSeverity.glow}`}>
                 
                 {/* En-tête */}
-                <div className="mb-8 border-b border-gray-700/60 pb-6 flex justify-between items-center">
+                <div className="mb-8 border-b border-gray-200 dark:border-gray-700/60 pb-6 flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent uppercase">
+                        <h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent uppercase">
                             Déclarer une remontée
                         </h1>
-                        <p className="text-xs text-gray-400 mt-1">Formulaire de sécurité obligatoire conforme aux normes MASE.</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Formulaire de sécurité obligatoire conforme aux normes MASE.</p>
                     </div>
                     <button
                         onClick={() => setView('report-list')}
-                        className="text-xs text-gray-400 hover:text-white border border-gray-700 hover:bg-gray-700/50 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
+                        className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-350 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700/50 px-3 py-1.5 rounded-lg transition-all cursor-pointer bg-transparent"
                     >
                         Retour historique
                     </button>
@@ -350,7 +350,7 @@ export default function ReportCreateView() {
 
                 {/* Indicateur d'Étapes */}
                 <div className="flex justify-between items-center mb-8 relative">
-                    <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-gray-700 -translate-y-1/2 z-0" />
+                    <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-gray-200 dark:bg-gray-700 -translate-y-1/2 z-0" />
                     {[1, 2, 3].map((s) => (
                         <div 
                             key={s} 
@@ -359,7 +359,7 @@ export default function ReportCreateView() {
                                     ? 'bg-blue-600 border-blue-500 text-white ring-4 ring-blue-500/25 scale-110' 
                                     : step > s 
                                         ? 'bg-green-600 border-green-500 text-white' 
-                                        : 'bg-gray-800 border-gray-700 text-gray-400'
+                                        : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-500 dark:text-gray-400'
                              }`}
                         >
                             {step > s ? <Check className="w-4 h-4" /> : s}
@@ -368,7 +368,7 @@ export default function ReportCreateView() {
                 </div>
 
                 {error && (
-                    <div className="bg-red-500/20 border border-red-500/30 text-red-200 p-4 rounded-xl mb-6 flex items-center gap-2 animate-in fade-in duration-200">
+                    <div className="bg-red-500/10 border border-red-500/25 text-red-600 dark:text-red-200 p-4 rounded-xl mb-6 flex items-center gap-2 animate-in fade-in duration-200">
                         <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                         <span className="text-sm font-medium">{error}</span>
                     </div>
@@ -388,23 +388,23 @@ export default function ReportCreateView() {
                                 transition={{ duration: 0.2 }}
                                 className="space-y-6"
                             >
-                                <div className="p-4 bg-gray-900/40 border border-gray-700/30 rounded-2xl">
-                                    <h3 className="text-sm font-bold text-gray-300 flex items-center gap-2 mb-1">
-                                        <MapPin className="w-4 h-4 text-blue-400" />
+                                <div className="p-4 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl">
+                                    <h3 className="text-sm font-bold text-gray-800 dark:text-gray-300 flex items-center gap-2 mb-1">
+                                        <MapPin className="w-4 h-4 text-blue-500" />
                                         Informations géographiques & temporelles
                                     </h3>
-                                    <p className="text-xs text-gray-400">Renseignez précisément où et quand s'est déroulé l'événement sur vos chantiers.</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Renseignez précisément où et quand s'est déroulé l'événement sur vos chantiers.</p>
                                 </div>
 
                                 {/* Lieu de l'incident */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center">
+                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center text-gray-800 dark:text-white">
                                         <span>Lieu ou Nom du Chantier *</span>
                                         <button
                                             type="button"
                                             onClick={handleGeolocate}
                                             disabled={geolocating}
-                                            className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded-lg border border-blue-500/20"
+                                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded-lg border border-blue-500/20"
                                         >
                                             <Navigation className={`w-3 h-3 ${geolocating ? 'animate-spin' : ''}`} />
                                             {geolocating ? 'Géolocalisation...' : 'Me géolocaliser'}
@@ -417,15 +417,15 @@ export default function ReportCreateView() {
                                         onChange={handleChange}
                                         required
                                         maxLength={200}
-                                        className="w-full p-3 rounded-xl bg-gray-900/60 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-500 text-sm"
+                                        className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900/60 text-gray-950 dark:text-white border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400 dark:placeholder-gray-500 text-sm"
                                         placeholder="Ex: Chantier X - Autoroute A13, PK 24..."
                                     />
                                 </div>
 
                                 {/* Date & Heure */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 flex items-center gap-1.5">
-                                        <Calendar className="w-4 h-4 text-blue-400" />
+                                    <label className="block text-sm font-bold mb-2 flex items-center gap-1.5 text-gray-800 dark:text-white">
+                                        <Calendar className="w-4 h-4 text-blue-500" />
                                         Date & Heure de l'incident *
                                     </label>
                                     <input
@@ -434,7 +434,7 @@ export default function ReportCreateView() {
                                         value={formData.incident_date}
                                         onChange={handleChange}
                                         required
-                                        className="w-full p-3 rounded-xl bg-gray-900/60 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
+                                        className="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-900/60 text-gray-950 dark:text-white border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
                                     />
                                 </div>
                             </motion.div>
@@ -450,17 +450,17 @@ export default function ReportCreateView() {
                                 transition={{ duration: 0.2 }}
                                 className="space-y-6"
                             >
-                                {/* Catégorie d'incident */}
+                                {/* Type de Remontée */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 flex items-center gap-1">
+                                    <label className="block text-sm font-bold mb-2 text-gray-800 dark:text-white">
                                         Type de Remontée (Catégorie) *
                                     </label>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {[
-                                            { id: 'dangerous_situation', label: 'Situation dangereuse', color: 'border-yellow-500/20 hover:border-yellow-500/40 text-yellow-400' },
-                                            { id: 'near_miss', label: 'Presque accident', color: 'border-orange-500/20 hover:border-orange-500/40 text-orange-400' },
-                                            { id: 'accident', label: 'Accident', color: 'border-red-500/20 hover:border-red-500/40 text-red-400' },
-                                            { id: 'fatal_accident', label: 'Accident mortel', color: 'border-red-900/40 hover:border-red-900 text-red-500 bg-red-950/20' }
+                                            { id: 'dangerous_situation', label: 'Situation dangereuse', color: 'border-yellow-500/30 dark:border-yellow-500/20 hover:border-yellow-500 text-yellow-600 dark:text-yellow-400' },
+                                            { id: 'near_miss', label: 'Presque accident', color: 'border-orange-500/30 dark:border-orange-500/20 hover:border-orange-500 text-orange-600 dark:text-orange-400' },
+                                            { id: 'accident', label: 'Accident', color: 'border-red-500/30 dark:border-red-500/20 hover:border-red-500 text-red-600 dark:text-red-400' },
+                                            { id: 'fatal_accident', label: 'Accident mortel', color: 'border-red-700/30 dark:border-red-900/40 hover:border-red-600 text-red-700 dark:text-red-500 bg-red-500/5 dark:bg-red-950/10' }
                                         ].map((cat) => {
                                             const isSelected = formData.incident_type === cat.id;
                                             return (
@@ -471,7 +471,7 @@ export default function ReportCreateView() {
                                                     className={`p-3 rounded-xl border text-left text-sm font-semibold transition-all duration-200 flex justify-between items-center cursor-pointer ${
                                                         isSelected 
                                                             ? 'bg-blue-600 border-blue-500 text-white shadow-lg scale-[1.02]' 
-                                                            : `bg-gray-900/60 text-gray-300 ${cat.color}`
+                                                            : `bg-gray-50 dark:bg-gray-900/60 text-gray-700 dark:text-gray-300 ${cat.color}`
                                                     }`}
                                                 >
                                                     <span>{cat.label}</span>
@@ -480,22 +480,22 @@ export default function ReportCreateView() {
                                             );
                                         })}
                                     </div>
-                                    <p className="text-[11px] text-gray-400 mt-2 italic bg-gray-900/20 p-2 rounded-lg border border-gray-700/20">
+                                    <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-2 italic bg-gray-50 dark:bg-gray-900/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700/20">
                                         💡 {activeCategory.desc}
                                     </p>
                                 </div>
 
                                 {/* Niveau de Gravité */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2">
+                                    <label className="block text-sm font-bold mb-2 text-gray-800 dark:text-white">
                                         Niveau de Gravité estimé *
                                     </label>
                                     <div className="grid grid-cols-4 gap-2">
                                         {[
-                                            { id: 'low', label: 'Faible', color: 'hover:border-green-500/40 active:bg-green-500/20', activeColor: 'bg-green-600 border-green-500' },
-                                            { id: 'medium', label: 'Moyen', color: 'hover:border-yellow-500/40 active:bg-yellow-500/20', activeColor: 'bg-yellow-600 border-yellow-500' },
-                                            { id: 'high', label: 'Élevé', color: 'hover:border-orange-500/40 active:bg-orange-500/20', activeColor: 'bg-orange-600 border-orange-500' },
-                                            { id: 'critical', label: 'Critique', color: 'hover:border-red-500/40 active:bg-red-500/20', activeColor: 'bg-red-600 border-red-500' }
+                                            { id: 'low', label: 'Faible', color: 'hover:border-green-500/40 hover:bg-green-500/5 dark:hover:bg-green-500/10', activeColor: 'bg-green-600 border-green-500' },
+                                            { id: 'medium', label: 'Moyen', color: 'hover:border-yellow-500/40 hover:bg-yellow-500/5 dark:hover:bg-yellow-500/10', activeColor: 'bg-yellow-600 border-yellow-500' },
+                                            { id: 'high', label: 'Élevé', color: 'hover:border-orange-500/40 hover:bg-orange-500/5 dark:hover:bg-orange-500/10', activeColor: 'bg-orange-600 border-orange-500' },
+                                            { id: 'critical', label: 'Critique', color: 'hover:border-red-500/40 hover:bg-red-500/5 dark:hover:bg-red-500/10', activeColor: 'bg-red-600 border-red-500' }
                                         ].map((g) => {
                                             const isSelected = formData.severity === g.id;
                                             return (
@@ -506,7 +506,7 @@ export default function ReportCreateView() {
                                                     className={`py-2 px-1 rounded-lg border text-center text-xs font-bold transition-all cursor-pointer ${
                                                         isSelected 
                                                             ? `${g.activeColor} text-white shadow-md scale-105` 
-                                                            : `bg-gray-900/60 border-gray-700 text-gray-300 ${g.color}`
+                                                            : `bg-gray-50 dark:bg-gray-900/60 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 ${g.color}`
                                                     }`}
                                                 >
                                                     {g.label}
@@ -514,16 +514,16 @@ export default function ReportCreateView() {
                                             );
                                         })}
                                     </div>
-                                    <p className="text-[11px] text-gray-400 mt-2 italic bg-gray-900/20 p-2 rounded-lg border border-gray-700/20">
+                                    <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-2 italic bg-gray-50 dark:bg-gray-900/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700/20">
                                         📌 {activeSeverity.desc}
                                     </p>
                                 </div>
 
                                 {/* Description détaillée */}
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center">
+                                    <label className="block text-sm font-bold mb-2 flex justify-between items-center text-gray-800 dark:text-white">
                                         <span>Explication détaillée (Qu'est-ce qu'il s'est passé ?) *</span>
-                                        <span className={`text-xs ${formData.description.length >= 450 ? 'text-red-400 font-bold' : 'text-gray-400'}`}>
+                                        <span className={`text-xs ${formData.description.length >= 450 ? 'text-red-500 font-bold' : 'text-gray-500 dark:text-gray-400'}`}>
                                             {formData.description.length} / 500
                                         </span>
                                     </label>
@@ -538,7 +538,7 @@ export default function ReportCreateView() {
                                             required
                                             maxLength={500}
                                             rows={5}
-                                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-900/60 text-white border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-500 text-sm"
+                                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-900/60 text-gray-950 dark:text-white border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all placeholder-gray-400 dark:placeholder-gray-500 text-sm"
                                             placeholder="Décrivez précisément les faits, les équipements concernés, les mesures immédiates de protection prises..."
                                         />
                                     </div>
@@ -557,12 +557,12 @@ export default function ReportCreateView() {
                                 transition={{ duration: 0.2 }}
                                 className="space-y-6"
                             >
-                                <div className="p-4 bg-gray-900/40 border border-gray-700/30 rounded-2xl">
-                                    <h3 className="text-sm font-bold text-gray-300 flex items-center gap-2 mb-1">
-                                        <Camera className="w-4 h-4 text-blue-400" />
+                                <div className="p-4 bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700/30 rounded-2xl">
+                                    <h3 className="text-sm font-bold text-gray-800 dark:text-gray-300 flex items-center gap-2 mb-1">
+                                        <Camera className="w-4 h-4 text-blue-500" />
                                         Preuves & médias joints (Facultatif)
                                     </h3>
-                                    <p className="text-xs text-gray-400">Ajoutez des photos ou des vidéos pour documenter la remontée d'accident. Limite globale de 200 Mo par fichier.</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">Ajoutez des photos ou des vidéos pour documenter la remontée d'accident. Limite globale de 200 Mo par fichier.</p>
                                 </div>
 
                                 {/* Zone Drag & Drop */}
@@ -573,8 +573,8 @@ export default function ReportCreateView() {
                                     onClick={() => document.getElementById('media-upload-form')?.click()}
                                     className={`p-8 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all ${
                                         isDragOver 
-                                            ? 'bg-blue-600/10 border-blue-500 scale-[1.01]' 
-                                            : 'bg-gray-900/40 border-gray-700 hover:border-gray-600 hover:bg-gray-900/60'
+                                            ? 'bg-blue-500/10 dark:bg-blue-600/10 border-blue-500 scale-[1.01]' 
+                                            : 'bg-gray-50 dark:bg-gray-900/40 border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-900/60'
                                     }`}
                                 >
                                     <input
@@ -591,12 +591,12 @@ export default function ReportCreateView() {
                                     />
                                     
                                     <div className="flex flex-col items-center justify-center gap-3">
-                                        <div className="p-3 bg-gray-800 border border-gray-700 rounded-full text-gray-400">
-                                            <Paperclip className="w-6 h-6 text-blue-400" />
+                                        <div className="p-3 bg-white dark:bg-gray-850 border border-gray-250 dark:border-gray-700 rounded-full text-gray-500">
+                                            <Paperclip className="w-6 h-6 text-blue-500" />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-bold">Faites glisser des fichiers ou cliquez pour importer</p>
-                                            <p className="text-xs text-gray-400 mt-1">Formats acceptés : Photos (PNG, JPEG) et Vidéos (MP4, MOV)</p>
+                                            <p className="text-sm font-bold text-gray-900 dark:text-white">Faites glisser des fichiers ou cliquez pour importer</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formats acceptés : Photos (PNG, JPEG) et Vidéos (MP4, MOV)</p>
                                         </div>
                                     </div>
                                 </div>
@@ -604,16 +604,16 @@ export default function ReportCreateView() {
                                 {/* Prévisualisations des miniatures */}
                                 {attachedFiles.length > 0 && (
                                     <div className="space-y-3">
-                                        <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Fichiers sélectionnés ({attachedFiles.length})</h4>
+                                        <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fichiers sélectionnés ({attachedFiles.length})</h4>
                                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                                             {attachedFiles.map((fileObj, idx) => (
-                                                <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-700 bg-gray-900 flex items-center justify-center shadow-md">
+                                                <div key={idx} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex items-center justify-center shadow-md">
                                                     {fileObj.type === 'image' ? (
                                                         <img src={fileObj.url} className="object-cover w-full h-full" alt="Miniature" />
                                                     ) : (
                                                         <div className="flex flex-col items-center justify-center p-2 text-center w-full h-full">
-                                                            <Video className="w-8 h-8 text-blue-400" />
-                                                            <span className="text-[9px] text-gray-400 truncate w-full mt-1">{fileObj.file.name}</span>
+                                                            <Video className="w-8 h-8 text-blue-500" />
+                                                            <span className="text-[9px] text-gray-500 dark:text-gray-400 truncate w-full mt-1">{fileObj.file.name}</span>
                                                         </div>
                                                     )}
                                                     
@@ -635,20 +635,20 @@ export default function ReportCreateView() {
                                 )}
 
                                 {/* Récapitulatif condensé */}
-                                <div className="p-4 bg-gray-900/60 border border-gray-800 rounded-2xl space-y-2 text-xs text-gray-300">
-                                    <h4 className="font-bold text-white uppercase text-[10px] tracking-widest text-gray-400">Récapitulatif</h4>
+                                <div className="p-4 bg-gray-50 dark:bg-gray-900/60 border border-gray-200 dark:border-gray-800 rounded-2xl space-y-2 text-xs text-gray-600 dark:text-gray-300">
+                                    <h4 className="font-bold text-gray-400 dark:text-gray-500 uppercase text-[10px] tracking-widest">Récapitulatif</h4>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <span className="text-gray-500">Lieu :</span> {formData.location}
+                                            <span className="text-gray-400 dark:text-gray-500">Lieu :</span> {formData.location}
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Type d'incident :</span> <span className="font-semibold text-blue-400">{activeCategory.label}</span>
+                                            <span className="text-gray-400 dark:text-gray-500">Type d'incident :</span> <span className="font-semibold text-blue-600 dark:text-blue-400">{activeCategory.label}</span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Gravité :</span> <span className="font-semibold text-orange-400">{activeSeverity.label}</span>
+                                            <span className="text-gray-400 dark:text-gray-500">Gravité :</span> <span className="font-semibold text-orange-600 dark:text-orange-400">{activeSeverity.label}</span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Date :</span> {formData.incident_date ? new Date(formData.incident_date).toLocaleString('fr-FR') : ''}
+                                            <span className="text-gray-400 dark:text-gray-500">Date :</span> {formData.incident_date ? new Date(formData.incident_date).toLocaleString('fr-FR') : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -658,13 +658,13 @@ export default function ReportCreateView() {
                     </AnimatePresence>
 
                     {/* Pied de formulaire : Boutons de navigation */}
-                    <div className="flex gap-4 border-t border-gray-700/60 pt-6 mt-6">
+                    <div className="flex gap-4 border-t border-gray-200 dark:border-gray-700/60 pt-6 mt-6">
                         {step > 1 && (
                             <button
                                 type="button"
                                 onClick={prevStep}
                                 disabled={isSubmitting}
-                                className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-xl border border-gray-600 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                                className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-850 dark:text-white font-bold rounded-xl border border-gray-300 dark:border-gray-600 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
                             >
                                 <ArrowLeft className="w-4 h-4" />
                                 Précédent
@@ -676,7 +676,7 @@ export default function ReportCreateView() {
                                 type="button"
                                 onClick={nextStep}
                                 disabled={(step === 1 && !isStep1Valid) || (step === 2 && !isStep2Valid)}
-                                className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:border-gray-800 disabled:text-gray-500 text-white font-bold rounded-xl border-none transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                                className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:border-gray-200 dark:disabled:border-gray-800 disabled:text-gray-400 dark:disabled:text-gray-500 text-white font-bold rounded-xl border-none transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md"
                             >
                                 Continuer
                                 <ArrowRight className="w-4 h-4" />
