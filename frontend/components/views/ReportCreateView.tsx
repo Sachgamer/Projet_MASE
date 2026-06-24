@@ -365,19 +365,15 @@ export default function ReportCreateView() {
             satelliteLayerRef.current = null;
         }
 
-        const isDarkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
-        const tileStyle = isDarkMode ? 'dark_all' : 'rastertiles/voyager';
-
         if (mapLayerType === 'streets') {
-            streetsLayerRef.current = L.tileLayer(`https://{s}.basemaps.cartocdn.com/${tileStyle}/{z}/{x}/{y}` + (L.Browser.retina ? '@2x.png' : '.png'), {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
+            streetsLayerRef.current = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                attribution: '&copy; Google Maps',
                 maxZoom: 20
             }).addTo(mapRef.current);
         } else {
-            satelliteLayerRef.current = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-                maxZoom: 19
+            satelliteLayerRef.current = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+                attribution: '&copy; Google Maps',
+                maxZoom: 20
             }).addTo(mapRef.current);
         }
     }, [mapLayerType, isMapOpen, leafletLoaded]);
@@ -1010,7 +1006,7 @@ export default function ReportCreateView() {
                             className={`p-6 rounded-2xl border-2 border-dashed text-center cursor-pointer transition-all ${
                                 isDragOver 
                                     ? 'bg-blue-500/10 dark:bg-blue-600/10 border-blue-500 scale-[1.01]' 
-                                    : 'bg-secondary/30 dark:bg-secondary/20 border-border hover:border-primary hover:bg-secondary/50'
+                                    : 'bg-background dark:bg-secondary/20 border-primary/30 dark:border-primary/20 hover:border-primary hover:bg-secondary/20'
                             }`}
                         >
                             <input
@@ -1026,11 +1022,13 @@ export default function ReportCreateView() {
                                 className="hidden"
                             />
                             
-                            <div className="flex flex-col items-center justify-center gap-2">
-                                <Paperclip className="w-5 h-5 text-blue-500 animate-pulse" />
+                            <div className="flex flex-col items-center justify-center gap-3">
+                                <div className="p-3 bg-secondary/50 dark:bg-input border border-border dark:border-border rounded-full text-blue-500 shadow-sm group-hover:scale-110 transition-transform">
+                                    <Camera className="w-6 h-6 text-blue-500 animate-pulse" />
+                                </div>
                                 <div>
-                                    <p className="text-xs font-bold text-foreground">Glissez vos photos/vidéos ici ou cliquez pour importer</p>
-                                    <p className="text-[10px] text-muted-foreground mt-0.5">Formats : Images (PNG, JPEG) et Vidéos (MP4, MOV)</p>
+                                    <p className="text-sm font-bold text-foreground">Glissez vos photos/vidéos ici ou cliquez pour importer</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Formats : Images (PNG, JPEG) et Vidéos (MP4, MOV) - Max 200 Mo</p>
                                 </div>
                             </div>
                         </div>

@@ -379,22 +379,6 @@ export default function ReportListView() {
                         </select>
                     </div>
 
-                    {/* Gravité */}
-                    <div className="flex items-center gap-2 bg-input border border-border rounded-lg px-3 py-1.5 text-foreground">
-                        <Filter className="w-4 h-4 text-muted-foreground" />
-                        <select
-                            value={selectedSeverity}
-                            onChange={(e) => { setSelectedSeverity(e.target.value); setCurrentPage(1); }}
-                            className="bg-transparent border-none text-sm text-foreground focus:outline-none cursor-pointer"
-                        >
-                            <option value="all" className="bg-background text-foreground">Toutes les gravités</option>
-                            <option value="critical" className="bg-background text-foreground">Critique</option>
-                            <option value="high" className="bg-background text-foreground">Élevée</option>
-                            <option value="medium" className="bg-background text-foreground">Moyenne</option>
-                            <option value="low" className="bg-background text-foreground">Faible</option>
-                        </select>
-                    </div>
-                    
                     {/* Tri */}
                     <div className="flex items-center gap-2 bg-input border border-border rounded-lg px-3 py-1.5 text-foreground">
                         <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
@@ -405,8 +389,6 @@ export default function ReportListView() {
                         >
                             <option value="date-desc" className="bg-background text-foreground">Plus récent d'abord</option>
                             <option value="date-asc" className="bg-background text-foreground">Plus ancien d'abord</option>
-                            <option value="severity-desc" className="bg-background text-foreground">Gravité décroissante</option>
-                            <option value="severity-asc" className="bg-background text-foreground">Gravité croissante</option>
                         </select>
                     </div>
                 </div>
@@ -472,10 +454,7 @@ export default function ReportListView() {
                                         {/* En-tête de la carte */}
                                         <div className="flex justify-between items-start gap-2">
                                             <div className="flex flex-wrap gap-2 items-center">
-                                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase border ${severityInfo.color}`}>
-                                                    {severityInfo.label}
-                                                </span>
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getCategoryDetails(report.incident_type).color}`}>
+                                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase border ${getCategoryDetails(report.incident_type).color}`}>
                                                     {getCategoryDetails(report.incident_type).label}
                                                 </span>
                                                 {!report.published ? (
@@ -700,13 +679,13 @@ export default function ReportListView() {
                     </div>
                     <h3 className="text-lg font-bold text-foreground mb-1">Aucune remontée trouvée</h3>
                     <p className="text-sm text-muted-foreground max-w-sm">
-                        {searchQuery || selectedSeverity !== 'all' || selectedCategory !== 'all'
+                        {searchQuery || selectedCategory !== 'all'
                             ? "Aucun rapport ne correspond à vos filtres de recherche." 
                             : activeTab === 'to-validate' 
                                 ? "Toutes les remontées d'accidents ont été validées." 
                                 : "Aucune remontée déclarée pour le moment."}
                     </p>
-                    {(searchQuery || selectedSeverity !== 'all' || selectedCategory !== 'all') && (
+                    {(searchQuery || selectedCategory !== 'all') && (
                         <button
                             onClick={() => { setSearchQuery(''); setSelectedSeverity('all'); setSelectedCategory('all'); }}
                             className="mt-4 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 border border-blue-500/20 px-3 py-1.5 rounded-lg bg-blue-500/10 cursor-pointer"
