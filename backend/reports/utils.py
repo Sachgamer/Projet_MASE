@@ -78,15 +78,32 @@ def generate_accident_pdf(report):
         c.drawString(45, y_text, remove_emojis(line))
         y_text -= 12
         
-    # 4. Photos (en dessous)
-    if report.image:
+    # 4. Photos (en dessous, max 3 côte à côte)
+    photos = report.photos.all()
+    if photos.exists():
+        for idx, photo_obj in enumerate(photos[:3]):
+            try:
+                img_path = photo_obj.image.path
+                if os.path.exists(img_path):
+                    x_pos = 45 + (idx * 175)
+                    y_pos = 175
+                    c.drawImage(img_path, x_pos, y_pos, width=165, height=120, preserveAspectRatio=True)
+            except Exception:
+                x_pos = 45 + (idx * 175)
+                y_pos = 175
+                c.setStrokeColor(colors.red)
+                c.rect(x_pos, y_pos, 165, 120, stroke=1, fill=0)
+                c.setFont("Helvetica-Bold", 8)
+                c.setFillColor(colors.red)
+                c.drawCentredString(x_pos + 82, y_pos + 65, "Image corrompue")
+                c.drawCentredString(x_pos + 82, y_pos + 50, "ou non supportée")
+                c.setFillColor(colors.black)
+    elif report.image:
         try:
             img_path = report.image.path
             if os.path.exists(img_path):
-                # On dessine la photo dans la zone y=175 à y=325
                 c.drawImage(img_path, 45, 175, width=250, height=150, preserveAspectRatio=True)
         except Exception:
-            # En cas d'erreur de chargement d'image
             c.setStrokeColor(colors.red)
             c.rect(45, 175, 250, 150, stroke=1, fill=0)
             c.setFont("Helvetica-Bold", 8)

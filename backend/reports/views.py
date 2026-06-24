@@ -32,9 +32,28 @@ class AccidentReportViewSet(viewsets.ModelViewSet):
         return AccidentReport.objects.all()
 
     def perform_create(self, serializer):
+        # Récupère toutes les photos envoyées dans le champ 'photos'
+        photos = self.request.FILES.getlist('photos')
+        
+        # Pour la rétrocompatibilité, associe la première photo au champ principal 'image'
+        first_image = None
+        if photos:
+            first_image = photos[0]
+        else:
+            # Fallback si seule l'image unique est fournie
+            first_image = self.request.FILES.get('image')
+            
         # Enregistre le rapport avec l'utilisateur actuel comme auteur
         # Par défaut, on force le rapport à n'est pas "publié" tant qu'un admin ne le valide pas
-        serializer.save(reporter=self.request.user, published=False)
+        report = serializer.save(reporter=self.request.user, published=False, image=first_image)
+        
+        # Enregistre toutes les photos dans le modèle AccidentReportPhoto
+        from .models import AccidentReportPhoto
+        if photos:
+            for photo in photos:
+                AccidentReportPhoto.objects.create(report=report, image=photo)
+        elif first_image:
+            AccidentReportPhoto.objects.create(report=report, image=first_image)
 
     @action(detail=True, methods=['get'])
     def generate_pdf(self, request, pk=None):

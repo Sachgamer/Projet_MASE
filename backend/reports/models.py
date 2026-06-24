@@ -30,3 +30,11 @@ class AccidentReport(models.Model):
 
     def __str__(self):
         return f"{self.severity} - {self.location} ({self.reporter.username})"
+
+class AccidentReportPhoto(models.Model):
+    report = models.ForeignKey(AccidentReport, on_delete=models.CASCADE, related_name='photos')
+    image = models.ImageField(upload_to='reports/images/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Photo {self.id} for Report {self.report.id}"

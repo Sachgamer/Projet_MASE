@@ -17,7 +17,7 @@ export default function ReportCreateView() {
         description: '',
         incident_date: '',
     });
-    const [image, setImage] = useState<File | null>(null); // Fichier image attaché
+    const [images, setImages] = useState<File[]>([]); // Liste des fichiers images attachés
     const [video, setVideo] = useState<File | null>(null); // Fichier vidéo attaché
     const [error, setError] = useState('');
 
@@ -35,9 +35,11 @@ export default function ReportCreateView() {
         setError('');
 
         const MAX_SIZE = 200 * 1024 * 1024; // 200 Mo
-        if (image && image.size > MAX_SIZE) {
-            setError('Fichier trop volumineux. Veuillez réduire la taille de votre image (max. 200 Mo).');
-            return;
+        for (const imageFile of images) {
+            if (imageFile.size > MAX_SIZE) {
+                setError('Fichier trop volumineux. Veuillez réduire la taille de vos images (max. 200 Mo).');
+                return;
+            }
         }
         if (video && video.size > MAX_SIZE) {
             setError('Fichier trop volumineux. Veuillez réduire la taille de votre vidéo (max. 200 Mo).');
@@ -63,7 +65,9 @@ export default function ReportCreateView() {
             data.append('incident_date', incidentDate.toISOString());
 
             // Ajout des fichiers médias si présents
-            if (image) data.append('image', image);
+            images.forEach(imgFile => {
+                data.append('photos', imgFile);
+            });
             if (video) data.append('video', video);
 
             await createReport(data);
