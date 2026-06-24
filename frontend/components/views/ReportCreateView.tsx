@@ -64,6 +64,59 @@ export default function ReportCreateView() {
     const [searchingSuggestions, setSearchingSuggestions] = useState(false);
     const [isManualTyping, setIsManualTyping] = useState(false);
 
+    // États pour le support de la carte Leaflet
+    const [leafletLoaded, setLeafletLoaded] = useState(false);
+    const [isMapOpen, setIsMapOpen] = useState(false);
+    const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [mapAddress, setMapAddress] = useState('');
+    const [mapSearchQuery, setMapSearchQuery] = useState('');
+    const [mapSearchSuggestions, setMapSearchSuggestions] = useState<any[]>([]);
+    const [isSearchingMap, setIsSearchingMap] = useState(false);
+
+    const mapRef = useRef<any>(null);
+    const markerRef = useRef<any>(null);
+    const mapContainerRef = useRef<HTMLDivElement>(null);
+
+    // Chargement dynamique de Leaflet depuis le CDN
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if ((window as any).L) {
+            setLeafletLoaded(true);
+            return;
+        }
+
+        // Ajouter la feuille de style Leaflet dans le head
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+        link.crossOrigin = '';
+        document.head.appendChild(link);
+
+        // Ajouter le script Leaflet
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+        script.crossOrigin = '';
+        script.onload = () => {
+            const L = (window as any).L;
+            if (L) {
+                // Configurer les icônes de marqueurs par défaut avec les assets CDN de Leaflet
+                const DefaultIcon = L.icon({
+                    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                });
+                L.Marker.prototype.options.icon = DefaultIcon;
+                setLeafletLoaded(true);
+            }
+        };
+        document.body.appendChild(script);
+    }, []);
+
     // Vérifie si un brouillon existe dans le localStorage au montage
     useEffect(() => {
         const draft = localStorage.getItem('report_create_draft');
@@ -140,6 +193,196 @@ export default function ReportCreateView() {
         setHasDraft(false);
     };
 
+    // Géocodage inverse (coordonnées vers adresse textuelle précise)
+    const reverseGeocode = async (lat: number, lng: number) => {
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                {
+                    headers: {
+                        'Accept-Language': 'fr-FR,fr;q=0.9',
+                        'User-Agent': 'WebMASE-App'
+                    }
+                }
+            );
+            if (response.ok) {
+                const data = await response.json();
+                let addressString = '';
+                if (data.address) {
+                    const name = data.name || '';
+                    const road = data.address.road || data.address.pedestrian || data.address.suburb || '';
+                    const city = data.address.city || data.address.town || data.address.village || '';
+                    
+                    if (name && name !== road) {
+                        addressString = `${name} - ${road}, ${city}`;
+                    } else if (road && city) {
+                        addressString = `${road}, ${city}`;
+                    } else {
+                        addressString = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                    }
+                } else {
+                    addressString = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                }
+
+                if (addressString.length > 180) {
+                    addressString = addressString.substring(0, 177) + '...';
+                }
+                setMapAddress(addressString);
+            }
+        } catch (err) {
+            console.error("Erreur de géocodage inverse sur la carte:", err);
+        }
+    };
+
+    // Initialisation de la carte Leaflet lorsque le modal s'ouvre
+    useEffect(() => {
+        if (!isMapOpen || !leafletLoaded || !mapContainerRef.current) return;
+
+        const L = (window as any).L;
+        if (!L) return;
+
+        // Déterminer les coordonnées initiales de centrage
+        let initialLat = 51.0348;
+        let initialLng = 2.3768;
+
+        // Essayer de lire depuis formData.location si elle contient des coordonnées lat/lng
+        const coordRegex = /(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/;
+        const match = formData.location.match(coordRegex);
+        if (match) {
+            initialLat = parseFloat(match[1]);
+            initialLng = parseFloat(match[2]);
+        } else if (mapCoords) {
+            initialLat = mapCoords.lat;
+            initialLng = mapCoords.lng;
+        }
+
+        // Créer l'instance de la carte
+        const map = L.map(mapContainerRef.current).setView([initialLat, initialLng], 15);
+        mapRef.current = map;
+
+        // Ajouter la couche de tuiles OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Ajouter le marqueur déplaçable
+        const marker = L.marker([initialLat, initialLng], {
+            draggable: true
+        }).addTo(map);
+        markerRef.current = marker;
+
+        // Effectuer un géocodage inverse initial
+        setMapCoords({ lat: initialLat, lng: initialLng });
+        reverseGeocode(initialLat, initialLng);
+
+        // Événement clic sur la carte pour déplacer le marqueur
+        map.on('click', (e: any) => {
+            const { lat, lng } = e.latlng;
+            marker.setLatLng([lat, lng]);
+            setMapCoords({ lat, lng });
+            reverseGeocode(lat, lng);
+        });
+
+        // Événement dragend sur le marqueur
+        marker.on('dragend', () => {
+            const position = marker.getLatLng();
+            setMapCoords({ lat: position.lat, lng: position.lng });
+            reverseGeocode(position.lat, position.lng);
+        });
+
+        // Invalidation de la taille pour s'assurer que Leaflet s'affiche correctement
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 200);
+
+        return () => {
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+            markerRef.current = null;
+        };
+    }, [isMapOpen, leafletLoaded]);
+
+    // Recherche de lieux au sein du modal de carte (Nominatim)
+    const handleMapSearch = async () => {
+        if (!mapSearchQuery.trim()) return;
+        setIsSearchingMap(true);
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(mapSearchQuery)}&countrycodes=fr&limit=5&addressdetails=1`,
+                {
+                    headers: {
+                        'Accept-Language': 'fr-FR,fr;q=0.9',
+                        'User-Agent': 'WebMASE-App'
+                    }
+                }
+            );
+            if (response.ok) {
+                const data = await response.json();
+                setMapSearchSuggestions(data);
+            }
+        } catch (err) {
+            console.error("Erreur lors de la recherche cartographique:", err);
+        } finally {
+            setIsSearchingMap(false);
+        }
+    };
+
+    // Sélection d'une suggestion de recherche au sein du modal de carte
+    const handleSelectMapSuggestion = (suggestion: any) => {
+        const lat = parseFloat(suggestion.lat);
+        const lon = parseFloat(suggestion.lon);
+        if (isNaN(lat) || isNaN(lon)) return;
+
+        setMapCoords({ lat, lng: lon });
+
+        if (mapRef.current) {
+            mapRef.current.setView([lat, lon], 17);
+        }
+        if (markerRef.current) {
+            markerRef.current.setLatLng([lat, lon]);
+        }
+
+        // Formater l'adresse de la suggestion
+        let addressString = '';
+        if (suggestion.address) {
+            const name = suggestion.name || '';
+            const road = suggestion.address.road || suggestion.address.pedestrian || suggestion.address.suburb || '';
+            const city = suggestion.address.city || suggestion.address.town || suggestion.address.village || '';
+            
+            if (name && name !== road) {
+                addressString = `${name} - ${road}, ${city}`;
+            } else if (road && city) {
+                addressString = `${road}, ${city}`;
+            } else {
+                addressString = suggestion.display_name;
+            }
+        } else {
+            addressString = suggestion.display_name;
+        }
+
+        if (addressString.length > 180) {
+            addressString = addressString.substring(0, 177) + '...';
+        }
+
+        setMapAddress(addressString);
+        setMapSearchSuggestions([]);
+        setMapSearchQuery('');
+    };
+
+    // Confirme la position sélectionnée sur la carte et ferme le modal
+    const handleConfirmMapPosition = () => {
+        if (mapAddress) {
+            setIsManualTyping(false);
+            setFormData(prev => ({
+                ...prev,
+                location: mapAddress
+            }));
+        }
+        setIsMapOpen(false);
+    };
+
     // Récupère la position géographique de l'utilisateur (utile pour les chantiers extérieurs mobiles)
     const handleGeolocate = () => {
         if (!navigator.geolocation) {
@@ -154,6 +397,7 @@ export default function ReportCreateView() {
                 if (accuracy) {
                     setLocationAccuracy(accuracy);
                 }
+                setMapCoords({ lat: latitude, lng: longitude });
                 setIsManualTyping(false);
                 try {
                     // Appel à l'API de géocodage inverse Nominatim (OpenStreetMap)
@@ -235,6 +479,11 @@ export default function ReportCreateView() {
 
         if (addressString.length > 180) {
             addressString = addressString.substring(0, 177) + '...';
+        }
+
+        // Mettre à jour également les coordonnées de la carte si disponible dans la suggestion
+        if (suggestion.lat && suggestion.lon) {
+            setMapCoords({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon) });
         }
 
         setIsManualTyping(false);
@@ -525,15 +774,25 @@ export default function ReportCreateView() {
                                 <div className="relative">
                                     <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
                                         <span>Lieu ou Nom du Chantier *</span>
-                                        <button
-                                            type="button"
-                                            onClick={handleGeolocate}
-                                            disabled={geolocating}
-                                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded-lg border border-blue-500/20"
-                                        >
-                                            <Navigation className={`w-3 h-3 ${geolocating ? 'animate-spin' : ''}`} />
-                                            {geolocating ? 'Géolocalisation...' : 'Me géolocaliser'}
-                                        </button>
+                                        <div className="flex flex-wrap gap-2 justify-end">
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsMapOpen(true)}
+                                                className="text-xs text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 flex items-center gap-1 cursor-pointer bg-green-500/10 hover:bg-green-500/20 px-2.5 py-1 rounded-lg border border-green-500/20"
+                                            >
+                                                <MapPin className="w-3 h-3" />
+                                                Choisir sur la carte
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleGeolocate}
+                                                disabled={geolocating}
+                                                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1 rounded-lg border border-blue-500/20"
+                                            >
+                                                <Navigation className={`w-3 h-3 ${geolocating ? 'animate-spin' : ''}`} />
+                                                {geolocating ? 'Géolocalisation...' : 'Me géolocaliser'}
+                                            </button>
+                                        </div>
                                     </label>
                                     <input
                                         type="text"
@@ -548,9 +807,18 @@ export default function ReportCreateView() {
                                     />
                                     
                                     {locationAccuracy && locationAccuracy > 50 && !isManualTyping && (
-                                        <p className="text-[10px] text-orange-600 dark:text-orange-400 mt-1.5 flex items-center gap-1 bg-orange-500/10 border border-orange-500/25 px-2.5 py-1 rounded-lg">
-                                            ⚠️ Position approximative (+/- {Math.round(locationAccuracy)}m). Vous pouvez saisir directement "Goron" pour autocompléter.
-                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsMapOpen(true)}
+                                            className="w-full text-left text-[10px] text-orange-600 dark:text-orange-400 mt-1.5 flex items-center justify-between gap-1 bg-orange-500/10 border border-orange-500/25 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-orange-500/15 transition-all"
+                                        >
+                                            <span className="flex items-center gap-1">
+                                                ⚠️ Position approximative (+/- {Math.round(locationAccuracy)}m).
+                                            </span>
+                                            <span className="font-bold underline flex items-center gap-0.5">
+                                                Ajuster sur la carte ➔
+                                            </span>
+                                        </button>
                                     )}
 
                                     {/* Menu de suggestions (Nominatim Autocomplete) */}
@@ -863,6 +1131,145 @@ export default function ReportCreateView() {
                     </div>
                 </form>
             </div>
+
+            {/* Modal de Carte Leaflet pour géolocalisation précise */}
+            {isMapOpen && (
+                <div 
+                    className="fixed inset-0 z-[200] bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
+                    onClick={() => setIsMapOpen(false)}
+                >
+                    <div 
+                        className="bg-background text-foreground border border-border w-full max-w-2xl rounded-3xl shadow-2xl p-6 relative flex flex-col gap-4 animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* En-tête */}
+                        <div className="flex justify-between items-center border-b border-border pb-4">
+                            <div>
+                                <h3 className="text-lg font-extrabold text-foreground flex items-center gap-2">
+                                    <MapPin className="w-5 h-5 text-green-500" />
+                                    Positionnement sur la carte
+                                </h3>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Faites glisser le marqueur ou recherchez un lieu précis.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsMapOpen(false)}
+                                className="p-1.5 rounded-full bg-secondary hover:bg-muted text-muted-foreground hover:text-foreground transition-all cursor-pointer border border-border"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Barre de recherche dans le modal */}
+                        <div className="relative flex gap-2">
+                            <div className="relative flex-grow">
+                                <input
+                                    type="text"
+                                    placeholder="Rechercher une entreprise, rue, POI (ex: Rue de l'Albeck)..."
+                                    value={mapSearchQuery}
+                                    onChange={(e) => setMapSearchQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleMapSearch();
+                                        }
+                                    }}
+                                    className="w-full p-2.5 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                />
+                                {mapSearchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setMapSearchQuery('');
+                                            setMapSearchSuggestions([]);
+                                        }}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer border-0 bg-transparent"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleMapSearch}
+                                disabled={isSearchingMap}
+                                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                            >
+                                {isSearchingMap ? '...' : 'Rechercher'}
+                            </button>
+
+                            {/* Suggestions de recherche */}
+                            {mapSearchSuggestions.length > 0 && (
+                                <div className="absolute z-[210] top-full left-0 right-0 mt-1 bg-secondary border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-border/40">
+                                    {mapSearchSuggestions.map((suggestion, idx) => {
+                                        const name = suggestion.name || '';
+                                        const road = suggestion.address?.road || '';
+                                        const city = suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || '';
+                                        return (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() => handleSelectMapSuggestion(suggestion)}
+                                                className="w-full text-left p-2.5 hover:bg-muted/50 transition-colors text-xs text-foreground cursor-pointer flex flex-col gap-0.5 border-none bg-transparent"
+                                            >
+                                                {name && name !== road && (
+                                                    <span className="font-bold text-primary">{name}</span>
+                                                )}
+                                                <span className="text-foreground/90">
+                                                    {road ? `${road}, ` : ''}{city}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground truncate font-normal">
+                                                    {suggestion.display_name}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Conteneur de la carte */}
+                        <div className="relative w-full rounded-2xl overflow-hidden border border-border shadow-inner bg-muted/20">
+                            <div 
+                                id="leaflet-map-container" 
+                                ref={mapContainerRef} 
+                                className="w-full h-72 z-10"
+                            />
+                        </div>
+
+                        {/* Adresse résolue en bas */}
+                        <div className="p-3 bg-secondary/50 rounded-xl border border-border flex flex-col gap-1">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                Lieu sélectionné
+                            </span>
+                            <span className="text-xs font-semibold text-foreground">
+                                {mapAddress || "Déplacez le marqueur pour obtenir l'adresse..."}
+                            </span>
+                        </div>
+
+                        {/* Actions de pied de page */}
+                        <div className="flex gap-3 justify-end border-t border-border pt-4">
+                            <button
+                                type="button"
+                                onClick={() => setIsMapOpen(false)}
+                                className="px-4 py-2 bg-secondary hover:bg-muted border border-border text-foreground text-xs font-bold rounded-xl cursor-pointer"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmMapPosition}
+                                disabled={!mapAddress}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl cursor-pointer border-none"
+                            >
+                                Confirmer la position
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
