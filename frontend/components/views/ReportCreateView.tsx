@@ -116,44 +116,80 @@ export default function ReportCreateView() {
         document.head.appendChild(script);
     }, []);
 
-    // Chargement dynamique de Leaflet depuis le CDN
+    // Chargement dynamique de Leaflet, MapLibre GL et du plugin de liaison
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        if ((window as any).L) {
+        if ((window as any).L && (window as any).L.maplibreGL) {
             setLeafletLoaded(true);
             return;
         }
 
-        // Ajouter la feuille de style Leaflet dans le head
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
-        link.crossOrigin = '';
-        document.head.appendChild(link);
+        // 1. Ajouter les styles CSS
+        if (!document.querySelector('link[href*="leaflet.css"]')) {
+            const linkL = document.createElement('link');
+            linkL.rel = 'stylesheet';
+            linkL.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            linkL.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+            linkL.crossOrigin = '';
+            document.head.appendChild(linkL);
+        }
+        if (!document.querySelector('link[href*="maplibre-gl.css"]')) {
+            const linkM = document.createElement('link');
+            linkM.rel = 'stylesheet';
+            linkM.href = 'https://unpkg.com/maplibre-gl/dist/maplibre-gl.css';
+            document.head.appendChild(linkM);
+        }
 
-        // Ajouter le script Leaflet
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
-        script.crossOrigin = '';
-        script.onload = () => {
-            const L = (window as any).L;
-            if (L) {
-                // Configurer les icônes de marqueurs par défaut avec les assets CDN de Leaflet
-                const DefaultIcon = L.icon({
-                    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41],
-                    popupAnchor: [1, -34],
-                    shadowSize: [41, 41]
-                });
-                L.Marker.prototype.options.icon = DefaultIcon;
+        // 2. Charger les scripts séquentiellement
+        const loadScript = (src: string, integrity?: string): Promise<void> => {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                if (integrity) {
+                    script.integrity = integrity;
+                    script.crossOrigin = '';
+                }
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error(`Echec chargement script : ${src}`));
+                document.body.appendChild(script);
+            });
+        };
+
+        const initMapLibraries = async () => {
+            try {
+                const promises = [];
+                if (!(window as any).L) {
+                    promises.push(loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='));
+                }
+                if (!(window as any).maplibregl) {
+                    promises.push(loadScript('https://unpkg.com/maplibre-gl/dist/maplibre-gl.js'));
+                }
+                await Promise.all(promises);
+
+                const L = (window as any).L;
+                if (L) {
+                    const DefaultIcon = L.icon({
+                        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                        iconSize: [25, 41],
+                        iconAnchor: [12, 41],
+                        popupAnchor: [1, -34],
+                        shadowSize: [41, 41]
+                    });
+                    L.Marker.prototype.options.icon = DefaultIcon;
+                }
+
+                if (L && !L.maplibreGL) {
+                    await loadScript('https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js');
+                }
+
                 setLeafletLoaded(true);
+            } catch (err) {
+                console.error("Erreur de chargement des librairies cartographiques :", err);
             }
         };
-        document.body.appendChild(script);
+
+        initMapLibraries();
     }, []);
 
     // Vérifie si un brouillon existe dans le localStorage au montage
@@ -569,7 +605,7 @@ export default function ReportCreateView() {
         };
     }, [isMapOpen, leafletLoaded]);
 
-    // Gestion dynamique du basculement des couches de tuiles (Plan vs Satellite)
+    // Gestion dynamique du basculement des couches de tuiles (Plan OpenFreeMap vs Satellite Google Maps)
     useEffect(() => {
         if (!mapRef.current || !isMapOpen) return;
         const L = (window as any).L;
@@ -586,11 +622,21 @@ export default function ReportCreateView() {
         }
 
         if (mapLayerType === 'streets') {
-            streetsLayerRef.current = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-                attribution: '&copy; Google Maps',
-                maxZoom: 20
-            }).addTo(mapRef.current);
+            if (L.maplibreGL) {
+                // Utiliser OpenFreeMap avec le style vectoriel Liberty (ultra-précis et fluide)
+                streetsLayerRef.current = L.maplibreGL({
+                    style: 'https://tiles.openfreemap.org/styles/liberty',
+                    attribution: '&copy; <a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                }).addTo(mapRef.current);
+            } else {
+                // Repli si le plugin n'a pas pu se charger
+                streetsLayerRef.current = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                    attribution: '&copy; Google Maps',
+                    maxZoom: 20
+                }).addTo(mapRef.current);
+            }
         } else {
+            // Satellite Google Maps
             satelliteLayerRef.current = L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
                 attribution: '&copy; Google Maps',
                 maxZoom: 20
