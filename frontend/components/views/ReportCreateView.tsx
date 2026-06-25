@@ -543,13 +543,22 @@ export default function ReportCreateView() {
         };
         window.addEventListener('resize', handleResize);
 
-        // Invalidation de la taille pour s'assurer que Leaflet s'affiche correctement
-        setTimeout(() => {
-            map.invalidateSize();
-        }, 200);
+        // Lancer un intervalle temporaire pour invalider la taille de la carte pendant l'ouverture/animation du modal
+        const sizeInterval = setInterval(() => {
+            if (map) {
+                map.invalidateSize();
+            }
+        }, 150);
+
+        // Arrêter l'intervalle après 1,5 seconde (fin de toute animation possible)
+        const sizeTimeout = setTimeout(() => {
+            clearInterval(sizeInterval);
+        }, 1500);
 
         return () => {
             window.removeEventListener('resize', handleResize);
+            clearInterval(sizeInterval);
+            clearTimeout(sizeTimeout);
             if (mapRef.current) {
                 mapRef.current.remove();
                 mapRef.current = null;
@@ -592,13 +601,16 @@ export default function ReportCreateView() {
     // Mise à jour automatique de l'infobulle (popup) sur le marqueur pour afficher l'adresse en direct
     useEffect(() => {
         if (markerRef.current && mapAddress) {
+            markerRef.current.closePopup();
+            markerRef.current.unbindPopup();
+
             markerRef.current.bindPopup(
                 `<div style="font-family: inherit; font-size: 11px; font-weight: 700; color: #1e293b; text-align: center; max-width: 180px;">
                     ${mapAddress}
                  </div>`,
                 {
                     closeButton: false,
-                    autoClose: false,
+                    autoClose: true,
                     closeOnClick: false
                 }
             ).openPopup();
@@ -1370,7 +1382,7 @@ export default function ReportCreateView() {
                         </div>
 
                         {/* Barre de recherche dans le modal */}
-                        <div className="relative flex flex-col sm:flex-row gap-2">
+                        <div className="relative flex flex-col sm:flex-row gap-2 z-[30]">
                             <div className="relative flex-grow">
                                 <input
                                     type="text"
@@ -1437,7 +1449,7 @@ export default function ReportCreateView() {
 
                             {/* Suggestions de recherche */}
                             {mapSearchSuggestions.length > 0 && (
-                                <div className="absolute z-[210] top-full left-0 right-0 mt-1 bg-secondary border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-border/40">
+                                <div className="absolute z-[1000] top-full left-0 right-0 mt-1 bg-secondary border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-border/40">
                                     {mapSearchSuggestions.map((suggestion, idx) => {
                                         const name = suggestion.name || '';
                                         const road = suggestion.road || '';
