@@ -72,12 +72,49 @@ export default function ReportCreateView() {
     const [mapSearchSuggestions, setMapSearchSuggestions] = useState<any[]>([]);
     const [isSearchingMap, setIsSearchingMap] = useState(false);
 
+    const [googleLoaded, setGoogleLoaded] = useState(false);
+
     const mapRef = useRef<any>(null);
     const markerRef = useRef<any>(null);
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const [mapLayerType, setMapLayerType] = useState<'streets' | 'satellite'>('streets');
     const streetsLayerRef = useRef<any>(null);
     const satelliteLayerRef = useRef<any>(null);
+
+    // Chargement dynamique de Google Maps Places API
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        
+        const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (!googleMapsApiKey) {
+            console.log("Clé Google Maps absente. Repli automatique sur l'API Adresse.");
+            return;
+        }
+
+        if ((window as any).google && (window as any).google.maps && (window as any).google.maps.places) {
+            setGoogleLoaded(true);
+            return;
+        }
+
+        const existingScript = document.getElementById('google-maps-places-sdk');
+        if (existingScript) {
+            existingScript.addEventListener('load', () => setGoogleLoaded(true));
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.id = 'google-maps-places-sdk';
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&language=fr`;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+            setGoogleLoaded(true);
+        };
+        script.onerror = () => {
+            console.error("Erreur lors du chargement de l'API Google Maps");
+        };
+        document.head.appendChild(script);
+    }, []);
 
     // Chargement dynamique de Leaflet depuis le CDN
     useEffect(() => {
@@ -141,42 +178,55 @@ export default function ReportCreateView() {
         };
     }, []);
 
-    // Recherche d'adresses en temps réel pour l'autocomplétion (Nominatim OpenStreetMap)
+    // Recherche d'adresses en temps réel pour l'autocomplétion (Google Maps ou API Adresse)
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (formData.location.trim().length > 3 && isManualTyping) {
                 setSearchingSuggestions(true);
-                try {
-                    let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(formData.location)}&countrycodes=fr&limit=5&addressdetails=1`;
-                    
-                    // Si des coordonnées de géolocalisation ou de carte sont déjà connues, prioriser la zone locale
-                    if (mapCoords) {
-                        const offset = 0.15;
-                        const left = mapCoords.lng - offset;
-                        const right = mapCoords.lng + offset;
-                        const bottom = mapCoords.lat - offset;
-                        const top = mapCoords.lat + offset;
-                        url += `&viewbox=${left},${top},${right},${bottom}`;
-                    }
 
-                    const response = await fetch(
-                        url,
-                        {
-                            headers: {
-                                'Accept-Language': 'fr-FR,fr;q=0.9',
-                                'User-Agent': 'WebMASE-App'
-                            }
+                // Cas 1 : Google Maps est chargé
+                if (googleLoaded && (window as any).google?.maps?.places) {
+                    try {
+                        const autocompleteService = new (window as any).google.maps.places.AutocompleteService();
+                        const request: any = {
+                            input: formData.location,
+                            componentRestrictions: { country: 'fr' },
+                        };
+                        
+                        // Ajouter un biais de localisation si les coordonnées sont disponibles
+                        if (mapCoords) {
+                            request.location = new (window as any).google.maps.LatLng(mapCoords.lat, mapCoords.lng);
+                            request.radius = 20000; // 20km
                         }
-                    );
-                    if (response.ok) {
-                        const data = await response.json();
-                        setSuggestions(data);
-                        setShowSuggestions(data.length > 0);
+
+                        autocompleteService.getPlacePredictions(request, (predictions: any[], status: any) => {
+                            if (status === 'OK' && predictions) {
+                                const formatted = predictions.map((pred: any) => {
+                                    const mainText = pred.structured_formatting?.main_text || '';
+                                    const secondaryText = pred.structured_formatting?.secondary_text || '';
+                                    return {
+                                        display_name: pred.description,
+                                        name: mainText,
+                                        road: '',
+                                        city: secondaryText,
+                                        place_id: pred.place_id,
+                                        source: 'google'
+                                    };
+                                });
+                                setSuggestions(formatted);
+                                setShowSuggestions(formatted.length > 0);
+                                setSearchingSuggestions(false);
+                            } else {
+                                fetchApiAdresse(formData.location);
+                            }
+                        });
+                    } catch (err) {
+                        console.error("Erreur d'autocomplétion Google Maps:", err);
+                        fetchApiAdresse(formData.location);
                     }
-                } catch (err) {
-                    console.error("Erreur de recherche d'adresses:", err);
-                } finally {
-                    setSearchingSuggestions(false);
+                } else {
+                    // Cas 2 : Utilisation de l'API Adresse
+                    fetchApiAdresse(formData.location);
                 }
             } else {
                 setSuggestions([]);
@@ -184,8 +234,81 @@ export default function ReportCreateView() {
             }
         }, 500); // Debounce de 500ms
 
+        const fetchApiAdresse = async (query: string) => {
+            try {
+                let url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`;
+                if (mapCoords) {
+                    url += `&lat=${mapCoords.lat}&lon=${mapCoords.lng}`;
+                }
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    const formatted = data.features.map((feature: any) => {
+                        const props = feature.properties;
+                        const coords = feature.geometry.coordinates; // [lon, lat]
+                        return {
+                            display_name: props.label,
+                            name: props.name || '',
+                            road: props.street || '',
+                            city: props.city || '',
+                            lat: coords[1].toString(),
+                            lon: coords[0].toString(),
+                            source: 'api-adresse'
+                        };
+                    });
+                    setSuggestions(formatted);
+                    setShowSuggestions(formatted.length > 0);
+                } else {
+                    fetchNominatim(query);
+                }
+            } catch (err) {
+                console.error("Erreur API Adresse:", err);
+                fetchNominatim(query);
+            } finally {
+                setSearchingSuggestions(false);
+            }
+        };
+
+        const fetchNominatim = async (query: string) => {
+            try {
+                let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&countrycodes=fr&limit=5&addressdetails=1`;
+                if (mapCoords) {
+                    const offset = 0.15;
+                    const left = mapCoords.lng - offset;
+                    const right = mapCoords.lng + offset;
+                    const bottom = mapCoords.lat - offset;
+                    const top = mapCoords.lat + offset;
+                    url += `&viewbox=${left},${top},${right},${bottom}`;
+                }
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept-Language': 'fr-FR,fr;q=0.9',
+                        'User-Agent': 'WebMASE-App'
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const formatted = data.map((item: any) => ({
+                        display_name: item.display_name,
+                        name: item.name || '',
+                        road: item.address?.road || '',
+                        city: item.address?.city || item.address?.town || item.address?.village || '',
+                        lat: item.lat,
+                        lon: item.lon,
+                        source: 'nominatim'
+                    }));
+                    setSuggestions(formatted);
+                    setShowSuggestions(formatted.length > 0);
+                }
+            } catch (err) {
+                console.error("Erreur Nominatim fallback:", err);
+            } finally {
+                setSearchingSuggestions(false);
+            }
+        };
+
         return () => clearTimeout(delayDebounceFn);
-    }, [formData.location, isManualTyping, mapCoords]);
+    }, [formData.location, isManualTyping, mapCoords, googleLoaded]);
 
     // Restaure les données du brouillon
     const restoreDraft = () => {
@@ -207,8 +330,67 @@ export default function ReportCreateView() {
         setHasDraft(false);
     };
 
-    // Géocodage inverse (coordonnées vers adresse textuelle précise)
-    const reverseGeocode = async (lat: number, lng: number) => {
+    // Récupère les détails de coordonnées GPS pour un place_id Google Maps
+    const getGooglePlaceDetails = (placeId: string): Promise<{ lat: number; lng: number }> => {
+        return new Promise((resolve, reject) => {
+            if (typeof window === 'undefined' || !(window as any).google) {
+                reject("Google Maps SDK non chargé");
+                return;
+            }
+            try {
+                const container = document.createElement('div');
+                const service = new (window as any).google.maps.places.PlacesService(container);
+                service.getDetails({
+                    placeId: placeId,
+                    fields: ['geometry']
+                }, (place: any, status: any) => {
+                    if (status === 'OK' && place?.geometry?.location) {
+                        resolve({
+                            lat: place.geometry.location.lat(),
+                            lng: place.geometry.location.lng()
+                        });
+                    } else {
+                        reject(`Erreur Place Details : ${status}`);
+                    }
+                });
+            } catch (e) {
+                reject(e);
+            }
+        });
+    };
+
+    // Géocodage inverse unifié (coordonnées vers adresse textuelle précise)
+    const performReverseGeocode = async (lat: number, lng: number): Promise<string> => {
+        if (googleLoaded && (window as any).google?.maps) {
+            try {
+                const geocoder = new (window as any).google.maps.Geocoder();
+                const address = await new Promise<string>((resolve, reject) => {
+                    geocoder.geocode({ location: { lat, lng } }, (results: any[], status: any) => {
+                        if (status === 'OK' && results && results[0]) {
+                            resolve(results[0].formatted_address);
+                        } else {
+                            reject(`Google reverse geocoding status: ${status}`);
+                        }
+                    });
+                });
+                return address;
+            } catch (err) {
+                console.warn("Erreur géocodage inverse Google:", err);
+            }
+        }
+
+        try {
+            const response = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lng}&lat=${lat}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.features && data.features.length > 0) {
+                    return data.features[0].properties.label;
+                }
+            }
+        } catch (err) {
+            console.warn("Erreur géocodage inverse API Adresse:", err);
+        }
+
         try {
             const response = await fetch(
                 `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
@@ -221,28 +403,32 @@ export default function ReportCreateView() {
             );
             if (response.ok) {
                 const data = await response.json();
-                let addressString = '';
                 if (data.address) {
                     const name = data.name || '';
                     const road = data.address.road || data.address.pedestrian || data.address.suburb || '';
                     const city = data.address.city || data.address.town || data.address.village || '';
-                    
                     if (name && name !== road) {
-                        addressString = `${name} - ${road}, ${city}`;
+                        return `${name} - ${road}, ${city}`;
                     } else if (road && city) {
-                        addressString = `${road}, ${city}`;
-                    } else {
-                        addressString = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        return `${road}, ${city}`;
                     }
-                } else {
-                    addressString = data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
                 }
-
-                if (addressString.length > 180) {
-                    addressString = addressString.substring(0, 177) + '...';
-                }
-                setMapAddress(addressString);
+                return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             }
+        } catch (err) {
+            console.warn("Erreur géocodage inverse Nominatim:", err);
+        }
+
+        return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    };
+
+    const reverseGeocode = async (lat: number, lng: number) => {
+        try {
+            let address = await performReverseGeocode(lat, lng);
+            if (address.length > 180) {
+                address = address.substring(0, 177) + '...';
+            }
+            setMapAddress(address);
         } catch (err) {
             console.error("Erreur de géocodage inverse sur la carte:", err);
         }
@@ -394,76 +580,121 @@ export default function ReportCreateView() {
         }
     }, [mapAddress]);
 
-    // Recherche de lieux au sein du modal de carte (avec zone de géolocalisation pour prioriser les résultats locaux)
+    // Recherche de lieux au sein du modal de carte (Google Maps, API Adresse ou Nominatim)
     const handleMapSearch = async () => {
         if (!mapSearchQuery.trim()) return;
         setIsSearchingMap(true);
+
+        if (googleLoaded && (window as any).google?.maps?.places) {
+            try {
+                const autocompleteService = new (window as any).google.maps.places.AutocompleteService();
+                const request: any = {
+                    input: mapSearchQuery,
+                    componentRestrictions: { country: 'fr' }
+                };
+                if (mapCoords) {
+                    request.location = new (window as any).google.maps.LatLng(mapCoords.lat, mapCoords.lng);
+                    request.radius = 20000;
+                }
+                autocompleteService.getPlacePredictions(request, (predictions: any[], status: any) => {
+                    if (status === 'OK' && predictions) {
+                        const formatted = predictions.map((pred: any) => ({
+                            display_name: pred.description,
+                            name: pred.structured_formatting?.main_text || '',
+                            road: '',
+                            city: pred.structured_formatting?.secondary_text || '',
+                            place_id: pred.place_id,
+                            source: 'google'
+                        }));
+                        setMapSearchSuggestions(formatted);
+                        setIsSearchingMap(false);
+                    } else {
+                        fetchMapApiAdresse(mapSearchQuery);
+                    }
+                });
+            } catch (err) {
+                console.error("Erreur de recherche cartographique Google:", err);
+                fetchMapApiAdresse(mapSearchQuery);
+            }
+        } else {
+            fetchMapApiAdresse(mapSearchQuery);
+        }
+    };
+
+    const fetchMapApiAdresse = async (query: string) => {
         try {
-            let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(mapSearchQuery)}&countrycodes=fr&limit=5&addressdetails=1`;
-            
-            // Si des coordonnées de carte/GPS sont définies, ajouter un biais géographique de proximité (viewbox)
+            let url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`;
             if (mapCoords) {
-                const offset = 0.15; // Rayon de ~15-20km autour des coordonnées actuelles
+                url += `&lat=${mapCoords.lat}&lon=${mapCoords.lng}`;
+            }
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const formatted = data.features.map((feature: any) => {
+                    const props = feature.properties;
+                    const coords = feature.geometry.coordinates;
+                    return {
+                        display_name: props.label,
+                        name: props.name || '',
+                        road: props.street || '',
+                        city: props.city || '',
+                        lat: coords[1].toString(),
+                        lon: coords[0].toString(),
+                        source: 'api-adresse'
+                    };
+                });
+                setMapSearchSuggestions(formatted);
+            } else {
+                fetchMapNominatim(query);
+            }
+        } catch (err) {
+            console.error("Erreur recherche carte API Adresse:", err);
+            fetchMapNominatim(query);
+        } finally {
+            setIsSearchingMap(false);
+        }
+    };
+
+    const fetchMapNominatim = async (query: string) => {
+        try {
+            let url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&countrycodes=fr&limit=5&addressdetails=1`;
+            if (mapCoords) {
+                const offset = 0.15;
                 const left = mapCoords.lng - offset;
                 const right = mapCoords.lng + offset;
                 const bottom = mapCoords.lat - offset;
                 const top = mapCoords.lat + offset;
                 url += `&viewbox=${left},${top},${right},${bottom}`;
             }
-            
-            const response = await fetch(
-                url,
-                {
-                    headers: {
-                        'Accept-Language': 'fr-FR,fr;q=0.9',
-                        'User-Agent': 'WebMASE-App'
-                    }
+            const response = await fetch(url, {
+                headers: {
+                    'Accept-Language': 'fr-FR,fr;q=0.9',
+                    'User-Agent': 'WebMASE-App'
                 }
-            );
+            });
             if (response.ok) {
                 const data = await response.json();
-                setMapSearchSuggestions(data);
+                const formatted = data.map((item: any) => ({
+                    display_name: item.display_name,
+                    name: item.name || '',
+                    road: item.address?.road || '',
+                    city: item.address?.city || item.address?.town || item.address?.village || '',
+                    lat: item.lat,
+                    lon: item.lon,
+                    source: 'nominatim'
+                }));
+                setMapSearchSuggestions(formatted);
             }
         } catch (err) {
-            console.error("Erreur lors de la recherche cartographique:", err);
+            console.error("Erreur recherche carte Nominatim:", err);
         } finally {
             setIsSearchingMap(false);
         }
     };
 
     // Sélection d'une suggestion de recherche au sein du modal de carte
-    const handleSelectMapSuggestion = (suggestion: any) => {
-        const lat = parseFloat(suggestion.lat);
-        const lon = parseFloat(suggestion.lon);
-        if (isNaN(lat) || isNaN(lon)) return;
-
-        setMapCoords({ lat, lng: lon });
-
-        if (mapRef.current) {
-            mapRef.current.setView([lat, lon], 17);
-        }
-        if (markerRef.current) {
-            markerRef.current.setLatLng([lat, lon]);
-        }
-
-        // Formater l'adresse de la suggestion
-        let addressString = '';
-        if (suggestion.address) {
-            const name = suggestion.name || '';
-            const road = suggestion.address.road || suggestion.address.pedestrian || suggestion.address.suburb || '';
-            const city = suggestion.address.city || suggestion.address.town || suggestion.address.village || '';
-            
-            if (name && name !== road) {
-                addressString = `${name} - ${road}, ${city}`;
-            } else if (road && city) {
-                addressString = `${road}, ${city}`;
-            } else {
-                addressString = suggestion.display_name;
-            }
-        } else {
-            addressString = suggestion.display_name;
-        }
-
+    const handleSelectMapSuggestion = async (suggestion: any) => {
+        let addressString = suggestion.display_name;
         if (addressString.length > 180) {
             addressString = addressString.substring(0, 177) + '...';
         }
@@ -471,6 +702,31 @@ export default function ReportCreateView() {
         setMapAddress(addressString);
         setMapSearchSuggestions([]);
         setMapSearchQuery('');
+
+        const updateMapMarker = (lat: number, lng: number) => {
+            setMapCoords({ lat, lng });
+            if (mapRef.current) {
+                mapRef.current.setView([lat, lng], 17);
+            }
+            if (markerRef.current) {
+                markerRef.current.setLatLng([lat, lng]);
+            }
+        };
+
+        if (suggestion.source === 'google' && suggestion.place_id) {
+            try {
+                const details = await getGooglePlaceDetails(suggestion.place_id);
+                updateMapMarker(details.lat, details.lng);
+            } catch (err) {
+                console.error("Erreur de récupération des coordonnées Google (carte):", err);
+            }
+        } else if (suggestion.lat && suggestion.lon) {
+            const lat = parseFloat(suggestion.lat);
+            const lon = parseFloat(suggestion.lon);
+            if (!isNaN(lat) && !isNaN(lon)) {
+                updateMapMarker(lat, lon);
+            }
+        }
     };
 
     // Confirme la position sélectionnée sur la carte et ferme le modal
@@ -502,46 +758,16 @@ export default function ReportCreateView() {
                 setMapCoords({ lat: latitude, lng: longitude });
                 setIsManualTyping(false);
                 try {
-                    // Appel à l'API de géocodage inverse Nominatim (OpenStreetMap)
-                    const response = await fetch(
-                        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
-                        {
-                            headers: {
-                                'Accept-Language': 'fr-FR,fr;q=0.9',
-                                'User-Agent': 'WebMASE-App'
-                            }
-                        }
-                    );
-                    if (!response.ok) throw new Error("Erreur de réponse de l'API de géocodage");
-                    const data = await response.json();
-                    
-                    // Extraire une adresse lisible et concise
-                    let addressString = '';
-                    if (data.address) {
-                        const road = data.address.road || data.address.pedestrian || data.address.suburb || '';
-                        const city = data.address.city || data.address.town || data.address.village || '';
-                        
-                        if (road && city) {
-                            addressString = `${road}, ${city}`;
-                        } else {
-                            addressString = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
-                        }
-                    } else {
-                        addressString = data.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                    let address = await performReverseGeocode(latitude, longitude);
+                    if (address.length > 180) {
+                        address = address.substring(0, 177) + '...';
                     }
-
-                    // Limiter la longueur de l'adresse pour ne pas dépasser la taille max de l'input (200 caractères)
-                    if (addressString.length > 180) {
-                        addressString = addressString.substring(0, 177) + '...';
-                    }
-
                     setFormData(prev => ({
                         ...prev,
-                        location: addressString
+                        location: address
                     }));
                 } catch (err) {
-                    console.error("Erreur de géocodage inverse:", err);
-                    // Repli sur les coordonnées GPS en cas d'erreur réseau/API
+                    console.error("Erreur de géocodage lors de la géolocalisation:", err);
                     setFormData(prev => ({
                         ...prev,
                         location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)} (Chantier extérieur)`
@@ -560,32 +786,11 @@ export default function ReportCreateView() {
     };
 
     // Sélection d'une adresse suggérée
-    const handleSelectSuggestion = (suggestion: any) => {
-        let addressString = '';
-        if (suggestion.address) {
-            const name = suggestion.name || '';
-            const road = suggestion.address.road || suggestion.address.pedestrian || suggestion.address.suburb || '';
-            const city = suggestion.address.city || suggestion.address.town || suggestion.address.village || '';
-            
-            // Si c'est un point d'intérêt nommé (magasin, entreprise) différent du nom de rue
-            if (name && name !== road) {
-                addressString = `${name} - ${road}, ${city}`;
-            } else if (road && city) {
-                addressString = `${road}, ${city}`;
-            } else {
-                addressString = suggestion.display_name;
-            }
-        } else {
-            addressString = suggestion.display_name;
-        }
+    const handleSelectSuggestion = async (suggestion: any) => {
+        let addressString = suggestion.display_name;
 
         if (addressString.length > 180) {
             addressString = addressString.substring(0, 177) + '...';
-        }
-
-        // Mettre à jour également les coordonnées de la carte si disponible dans la suggestion
-        if (suggestion.lat && suggestion.lon) {
-            setMapCoords({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon) });
         }
 
         setIsManualTyping(false);
@@ -595,6 +800,17 @@ export default function ReportCreateView() {
         }));
         setShowSuggestions(false);
         setSuggestions([]);
+
+        if (suggestion.source === 'google' && suggestion.place_id) {
+            try {
+                const details = await getGooglePlaceDetails(suggestion.place_id);
+                setMapCoords(details);
+            } catch (err) {
+                console.error("Erreur de récupération des coordonnées Google:", err);
+            }
+        } else if (suggestion.lat && suggestion.lon) {
+            setMapCoords({ lat: parseFloat(suggestion.lat), lng: parseFloat(suggestion.lon) });
+        }
     };
 
     // Met à jour les champs de saisie standards
@@ -918,13 +1134,13 @@ export default function ReportCreateView() {
                                 </button>
                             )}
 
-                            {/* Menu de suggestions (Nominatim Autocomplete) */}
+                            {/* Menu de suggestions (Google Maps / API Adresse / Nominatim Autocomplete) */}
                             {showSuggestions && suggestions.length > 0 && (
                                 <div className="absolute z-[110] left-0 right-0 mt-1 bg-secondary border border-border rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border/40 backdrop-blur-md">
                                     {suggestions.map((suggestion, idx) => {
                                         const name = suggestion.name || '';
-                                        const road = suggestion.address?.road || '';
-                                        const city = suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || '';
+                                        const road = suggestion.road || '';
+                                        const city = suggestion.city || '';
                                         return (
                                             <button
                                                 key={idx}
@@ -1185,8 +1401,8 @@ export default function ReportCreateView() {
                                 <div className="absolute z-[210] top-full left-0 right-0 mt-1 bg-secondary border border-border rounded-xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-border/40">
                                     {mapSearchSuggestions.map((suggestion, idx) => {
                                         const name = suggestion.name || '';
-                                        const road = suggestion.address?.road || '';
-                                        const city = suggestion.address?.city || suggestion.address?.town || suggestion.address?.village || '';
+                                        const road = suggestion.road || '';
+                                        const city = suggestion.city || '';
                                         return (
                                             <button
                                                 key={idx}
