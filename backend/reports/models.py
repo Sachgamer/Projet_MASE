@@ -1,6 +1,22 @@
 from django.db import models
 from django.conf import settings
 
+# Représente un chantier ou une zone de travail
+class WorkSite(models.Model):
+    name = models.CharField(max_length=255, unique=True, verbose_name="Nom du chantier")
+    address = models.CharField(max_length=255, blank=True, verbose_name="Adresse")
+    latitude = models.FloatField(null=True, blank=True, verbose_name="Latitude")
+    longitude = models.FloatField(null=True, blank=True, verbose_name="Longitude")
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Chantier"
+        verbose_name_plural = "Chantiers"
+
+    def __str__(self):
+        return self.name
+
 # Représente un rapport d'accident ou d'incident
 class AccidentReport(models.Model):
     SEVERITY_CHOICES = [
@@ -25,6 +41,8 @@ class AccidentReport(models.Model):
     incident_type = models.CharField(max_length=50, choices=INCIDENT_TYPE_CHOICES, default='dangerous_situation')
     # Lieu de l'incident
     location = models.CharField(max_length=255)
+    # Chantier associé
+    worksite = models.ForeignKey(WorkSite, on_delete=models.SET_NULL, null=True, blank=True, related_name='reports', verbose_name="Chantier associé")
     # Explication détaillée de ce qu'il s'est passé
     description = models.TextField()
     # Date et heure précises de l'incident

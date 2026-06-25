@@ -63,6 +63,9 @@ export const uploadFile = (formData: FormData) => api.post('/api/files/', formDa
 export const getReports = () => api.get('/api/reports/');
 export const createReport = (data: FormData) => api.post('/api/reports/', data);
 
+export const getWorkSites = () => api.get('/api/worksites/');
+export const createWorkSite = (data: any) => api.post('/api/worksites/', data);
+
 export const createChoice = (data: any) => api.post('/api/choices/', data);
 export const deleteReport = (id: number) => api.delete(`/api/reports/${id}/`);
 export const updateReport = (id: number, data: FormData | any) => {

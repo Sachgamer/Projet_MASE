@@ -7,6 +7,10 @@ import { useView } from '@/context/ViewContext';
 // Mocks des dépendances
 jest.mock('@/lib/api', () => ({
   createReport: jest.fn(),
+  getWorkSites: jest.fn(() => Promise.resolve({ data: [
+    { id: 1, name: 'Usine Nord, Bâtiment B', address: '123 Rue', is_active: true }
+  ] })),
+  createWorkSite: jest.fn(() => Promise.resolve({ data: { id: 1 } })),
 }));
 
 jest.mock('@/context/AuthContext', () => ({
@@ -34,8 +38,10 @@ describe('ReportCreateView - Formulaire de remontée', () => {
   it('affiche une erreur si la date est manquante à la soumission', async () => {
     render(<ReportCreateView />);
     
-    // On remplit le lieu et la description mais on oublie la date
-    fireEvent.change(screen.getByPlaceholderText(/Lieu de l'incident/i), { target: { value: 'Atelier' } });
+    // On sélectionne le chantier dans le dropdown
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: '1' } });
+    
     fireEvent.change(screen.getByRole('textbox', { name: /Description/i }), { target: { value: 'Fuite' } });
     
     fireEvent.click(screen.getByRole('button', { name: /Envoyer la remontée/i }));
@@ -53,9 +59,9 @@ describe('ReportCreateView - Formulaire de remontée', () => {
     const categoryButton = screen.getByRole('button', { name: /^Accident$/i });
     fireEvent.click(categoryButton);
 
-    // 2. On remplit le texte
-    const locationInput = screen.getByPlaceholderText(/Chantier X/i);
-    fireEvent.change(locationInput, { target: { value: 'Usine Nord, Bâtiment B' } });
+    // 2. On sélectionne le chantier dans le dropdown
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: '1' } });
 
     const descInput = screen.getByPlaceholderText(/Décrivez précisément les faits/i);
     fireEvent.change(descInput, { target: { value: "Chariot élévateur renversé sur le site." } });
@@ -71,10 +77,6 @@ describe('ReportCreateView - Formulaire de remontée', () => {
     // jsdom utilise fireEvent.change pour les fichiers
     fireEvent.change(fileInput, { target: { files: [testImage] } });
 
-    // Vérifie que le nom du fichier est bien apparu sur l'écran
-    // Note: notre composant n'affiche pas le nom du fichier image brut mais affiche son URL d'aperçu dans un img src.
-    // Nous pouvons aussi juste vérifier la soumission.
-
     // 5. On soumet le formulaire
     fireEvent.click(screen.getByRole('button', { name: /Envoyer la remontée/i }));
 
@@ -88,6 +90,7 @@ describe('ReportCreateView - Formulaire de remontée', () => {
     
     expect(formDataSent.get('severity')).toBe('high');
     expect(formDataSent.get('location')).toBe('Usine Nord, Bâtiment B');
+    expect(formDataSent.get('worksite')).toBe('1');
     expect(formDataSent.get('description')).toBe('Chariot élévateur renversé sur le site.');
     
     // Le composant convertit la date locale en format ISO pour l'API

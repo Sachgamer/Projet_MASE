@@ -24,7 +24,7 @@ from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from slideshows.views import SlideshowViewSet, QuizViewSet, SlideViewSet, QuestionViewSet, ChoiceViewSet
 from files.views import PersonalFileViewSet
-from reports.views import AccidentReportViewSet
+from reports.views import AccidentReportViewSet, WorkSiteViewSet
 
 router = DefaultRouter()
 router.register(r'slideshows', SlideshowViewSet)
@@ -34,6 +34,7 @@ router.register(r'questions', QuestionViewSet)
 router.register(r'choices', ChoiceViewSet)
 router.register(r'files', PersonalFileViewSet, basename='personal-file')
 router.register(r'reports', AccidentReportViewSet, basename='accident-report')
+router.register(r'worksites', WorkSiteViewSet, basename='worksite')
 
 from users.views import UserViewSet, BlockedMacAddressViewSet, CustomLoginView, Verify2FAView, CustomLogoutView
 router.register(r'users', UserViewSet, basename='user')

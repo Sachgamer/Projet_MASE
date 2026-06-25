@@ -2,9 +2,20 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from django.db.models import Q
 from django.http import FileResponse
-from .models import AccidentReport
-from .serializers import AccidentReportSerializer
+from .models import AccidentReport, WorkSite
+from .serializers import AccidentReportSerializer, WorkSiteSerializer
 from .utils import generate_accident_pdf
+
+class WorkSiteViewSet(viewsets.ModelViewSet):
+    queryset = WorkSite.objects.all()
+    serializer_class = WorkSiteSerializer
+
+    def get_permissions(self):
+        # Permettre aux utilisateurs authentifiés de lister et créer des chantiers (pour l'ajout en direct)
+        if self.action in ['list', 'create', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        # Seuls les admins peuvent modifier/supprimer des chantiers
+        return [permissions.IsAdminUser()]
 
 # Définit qui peut voir ou créer des rapports d'accident
 class IsAdminOrReadOnly(permissions.BasePermission):

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { createReport } from '@/lib/api';
+import { createReport, getWorkSites, createWorkSite } from '@/lib/api';
 import { useView } from '@/context/ViewContext';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,6 +55,12 @@ export default function ReportCreateView() {
     const [geolocating, setGeolocating] = useState(false);
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // États pour le référentiel de chantiers
+    const [workSites, setWorkSites] = useState<any[]>([]);
+    const [selectedWorkSiteId, setSelectedWorkSiteId] = useState<string>('');
+    const [isCreatingNewWorkSite, setIsCreatingNewWorkSite] = useState(false);
+    const [newWorkSiteName, setNewWorkSiteName] = useState('');
 
     // États pour le support du géocodage et de l'autocomplétion
     const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
@@ -190,6 +196,21 @@ export default function ReportCreateView() {
         };
 
         initMapLibraries();
+    }, []);
+
+    // Charger les chantiers actifs
+    useEffect(() => {
+        const loadWorkSites = async () => {
+            try {
+                const res = await getWorkSites();
+                if (res.data) {
+                    setWorkSites(res.data.filter((ws: any) => ws.is_active));
+                }
+            } catch (err) {
+                console.error("Erreur de chargement des chantiers:", err);
+            }
+        };
+        loadWorkSites();
     }, []);
 
     // Vérifie si un brouillon existe dans le localStorage au montage
@@ -910,6 +931,36 @@ export default function ReportCreateView() {
         }
     };
 
+    const handleWorkSiteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        setSelectedWorkSiteId(val);
+        if (val === 'new') {
+            setIsCreatingNewWorkSite(true);
+            setFormData(prev => ({ ...prev, location: '' }));
+            setNewWorkSiteName('');
+        } else if (val === '') {
+            setIsCreatingNewWorkSite(false);
+            setFormData(prev => ({ ...prev, location: '' }));
+        } else {
+            setIsCreatingNewWorkSite(false);
+            const selected = workSites.find(ws => ws.id.toString() === val);
+            if (selected) {
+                setFormData(prev => ({ ...prev, location: selected.name }));
+                if (selected.latitude && selected.longitude) {
+                    const resolvedCoords = { lat: selected.latitude, lng: selected.longitude };
+                    setMapCoords(resolvedCoords);
+                    if (mapRef.current) {
+                        mapRef.current.setView([selected.latitude, selected.longitude], 16);
+                    }
+                    if (markerRef.current) {
+                        markerRef.current.setLatLng([selected.latitude, selected.longitude]);
+                    }
+                    setMapAddress(selected.address || selected.name);
+                }
+            }
+        }
+    };
+
     // Met à jour les champs de saisie standards
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         if (e.target.name === 'location') {
@@ -992,10 +1043,36 @@ export default function ReportCreateView() {
         }
 
         try {
+            let worksiteId = null;
+            if (isCreatingNewWorkSite) {
+                try {
+                    const wsResponse = await createWorkSite({
+                        name: newWorkSiteName,
+                        address: formData.location,
+                        latitude: mapCoords?.lat,
+                        longitude: mapCoords?.lng
+                    });
+                    worksiteId = wsResponse.data.id;
+                } catch (err: any) {
+                    console.error("Erreur lors de la création du chantier:", err);
+                    setError("Impossible de créer le nouveau chantier. Il existe peut-être déjà sous ce nom.");
+                    setIsSubmitting(false);
+                    return;
+                }
+            } else if (selectedWorkSiteId && selectedWorkSiteId !== '') {
+                worksiteId = parseInt(selectedWorkSiteId);
+            }
+
             const data = new FormData();
             data.append('severity', formData.severity);
             data.append('incident_type', formData.incident_type);
-            data.append('location', formData.location);
+            
+            // Si c'est un nouveau chantier créé à la volée, le champ de texte principal location prend le nom du chantier
+            const locationText = isCreatingNewWorkSite ? newWorkSiteName : formData.location;
+            data.append('location', locationText);
+            if (worksiteId) {
+                data.append('worksite', worksiteId.toString());
+            }
             data.append('description', formData.description);
             
             if (!formData.incident_date) {
@@ -1050,7 +1127,9 @@ export default function ReportCreateView() {
     };
 
     // Validation globale du formulaire
-    const isFormValid = formData.location.trim().length > 0 && 
+    const isFormValid = (isCreatingNewWorkSite 
+                            ? newWorkSiteName.trim().length > 0 && formData.location.trim().length > 0 
+                            : selectedWorkSiteId !== '') && 
                         formData.incident_date !== '' && 
                         formData.description.trim().length >= 10;
 
@@ -1181,55 +1260,116 @@ export default function ReportCreateView() {
                     {/* 2. INFOS GÉOGRAPHIQUES ET TEMPORELLES */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Lieu de l'incident */}
-                        <div className="relative">
-                            <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
-                                <span>Lieu ou Nom du Chantier *</span>
-                                <div className="flex flex-wrap gap-2 justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsMapOpen(true)}
-                                        className="text-[10px] text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 flex items-center gap-0.5 cursor-pointer bg-green-500/10 hover:bg-green-500/20 px-2 py-0.5 rounded-lg border border-green-500/20"
-                                    >
-                                        <MapPin className="w-2.5 h-2.5" />
-                                        Carte
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleGeolocate}
-                                        disabled={geolocating}
-                                        className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-0.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-blue-500/10 hover:bg-blue-500/20 px-2 py-0.5 rounded-lg border border-blue-500/20"
-                                    >
-                                        <Navigation className={`w-2.5 h-2.5 ${geolocating ? 'animate-spin' : ''}`} />
-                                        GPS
-                                    </button>
-                                </div>
-                            </label>
-                            <input
-                                type="text"
-                                name="location"
-                                value={formData.location}
-                                onChange={handleChange}
-                                required
-                                maxLength={200}
-                                autoComplete="off"
-                                className="w-full p-2.5 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-muted-foreground text-sm"
-                                placeholder="Ex: Chantier X - Autoroute A13..."
-                            />
-                            
-                            {locationAccuracy && locationAccuracy > 50 && !isManualTyping && (
-                                <button
-                                    type="button"
-                                    onClick={() => setIsMapOpen(true)}
-                                    className="w-full text-left text-[10px] text-orange-600 dark:text-orange-400 mt-1.5 flex items-center justify-between gap-1 bg-orange-500/10 border border-orange-500/25 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-orange-500/15 transition-all"
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-sm font-bold mb-2 text-foreground">
+                                    Chantier / Zone de l'incident *
+                                </label>
+                                <select
+                                    value={selectedWorkSiteId}
+                                    onChange={handleWorkSiteChange}
+                                    required
+                                    className="w-full p-2.5 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
                                 >
-                                    <span className="flex items-center gap-1">
-                                        ⚠️ Précision (+/- {Math.round(locationAccuracy)}m).
-                                    </span>
-                                    <span className="font-bold underline">
-                                        Ajuster ➔
-                                    </span>
-                                </button>
+                                    <option value="">Sélectionner un chantier...</option>
+                                    {workSites.map(ws => (
+                                        <option key={ws.id} value={ws.id.toString()}>{ws.name}</option>
+                                    ))}
+                                    <option value="new" className="text-blue-600 dark:text-blue-400 font-bold">+ Créer un nouveau chantier / Autre lieu...</option>
+                                </select>
+                            </div>
+
+                            {!isCreatingNewWorkSite && selectedWorkSiteId !== '' && (
+                                <div className="p-3 bg-blue-500/5 dark:bg-blue-950/10 border border-blue-500/20 rounded-xl flex justify-between items-center text-xs animate-in fade-in duration-200">
+                                    <div>
+                                        <p className="font-bold text-blue-600 dark:text-blue-400">Chantier sélectionné</p>
+                                        <p className="text-muted-foreground mt-0.5">
+                                            {workSites.find(ws => ws.id.toString() === selectedWorkSiteId)?.address || "Pas d'adresse enregistrée"}
+                                        </p>
+                                    </div>
+                                    {workSites.find(ws => ws.id.toString() === selectedWorkSiteId)?.latitude && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsMapOpen(true)}
+                                            className="text-[10px] text-green-600 dark:text-green-400 hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0"
+                                        >
+                                            <MapPin className="w-3.5 h-3.5" /> Voir la carte
+                                        </button>
+                                    )}
+                                </div>
                             )}
+
+                            <AnimatePresence>
+                                {isCreatingNewWorkSite && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="space-y-3 pt-1 overflow-hidden"
+                                    >
+                                        <div>
+                                            <label className="block text-sm font-bold mb-2 text-foreground">
+                                                Nom du Nouveau Chantier *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={newWorkSiteName}
+                                                onChange={(e) => setNewWorkSiteName(e.target.value)}
+                                                required={isCreatingNewWorkSite}
+                                                maxLength={100}
+                                                className="w-full p-2.5 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all text-sm"
+                                                placeholder="Ex: Chantier B - Dunkerque"
+                                            />
+                                        </div>
+                                        <div className="relative">
+                                            <label className="block text-sm font-bold mb-2 flex justify-between items-center text-foreground">
+                                                <span>Adresse ou Localisation du Chantier *</span>
+                                                <div className="flex flex-wrap gap-2 justify-end">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsMapOpen(true)}
+                                                        className="text-[10px] text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 flex items-center gap-0.5 cursor-pointer bg-green-500/10 hover:bg-green-500/20 px-2 py-0.5 rounded-lg border border-green-500/20"
+                                                    >
+                                                        <MapPin className="w-2.5 h-2.5" />
+                                                        Carte
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleGeolocate}
+                                                        disabled={geolocating}
+                                                        className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 flex items-center gap-0.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-blue-500/10 hover:bg-blue-500/20 px-2 py-0.5 rounded-lg border border-blue-500/20"
+                                                    >
+                                                        <Navigation className={`w-2.5 h-2.5 ${geolocating ? 'animate-spin' : ''}`} />
+                                                        GPS
+                                                    </button>
+                                                </div>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="location"
+                                                value={formData.location}
+                                                onChange={handleChange}
+                                                required={isCreatingNewWorkSite}
+                                                maxLength={200}
+                                                autoComplete="off"
+                                                className="w-full p-2.5 rounded-xl bg-input text-foreground border border-border focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-muted-foreground text-sm"
+                                                placeholder="Ex: Rue de l'Albeck, Dunkerque"
+                                            />
+                                            
+                                            {locationAccuracy && locationAccuracy > 50 && !isManualTyping && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsMapOpen(true)}
+                                                    className="w-full text-left text-[10px] text-orange-600 dark:text-orange-400 mt-1.5 flex items-center justify-between gap-1 bg-orange-500/10 border border-orange-500/25 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-orange-500/15 transition-all"
+                                                >
+                                                    <span className="flex items-center gap-1">
+                                                        ⚠️ Précision (+/- {Math.round(locationAccuracy)}m).
+                                                    </span>
+                                                    <span className="font-bold underline">
+                                                        Ajuster ➔
+                                                    </span>
+                                                </button>
+                                            )}
 
                             {/* Menu de suggestions (Google Maps / Photon API / Nominatim Autocomplete) */}
                             {showSuggestions && suggestions.length > 0 && (
