@@ -87,7 +87,7 @@ export default function ReportCreateView() {
         
         const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
         if (!googleMapsApiKey) {
-            console.log("Clé Google Maps absente. Repli automatique sur l'API Adresse.");
+            console.log("Clé Google Maps absente. Repli automatique sur Photon API.");
             return;
         }
 
@@ -178,7 +178,7 @@ export default function ReportCreateView() {
         };
     }, []);
 
-    // Recherche d'adresses en temps réel pour l'autocomplétion (Google Maps ou API Adresse)
+    // Recherche d'adresses en temps réel pour l'autocomplétion (Google Maps ou Photon API)
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (formData.location.trim().length > 3 && isManualTyping) {
@@ -217,16 +217,16 @@ export default function ReportCreateView() {
                                 setShowSuggestions(formatted.length > 0);
                                 setSearchingSuggestions(false);
                             } else {
-                                fetchApiAdresse(formData.location);
+                                fetchPhoton(formData.location);
                             }
                         });
                     } catch (err) {
                         console.error("Erreur d'autocomplétion Google Maps:", err);
-                        fetchApiAdresse(formData.location);
+                        fetchPhoton(formData.location);
                     }
                 } else {
-                    // Cas 2 : Utilisation de l'API Adresse
-                    fetchApiAdresse(formData.location);
+                    // Cas 2 : Utilisation de l'API Photon
+                    fetchPhoton(formData.location);
                 }
             } else {
                 setSuggestions([]);
@@ -234,26 +234,40 @@ export default function ReportCreateView() {
             }
         }, 500); // Debounce de 500ms
 
-        const fetchApiAdresse = async (query: string) => {
+        const fetchPhoton = async (query: string) => {
             try {
-                let url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`;
+                let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=fr`;
                 if (mapCoords) {
                     url += `&lat=${mapCoords.lat}&lon=${mapCoords.lng}`;
                 }
+                url += `&filter=countrycode:FR`;
+
                 const response = await fetch(url);
                 if (response.ok) {
                     const data = await response.json();
                     const formatted = data.features.map((feature: any) => {
                         const props = feature.properties;
                         const coords = feature.geometry.coordinates; // [lon, lat]
+                        
+                        const name = props.name || '';
+                        const street = props.street || '';
+                        const postcode = props.postcode || '';
+                        const city = props.city || '';
+                        
+                        let display_name = name;
+                        if (street && name !== street) display_name += `, ${street}`;
+                        if (postcode || city) {
+                            display_name += ` (${postcode} ${city})`.replace('()', '');
+                        }
+
                         return {
-                            display_name: props.label,
-                            name: props.name || '',
-                            road: props.street || '',
-                            city: props.city || '',
+                            display_name: display_name,
+                            name: name,
+                            road: street,
+                            city: city,
                             lat: coords[1].toString(),
                             lon: coords[0].toString(),
-                            source: 'api-adresse'
+                            source: 'photon'
                         };
                     });
                     setSuggestions(formatted);
@@ -262,7 +276,7 @@ export default function ReportCreateView() {
                     fetchNominatim(query);
                 }
             } catch (err) {
-                console.error("Erreur API Adresse:", err);
+                console.error("Erreur Photon API:", err);
                 fetchNominatim(query);
             } finally {
                 setSearchingSuggestions(false);
@@ -380,15 +394,26 @@ export default function ReportCreateView() {
         }
 
         try {
-            const response = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lng}&lat=${lat}`);
+            const response = await fetch(`https://photon.komoot.io/reverse/?lon=${lng}&lat=${lat}`);
             if (response.ok) {
                 const data = await response.json();
                 if (data.features && data.features.length > 0) {
-                    return data.features[0].properties.label;
+                    const props = data.features[0].properties;
+                    const name = props.name || '';
+                    const street = props.street || '';
+                    const postcode = props.postcode || '';
+                    const city = props.city || '';
+                    
+                    let display_name = name;
+                    if (street && name !== street) display_name += `, ${street}`;
+                    if (postcode || city) {
+                        display_name += ` (${postcode} ${city})`.replace('()', '');
+                    }
+                    return display_name;
                 }
             }
         } catch (err) {
-            console.warn("Erreur géocodage inverse API Adresse:", err);
+            console.warn("Erreur géocodage inverse Photon API:", err);
         }
 
         try {
@@ -580,7 +605,7 @@ export default function ReportCreateView() {
         }
     }, [mapAddress]);
 
-    // Recherche de lieux au sein du modal de carte (Google Maps, API Adresse ou Nominatim)
+    // Recherche de lieux au sein du modal de carte (Google Maps, Photon API ou Nominatim)
     const handleMapSearch = async () => {
         if (!mapSearchQuery.trim()) return;
         setIsSearchingMap(true);
@@ -609,38 +634,52 @@ export default function ReportCreateView() {
                         setMapSearchSuggestions(formatted);
                         setIsSearchingMap(false);
                     } else {
-                        fetchMapApiAdresse(mapSearchQuery);
+                        fetchMapPhoton(mapSearchQuery);
                     }
                 });
             } catch (err) {
                 console.error("Erreur de recherche cartographique Google:", err);
-                fetchMapApiAdresse(mapSearchQuery);
+                fetchMapPhoton(mapSearchQuery);
             }
         } else {
-            fetchMapApiAdresse(mapSearchQuery);
+            fetchMapPhoton(mapSearchQuery);
         }
     };
 
-    const fetchMapApiAdresse = async (query: string) => {
+    const fetchMapPhoton = async (query: string) => {
         try {
-            let url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&limit=5`;
+            let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=fr`;
             if (mapCoords) {
                 url += `&lat=${mapCoords.lat}&lon=${mapCoords.lng}`;
             }
+            url += `&filter=countrycode:FR`;
+
             const response = await fetch(url);
             if (response.ok) {
                 const data = await response.json();
                 const formatted = data.features.map((feature: any) => {
                     const props = feature.properties;
                     const coords = feature.geometry.coordinates;
+
+                    const name = props.name || '';
+                    const street = props.street || '';
+                    const postcode = props.postcode || '';
+                    const city = props.city || '';
+
+                    let display_name = name;
+                    if (street && name !== street) display_name += `, ${street}`;
+                    if (postcode || city) {
+                        display_name += ` (${postcode} ${city})`.replace('()', '');
+                    }
+
                     return {
-                        display_name: props.label,
-                        name: props.name || '',
-                        road: props.street || '',
-                        city: props.city || '',
+                        display_name: display_name,
+                        name: name,
+                        road: street,
+                        city: city,
                         lat: coords[1].toString(),
                         lon: coords[0].toString(),
-                        source: 'api-adresse'
+                        source: 'photon'
                     };
                 });
                 setMapSearchSuggestions(formatted);
@@ -648,7 +687,7 @@ export default function ReportCreateView() {
                 fetchMapNominatim(query);
             }
         } catch (err) {
-            console.error("Erreur recherche carte API Adresse:", err);
+            console.error("Erreur recherche carte Photon API:", err);
             fetchMapNominatim(query);
         } finally {
             setIsSearchingMap(false);
@@ -1134,7 +1173,7 @@ export default function ReportCreateView() {
                                 </button>
                             )}
 
-                            {/* Menu de suggestions (Google Maps / API Adresse / Nominatim Autocomplete) */}
+                            {/* Menu de suggestions (Google Maps / Photon API / Nominatim Autocomplete) */}
                             {showSuggestions && suggestions.length > 0 && (
                                 <div className="absolute z-[110] left-0 right-0 mt-1 bg-secondary border border-border rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-border/40 backdrop-blur-md">
                                     {suggestions.map((suggestion, idx) => {
