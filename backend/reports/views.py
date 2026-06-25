@@ -72,5 +72,9 @@ class AccidentReportViewSet(viewsets.ModelViewSet):
         buffer = generate_accident_pdf(report)
         from django.utils import timezone
         local_date = timezone.localtime(report.created_at) if report.created_at else timezone.localtime()
-        filename = f"Rapport_Accident_{report.id}_{local_date.strftime('%Y%m%d')}.pdf"
+        
+        username = report.reporter.username if report.reporter else 'unknown'
+        date_str = local_date.strftime('%Y%m%d')
+        filename = f"{username}_-{date_str}_Remontées-Accident.pdf"
+        
         return FileResponse(buffer, as_attachment=True, filename=filename)

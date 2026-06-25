@@ -613,7 +613,12 @@ export default function ReportListView() {
                                                 <Button 
                                                     className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5 px-3 py-1.5 rounded-lg text-xs border-0 cursor-pointer" 
                                                     size="sm" 
-                                                    onClick={() => downloadAccidentPdf(report.id)}
+                                                    onClick={() => {
+                                                        const dateStr = new Date(report.incident_date || report.created_at).toISOString().split('T')[0].replace(/-/g, '');
+                                                        const username = report.reporter_name || 'unknown';
+                                                        const fn = `${username}_-${dateStr}_Remontées-Accident.pdf`;
+                                                        downloadAccidentPdf(report.id, fn);
+                                                    }}
                                                 >
                                                     <Download className="w-3.5 h-3.5" />
                                                     Télécharger PDF

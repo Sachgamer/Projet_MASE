@@ -566,9 +566,15 @@ export default function ControleView() {
                                 <Button onClick={reset} size="lg" variant="outline" className="px-8">
                                     Faire un nouvel auto-contrôle
                                 </Button>
-                                {lastInspectionId && (
+                                 {lastInspectionId && (
                                     <button
-                                        onClick={() => downloadInspectionPdf(lastInspectionId)}
+                                        onClick={() => {
+                                            const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                                            const username = user?.username || 'unknown';
+                                            const objName = selectedItem?.type_name.replace(/\s+/g, '-').replace(/[^\w\-_\.]/g, '') || 'objet';
+                                            const filename = `${username}_${dateStr}_${objName}.pdf`;
+                                            downloadInspectionPdf(lastInspectionId, filename);
+                                        }}
                                         className="inline-flex items-center justify-center px-8 py-3 bg-primary text-white font-bold rounded-lg hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
                                     >
                                         Télécharger la fiche PDF

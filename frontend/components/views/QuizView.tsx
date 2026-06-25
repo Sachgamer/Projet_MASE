@@ -5,6 +5,8 @@ import api, { downloadQuizPdf } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useView } from '@/context/ViewContext';
 
+import { useAuth } from '@/context/AuthContext';
+
 // Interface pour les choix d'une question
 interface Choice {
     id: number;
@@ -31,6 +33,7 @@ interface Quiz {
 // Vue permettant à l'utilisateur de passer le quiz d'une formation
 export default function QuizView() {
     const { viewParams, setView } = useView();
+    const { user } = useAuth();
     const id = viewParams.id; // ID de la formation associée
     const [quiz, setQuiz] = useState<Quiz | null>(null);
     const [loading, setLoading] = useState(true);
@@ -82,7 +85,11 @@ export default function QuizView() {
         if (!quiz) return;
         setDownloading(true);
         try {
-            await downloadQuizPdf(quiz.id, answers, `Attestation_Quiz_${quiz.title.replace(/\s+/g, '_')}.pdf`);
+            const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+            const username = user?.username || 'unknown';
+            const quizTitle = quiz.title.replace(/\s+/g, '-').replace(/[^\w\-_\.]/g, '');
+            const filename = `${username}_${dateStr}_${quizTitle}.pdf`;
+            await downloadQuizPdf(quiz.id, answers, filename);
         } catch (error: any) {
             console.error("Erreur de téléchargement du PDF:", error.message);
             alert("Erreur lors du téléchargement du PDF récapitulatif.");

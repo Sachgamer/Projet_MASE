@@ -236,8 +236,14 @@ export default function AutoControlListView() {
                                     VOIR PHOTO DE PREUVE
                                 </button>
                             )}
-                            <button 
-                                onClick={() => downloadInspectionPdf(insp.id)}
+                             <button 
+                                onClick={() => {
+                                    const dateStr = new Date(insp.date).toISOString().split('T')[0].replace(/-/g, '');
+                                    const username = insp.item_details?.technician_username || 'unknown';
+                                    const objName = insp.item_details?.type_name.replace(/\s+/g, '-').replace(/[^\w\-_\.]/g, '') || 'objet';
+                                    const filename = `${username}_${dateStr}_${objName}.pdf`;
+                                    downloadInspectionPdf(insp.id, filename);
+                                }}
                                 className="block w-full py-2 bg-white/5 hover:bg-white/10 text-white text-center text-xs font-bold rounded-lg transition-colors border border-white/10"
                             >
                                 TÉLÉCHARGER RAPPORT PDF

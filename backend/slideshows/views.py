@@ -210,7 +210,12 @@ class QuizViewSet(viewsets.ModelViewSet):
             qa_pairs=qa_pairs
         )
         
-        filename = f"Fiche_Quiz_{quiz.id}_{timezone.localtime().strftime('%Y%m%d')}.pdf"
+        import re
+        username = request.user.username if request.user else 'unknown'
+        date_str = timezone.localtime().strftime('%Y%m%d')
+        quiz_name = re.sub(r'[^\w\-_\.]', '', quiz.slideshow.title.replace(' ', '-'))
+        filename = f"{username}_{date_str}_{quiz_name}.pdf"
+        
         return FileResponse(buffer, as_attachment=True, filename=filename)
 
 # Gère les questions d'un quiz
