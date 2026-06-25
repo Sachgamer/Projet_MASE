@@ -1403,6 +1403,7 @@ export default function ReportCreateView() {
                                     </motion.div>
                                 )}
                             </AnimatePresence>
+                        </div>
 
                         {/* Date & Heure */}
                         <div>
