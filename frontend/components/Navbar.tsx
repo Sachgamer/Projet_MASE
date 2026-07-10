@@ -268,7 +268,7 @@ export default function Navbar() {
 
     return (
         <nav className="bg-secondary/60 border-b border-border/40 backdrop-blur-md sticky top-0 z-[100]">
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     <div className="flex items-center">
                         {/* Logo / Titre -> Retour à l'accueil */}
