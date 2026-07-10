@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useView } from '@/context/ViewContext';
-import { getBaseURL } from '@/lib/api';
+import api, { getBaseURL } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { 
     Download, 
@@ -21,8 +21,16 @@ import {
     User,
     Shield,
     Sun,
-    Moon
+    Moon,
+    BarChart3,
+    ClipboardList,
+    Award,
+    FlaskConical,
+    Database,
+    Wifi,
+    WifiOff
 } from 'lucide-react';
+
 
 // Composant Barre de Navigation : Présent sur toutes les pages après connexion
 export default function Navbar() {
@@ -30,13 +38,101 @@ export default function Navbar() {
     const { setView } = useView();
     const [isMenuOpen, setIsMenuOpen] = useState(false); // État du menu mobile
     const [isReportsOpen, setIsReportsOpen] = useState(false); // État du menu déroulant "Remontées"
+    const [isRegistriesOpen, setIsRegistriesOpen] = useState(false); // État du menu déroulant "Registres"
     const [isAdminOpen, setIsAdminOpen] = useState(false); // État du menu déroulant "Admin"
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null); // Utilisé pour l'installation PWA
     const [theme, setTheme] = useState<'light' | 'dark'>('light'); // État du thème Jour/Nuit
     const [mounted, setMounted] = useState(false); // Permet d'éviter les erreurs d'hydratation (Next.js)
+    const [isOnline, setIsOnline] = useState(true);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [isSyncing, setIsSyncing] = useState(false);
     
     const reportsRef = useRef<HTMLDivElement>(null);
+    const registriesRef = useRef<HTMLDivElement>(null);
     const adminRef = useRef<HTMLDivElement>(null);
+
+    // Synchronisation automatique des données stockées hors-ligne
+    const syncOfflineData = async () => {
+        if (!navigator.onLine || isSyncing) return;
+        setIsSyncing(true);
+
+        try {
+            // 1. Sync Inspections
+            const pendingInspections = JSON.parse(localStorage.getItem('pending_inspections') || '[]');
+            if (pendingInspections.length > 0) {
+                const remaining = [];
+                for (const item of pendingInspections) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('item', item.item.toString());
+                        formData.append('is_valid', item.is_valid.toString());
+                        formData.append('defects', JSON.stringify(item.defects));
+                        formData.append('vehicle_checks', JSON.stringify(item.vehicle_checks));
+                        formData.append('comments', item.comments);
+                        
+                        if (item.photos && item.photos.length > 0) {
+                            for (const photo of item.photos) {
+                                const blob = await fetch(photo.base64).then(r => r.blob());
+                                const file = new File([blob], photo.name, { type: photo.type });
+                                formData.append('photos', file);
+                            }
+                        }
+                        await api.post('/api/controls/inspections/', formData);
+                    } catch (err) {
+                        console.error("Erreur sync inspection:", err);
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem('pending_inspections', JSON.stringify(remaining));
+            }
+
+            // 2. Sync Reports
+            const pendingReports = JSON.parse(localStorage.getItem('pending_reports') || '[]');
+            if (pendingReports.length > 0) {
+                const remaining = [];
+                for (const item of pendingReports) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('severity', item.severity);
+                        formData.append('incident_type', item.incident_type);
+                        formData.append('location', item.location);
+                        if (item.worksite) {
+                            formData.append('worksite', item.worksite.toString());
+                        }
+                        formData.append('description', item.description);
+                        formData.append('incident_date', item.incident_date);
+                        
+                        if (item.media && item.media.length > 0) {
+                            for (const mediaItem of item.media) {
+                                const blob = await fetch(mediaItem.base64).then(r => r.blob());
+                                const file = new File([blob], mediaItem.name, { type: mediaItem.type });
+                                if (mediaItem.mediaType === 'image') {
+                                    formData.append('photos', file);
+                                } else {
+                                    formData.append('video', file);
+                                }
+                            }
+                        }
+                        await api.post('/api/reports/', formData);
+                    } catch (err) {
+                        console.error("Erreur sync report:", err);
+                        remaining.push(item);
+                    }
+                }
+                localStorage.setItem('pending_reports', JSON.stringify(remaining));
+            }
+        } catch (e) {
+            console.error("Erreur générale durant la synchronisation:", e);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isOnline) {
+            syncOfflineData();
+        }
+    }, [isOnline]);
 
     useEffect(() => {
         setMounted(true);
@@ -66,29 +162,57 @@ export default function Navbar() {
             console.error("Impossible d'appliquer la classe sombre sur documentElement:", e);
         }
 
-        // Gère l'événement d'installation de l'application (PWA)
-        const handleBeforeInstallPrompt = (e: any) => {
-            e.preventDefault();
-            setDeferredPrompt(e);
-        };
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        
-        // Ferme les menus déroulants si on clique n'importe où ailleurs sur la page
-        const handleClickOutside = (event: MouseEvent) => {
-            if (reportsRef.current && !reportsRef.current.contains(event.target as Node)) {
-                setIsReportsOpen(false);
-            }
-            if (adminRef.current && !adminRef.current.contains(event.target as Node)) {
-                setIsAdminOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        
-        return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+        // Gère l'état du réseau hors-ligne
+        if (typeof window !== 'undefined') {
+            setIsOnline(navigator.onLine);
+            const handleOnline = () => {
+                setIsOnline(true);
+            };
+            const handleOffline = () => {
+                setIsOnline(false);
+            };
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+
+            const checkPending = () => {
+                const pendingInspections = JSON.parse(localStorage.getItem('pending_inspections') || '[]');
+                const pendingReports = JSON.parse(localStorage.getItem('pending_reports') || '[]');
+                setPendingCount(pendingInspections.length + pendingReports.length);
+            };
+            checkPending();
+            const interval = setInterval(checkPending, 3000);
+
+            // Gère l'événement d'installation de l'application (PWA)
+            const handleBeforeInstallPrompt = (e: any) => {
+                e.preventDefault();
+                setDeferredPrompt(e);
+            };
+            window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            
+            // Ferme les menus déroulants si on clique n'importe où ailleurs sur la page
+            const handleClickOutside = (event: MouseEvent) => {
+                if (reportsRef.current && !reportsRef.current.contains(event.target as Node)) {
+                    setIsReportsOpen(false);
+                }
+                if (registriesRef.current && !registriesRef.current.contains(event.target as Node)) {
+                    setIsRegistriesOpen(false);
+                }
+                if (adminRef.current && !adminRef.current.contains(event.target as Node)) {
+                    setIsAdminOpen(false);
+                }
+            };
+            document.addEventListener('mousedown', handleClickOutside);
+            
+            return () => {
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
+                window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+                document.removeEventListener('mousedown', handleClickOutside);
+                clearInterval(interval);
+            };
+        }
     }, []);
+
 
     const toggleTheme = () => {
         const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -123,15 +247,23 @@ export default function Navbar() {
 
     // Définition des liens principaux du menu
     const mainLinks = [
+        { view: 'hse-dashboard', label: 'Dashboard HSE', icon: BarChart3 },
         { view: 'dashboard', label: 'Causeries', icon: LayoutDashboard },
-        { view: 'files', label: 'Mes Fichiers', icon: Files },
+        { view: 'action-plan', label: 'Plan d\'Actions', icon: ClipboardList },
         { view: 'controle', label: 'Auto-contrôles', icon: CheckSquare },
+        { view: 'files', label: 'Mes Fichiers', icon: Files },
     ] as const;
 
     // Liens spécifiques aux remontées d'accidents
     const reportLinks = [
         { view: 'report-create', label: 'Faire une Remontée', icon: AlertTriangle },
         { view: 'report-list', label: 'Historique des Remontées', icon: History },
+    ] as const;
+
+    // Liens spécifiques aux registres sécurité
+    const registryLinks = [
+        { view: 'chemical-registry', label: 'Risques Chimiques / FDS', icon: FlaskConical },
+        { view: 'habilitation-list', label: 'Habilitations & Visites', icon: Award },
     ] as const;
 
     return (
@@ -165,6 +297,7 @@ export default function Navbar() {
                                 <button 
                                     onClick={() => {
                                         setIsReportsOpen(!isReportsOpen);
+                                        setIsRegistriesOpen(false);
                                         setIsAdminOpen(false);
                                     }}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all bg-transparent border-0 cursor-pointer ${isReportsOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
@@ -191,11 +324,59 @@ export default function Navbar() {
                                     </div>
                                 )}
                             </div>
+
+                            {/* Menu déroulant Registres */}
+                            <div className="relative h-full flex items-center" ref={registriesRef}>
+                                <button 
+                                    onClick={() => {
+                                        setIsRegistriesOpen(!isRegistriesOpen);
+                                        setIsReportsOpen(false);
+                                        setIsAdminOpen(false);
+                                    }}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all bg-transparent border-0 cursor-pointer ${isRegistriesOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+                                >
+                                    <Database className="w-4 h-4 opacity-70 text-blue-500" />
+                                    Registres
+                                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isRegistriesOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {isRegistriesOpen && (
+                                    <div className="absolute top-14 left-0 w-56 p-2 bg-secondary/95 border border-border/50 rounded-xl shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in duration-200">
+                                        {registryLinks.map((link) => (
+                                            <button
+                                                key={link.view}
+                                                onClick={() => {
+                                                    setView(link.view);
+                                                    setIsRegistriesOpen(false);
+                                                }}
+                                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left text-gray-300 hover:text-white hover:bg-white/10 transition-colors bg-transparent border-0 cursor-pointer"
+                                            >
+                                                <link.icon className="w-4 h-4 text-primary" />
+                                                {link.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
                     {/* Section Droite : Auth, Install PWA, Administration */}
                     <div className="hidden md:flex md:items-center space-x-3">
+                        {/* Indicateur de statut réseau (Online/Offline) */}
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold">
+                            {isOnline ? (
+                                <span className="flex items-center gap-1 text-green-500 bg-green-500/10 px-2.5 py-0.5 rounded-full border border-green-500/20">
+                                    <Wifi className="w-3.5 h-3.5" />
+                                    En ligne
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1 text-red-500 bg-red-500/10 px-2.5 py-0.5 rounded-full border border-red-500/20 animate-pulse">
+                                    <WifiOff className="w-3.5 h-3.5" />
+                                    Hors-ligne {pendingCount > 0 && `(${pendingCount} sync)`}
+                                </span>
+                            )}
+                        </div>
+
                         {/* Commutateur de thème Jour/Nuit */}
                         <button
                             onClick={toggleTheme}
@@ -232,6 +413,7 @@ export default function Navbar() {
                                             onClick={() => {
                                                 setIsAdminOpen(!isAdminOpen);
                                                 setIsReportsOpen(false);
+                                                setIsRegistriesOpen(false);
                                             }}
                                             className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold transition-all bg-transparent border-0 cursor-pointer ${isAdminOpen ? 'text-primary bg-primary/10' : 'text-primary hover:bg-primary/5'}`}
                                         >
@@ -349,6 +531,23 @@ export default function Navbar() {
                                 )}
                             </button>
                         </div>
+
+                        {/* Indicateur de statut réseau (Mobile) */}
+                        <div className="flex items-center justify-between px-4 py-4 rounded-xl bg-white/5 border border-white/10">
+                            <span className="text-lg font-medium text-gray-300 font-bold">État du Réseau</span>
+                            {isOnline ? (
+                                <span className="flex items-center gap-1 text-green-500 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20 text-sm font-semibold">
+                                    <Wifi className="w-4 h-4" />
+                                    En ligne
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-1 text-red-500 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20 text-sm font-semibold animate-pulse">
+                                    <WifiOff className="w-4 h-4" />
+                                    Hors-ligne {pendingCount > 0 && `(${pendingCount})`}
+                                </span>
+                            )}
+                        </div>
+
                         {/* Option d'installation sur Mobile */}
                         {deferredPrompt && (
                             <button
@@ -385,6 +584,21 @@ export default function Navbar() {
                                     className="w-full flex items-center gap-4 px-4 py-4 text-lg font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-xl bg-transparent border-0 text-left"
                                 >
                                     <link.icon className={`w-5 h-5 ${link.view === 'report-create' ? 'text-red-500' : 'text-blue-400'}`} />
+                                    {link.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Liens Registres Mobile */}
+                        <div className="space-y-2">
+                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest pl-2">Registres</h3>
+                            {registryLinks.map((link) => (
+                                <button
+                                    key={link.view}
+                                    onClick={() => { setView(link.view); setIsMenuOpen(false); }}
+                                    className="w-full flex items-center gap-4 px-4 py-4 text-lg font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-xl bg-transparent border-0 text-left"
+                                >
+                                    <link.icon className="w-5 h-5 text-primary opacity-70" />
                                     {link.label}
                                 </button>
                             ))}
@@ -467,3 +681,4 @@ export default function Navbar() {
         </nav>
     );
 }
+

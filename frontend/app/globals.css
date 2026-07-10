@@ -141,27 +141,21 @@ html:not(.dark) .bg-blue-500 .text-white {
    pour qu'elles s'affichent correctement en clair avec une bordure visible */
 html:not(.dark) .bg-white\/5 {
   background-color: var(--secondary) !important;
-  border-color: var(--border) !important;
 }
 html:not(.dark) .bg-secondary\/30 {
   background-color: var(--secondary) !important;
-  border-color: var(--border) !important;
 }
 html:not(.dark) .bg-secondary\/50 {
   background-color: var(--secondary) !important;
-  border-color: var(--border) !important;
 }
 html:not(.dark) .bg-secondary\/60 {
   background-color: var(--secondary) !important;
-  border-color: var(--border) !important;
 }
 html:not(.dark) .bg-secondary\/95 {
   background-color: var(--secondary) !important;
-  border-color: var(--border) !important;
 }
 html:not(.dark) .bg-secondary\/98 {
   background-color: var(--secondary) !important;
-  border-color: var(--border) !important;
 }
 html:not(.dark) .bg-white\/10 {
   background-color: var(--muted) !important;
@@ -205,16 +199,13 @@ html:not(.dark) select option {
 /* Surcharges pour harmoniser les fonds gris foncé en tons crème et gris doux */
 html:not(.dark) .bg-gray-800 {
   background-color: var(--secondary) !important;
-  border-color: var(--border) !important;
 }
 html:not(.dark) .bg-gray-800\/50 {
   background-color: var(--secondary) !important;
-  border-color: var(--border) !important;
 }
 html:not(.dark) .bg-gray-750, html:not(.dark) .bg-gray-700 {
   background-color: var(--input) !important;
   color: var(--foreground) !important;
-  border-color: var(--border) !important;
 }
 html:not(.dark) .bg-gray-900\/50 {
   background-color: rgba(244, 239, 230, 0.5) !important;

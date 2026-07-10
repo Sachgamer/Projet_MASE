@@ -7,8 +7,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from dj_rest_auth.views import LoginView
-from .models import User, BlockedMacAddress
-from .serializers import UserSerializer, Verify2FASerializer, BlockedMacAddressSerializer
+from .models import User, BlockedMacAddress, Habilitation
+from .serializers import UserSerializer, Verify2FASerializer, BlockedMacAddressSerializer, HabilitationSerializer
+
 
 # Gère la connexion personnalisée avec envoi de code 2FA par email
 class CustomLoginView(LoginView):
@@ -236,3 +237,22 @@ class BlockedMacAddressViewSet(viewsets.ModelViewSet):
     queryset = BlockedMacAddress.objects.all().order_by('-blocked_at')
     serializer_class = BlockedMacAddressSerializer
     permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+
+# Permet de gérer les habilitations professionnelles
+class HabilitationViewSet(viewsets.ModelViewSet):
+    serializer_class = HabilitationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return Habilitation.objects.all().order_by('expiration_date')
+        return Habilitation.objects.filter(user=user).order_by('expiration_date')
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not (user.is_staff or user.is_superuser):
+            serializer.save(user=user)
+        else:
+            serializer.save()
+

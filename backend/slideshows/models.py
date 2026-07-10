@@ -73,6 +73,7 @@ class QuizSubmission(models.Model):
     score = models.PositiveIntegerField()
     total_questions = models.PositiveIntegerField()
     is_passed = models.BooleanField(default=False)
+    signature = models.TextField(blank=True, null=True, help_text="Signature manuscrite Base64")
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -28,3 +28,20 @@ class PersonalFile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.name}"
+
+
+class ChemicalProduct(models.Model):
+    name = models.CharField(max_length=255, unique=True, verbose_name="Nom du produit")
+    manufacturer = models.CharField(max_length=255, blank=True, verbose_name="Fabricant")
+    sds_file = models.FileField(upload_to='sds/', verbose_name="Fiche de Données de Sécurité (FDS)")
+    pictograms = models.CharField(max_length=255, blank=True, help_text="Pictogrammes séparés par des virgules, ex: GHS02,GHS07", verbose_name="Pictogrammes de danger")
+    description = models.TextField(blank=True, verbose_name="Usage et remarques")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Produit chimique"
+        verbose_name_plural = "Produits chimiques / FDS"
+
+    def __str__(self):
+        return self.name
+

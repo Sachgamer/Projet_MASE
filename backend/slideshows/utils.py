@@ -40,7 +40,7 @@ def wrap_text(text, max_chars=85):
         lines.append(" ".join(current_line))
     return lines
 
-def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_questions, is_passed, qa_pairs):
+def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_questions, is_passed, qa_pairs, signature_base64=""):
     # 1. Préparation calque
     overlay_buffer = BytesIO()
     c = canvas.Canvas(overlay_buffer, pagesize=A4)
@@ -100,7 +100,31 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
             
         y_pos -= 5 # Espacement supplémentaire entre les questions
         
+    # 3.5 Signature de l'utilisateur (si présente)
+    if signature_base64:
+        try:
+            import base64
+            from reportlab.lib.utils import ImageReader
+            if ',' in signature_base64:
+                _, base64_str = signature_base64.split(',', 1)
+            else:
+                base64_str = signature_base64
+            img_data = base64.b64decode(base64_str)
+            img_buffer = BytesIO(img_data)
+            img = ImageReader(img_buffer)
+            
+            c.setFont("Helvetica-Bold", 8)
+            c.setFillColor(colors.black)
+            c.drawString(410, 110, "Signature du participant :")
+            c.drawImage(img, 410, 45, width=120, height=60, mask='auto')
+        except Exception as e:
+            c.setFont("Helvetica-Oblique", 8)
+            c.setFillColor(colors.HexColor('#FF0000'))
+            c.drawString(410, 110, f"Erreur signature : {str(e)[:25]}")
+            c.setFillColor(colors.black)
+
     c.save()
+
     overlay_buffer.seek(0)
     
     # 4. Fusion avec le template

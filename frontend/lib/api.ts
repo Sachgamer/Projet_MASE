@@ -79,6 +79,26 @@ export const deleteSlide = (id: number) => api.delete(`/api/slides/${id}/`);
 export const deleteQuestion = (id: number) => api.delete(`/api/questions/${id}/`);
 export const deleteFile = (id: number) => api.delete(`/api/files/${id}/`);
 
+// Actions (Plan d'actions)
+export const getActions = () => api.get('/api/actions/');
+export const createAction = (data: any) => api.post('/api/actions/', data);
+export const updateAction = (id: number, data: any) => api.patch(`/api/actions/${id}/`, data);
+export const deleteAction = (id: number) => api.delete(`/api/actions/${id}/`);
+
+// Chemical Products (Risques Chimiques)
+export const getChemicalProducts = () => api.get('/api/chemical-products/');
+export const createChemicalProduct = (formData: FormData) => api.post('/api/chemical-products/', formData);
+export const deleteChemicalProduct = (id: number) => api.delete(`/api/chemical-products/${id}/`);
+
+// Habilitations (Certifications & Visites)
+export const getHabilitations = () => api.get('/api/habilitations/');
+export const createHabilitation = (formData: FormData) => api.post('/api/habilitations/', formData);
+export const deleteHabilitation = (id: number) => api.delete(`/api/habilitations/${id}/`);
+
+// HSE Statistics
+export const getHseStats = () => api.get('/api/hse-stats/');
+
+
 // Télécharge le PDF du rapport d'auto-contrôle
 export const downloadInspectionPdf = async (id: number, filename?: string) => {
     const response = await api.get(`/api/controls/inspections/${id}/generate_pdf/`, {
@@ -94,10 +114,11 @@ export const downloadInspectionPdf = async (id: number, filename?: string) => {
 };
 
 // Télécharge le PDF d'attestation/fiche de validation du quiz
-export const downloadQuizPdf = async (id: number, answers: any[], filename?: string) => {
-    const response = await api.post(`/api/quizzes/${id}/generate_pdf/`, { answers }, {
+export const downloadQuizPdf = async (id: number, answers: any[], filename?: string, signature?: string) => {
+    const response = await api.post(`/api/quizzes/${id}/generate_pdf/`, { answers, signature }, {
         responseType: 'blob',
     });
+
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;

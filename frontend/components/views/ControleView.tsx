@@ -151,7 +151,54 @@ export default function ControleView() {
             ? vehicleCheckpoints.every(check => vehicleChecks[check] === true)
             : true;
 
-        formData.append('is_valid', (Object.values(defects).every(v => !v) && allVehicleChecksPassed).toString());
+        const isValid = Object.values(defects).every(v => !v) && allVehicleChecksPassed;
+
+        const fileToBase64 = (file: File): Promise<string> => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = error => reject(error);
+            });
+        };
+
+        if (!navigator.onLine) {
+            try {
+                const serializedPhotos = await Promise.all(
+                    photos.map(async (file) => {
+                        const base64 = await fileToBase64(file);
+                        return {
+                            name: file.name,
+                            type: file.type,
+                            base64
+                        };
+                    })
+                );
+                const offlineData = {
+                    item: selectedItem.id,
+                    is_valid: isValid,
+                    defects,
+                    vehicle_checks: vehicleChecks,
+                    comments,
+                    photos: serializedPhotos
+                };
+                const pending = JSON.parse(localStorage.getItem('pending_inspections') || '[]');
+                pending.push(offlineData);
+                localStorage.setItem('pending_inspections', JSON.stringify(pending));
+                
+                alert("Vous êtes hors-ligne. Votre auto-contrôle a été enregistré localement et sera synchronisé automatiquement dès que vous retrouverez une connexion.");
+                setSuccess(true);
+                setStep(4);
+            } catch (err) {
+                console.error("Erreur d'enregistrement local de l'auto-contrôle:", err);
+                alert("Erreur lors de l'enregistrement hors-ligne.");
+            } finally {
+                setSubmitting(false);
+            }
+            return;
+        }
+
+        formData.append('is_valid', isValid.toString());
         formData.append('defects', JSON.stringify(defects));
         formData.append('vehicle_checks', JSON.stringify(vehicleChecks));
         formData.append('comments', comments);
@@ -178,6 +225,7 @@ export default function ControleView() {
             setSubmitting(false);
         }
     };
+
 
     // Crée et assigne un nouvel équipement (Admin uniquement)
     const handleCreateEquipment = async (e: React.FormEvent) => {

@@ -51,6 +51,8 @@ class AccidentReport(models.Model):
     image = models.ImageField(upload_to='reports/images/', null=True, blank=True)
     # Vidéo de l'incident (facultatif)
     video = models.FileField(upload_to='reports/videos/', null=True, blank=True)
+    # Nombre de jours d'arrêt de travail engendrés par l'accident
+    days_lost = models.IntegerField(default=0, verbose_name="Jours d'arrêt")
     # Indique si le rapport est validé et visible par tous
     published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -65,3 +67,40 @@ class AccidentReportPhoto(models.Model):
 
     def __str__(self):
         return f"Photo {self.id} for Report {self.report.id}"
+
+class Action(models.Model):
+    STATUS_CHOICES = [
+        ('todo', 'À faire'),
+        ('in_progress', 'En cours'),
+        ('done', 'Clôturé'),
+        ('canceled', 'Annulé'),
+    ]
+    PRIORITY_CHOICES = [
+        ('low', 'Basse'),
+        ('medium', 'Moyenne'),
+        ('high', 'Haute'),
+    ]
+    
+    title = models.CharField(max_length=255, verbose_name="Titre de l'action")
+    description = models.TextField(verbose_name="Description de l'action")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='todo')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+    due_date = models.DateField(null=True, blank=True, verbose_name="Date d'échéance")
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_actions', verbose_name="Responsable")
+    reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_actions', verbose_name="Créateur")
+    
+    # Origines de l'action
+    accident_report = models.ForeignKey(AccidentReport, on_delete=models.SET_NULL, null=True, blank=True, related_name='actions')
+    inspection = models.ForeignKey('controls.Inspection', on_delete=models.SET_NULL, null=True, blank=True, related_name='actions')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Action de sécurité"
+        verbose_name_plural = "Plan d'actions"
+
+    def __str__(self):
+        return f"{self.title} ({self.get_status_display()})"
+

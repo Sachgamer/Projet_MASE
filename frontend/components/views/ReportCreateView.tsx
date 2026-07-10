@@ -1042,6 +1042,64 @@ export default function ReportCreateView() {
             }
         }
 
+        const fileToBase64 = (file: File): Promise<string> => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = error => reject(error);
+            });
+        };
+
+        if (!navigator.onLine) {
+            try {
+                const serializedMedia = await Promise.all(
+                    attachedFiles.map(async (item) => {
+                        const base64 = await fileToBase64(item.file);
+                        return {
+                            name: item.file.name,
+                            type: item.file.type,
+                            mediaType: item.type,
+                            base64
+                        };
+                    })
+                );
+                
+                let worksiteId = null;
+                if (!isCreatingNewWorkSite && selectedWorkSiteId && selectedWorkSiteId !== '') {
+                    worksiteId = parseInt(selectedWorkSiteId);
+                }
+
+                const incidentDate = new Date(formData.incident_date);
+                const locationText = isCreatingNewWorkSite ? newWorkSiteName : formData.location;
+
+                const offlineData = {
+                    severity: formData.severity,
+                    incident_type: formData.incident_type,
+                    location: locationText,
+                    worksite: worksiteId,
+                    description: formData.description,
+                    incident_date: isNaN(incidentDate.getTime()) ? new Date().toISOString() : incidentDate.toISOString(),
+                    media: serializedMedia
+                };
+
+                const pending = JSON.parse(localStorage.getItem('pending_reports') || '[]');
+                pending.push(offlineData);
+                localStorage.setItem('pending_reports', JSON.stringify(pending));
+
+                alert("Vous êtes hors-ligne. Votre déclaration de remontée a été enregistrée localement et sera synchronisée automatiquement dès que vous retrouverez une connexion.");
+                localStorage.removeItem('report_create_draft');
+                attachedFiles.forEach(f => URL.revokeObjectURL(f.url));
+                setView('report-list');
+            } catch (err) {
+                console.error("Erreur d'enregistrement local de la remontée:", err);
+                setError("Erreur lors de l'enregistrement hors-ligne.");
+            } finally {
+                setIsSubmitting(false);
+            }
+            return;
+        }
+
         try {
             let worksiteId = null;
             if (isCreatingNewWorkSite) {

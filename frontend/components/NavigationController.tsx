@@ -14,6 +14,10 @@ import ReportCreateView from '@/components/views/ReportCreateView';
 import ReportListView from '@/components/views/ReportListView';
 import AutoControlListView from '@/components/views/AutoControlListView';
 import BlockedMacListView from '@/components/views/BlockedMacListView';
+import HseDashboardView from '@/components/views/HseDashboardView';
+import ActionPlanView from '@/components/views/ActionPlanView';
+import HabilitationListView from '@/components/views/HabilitationListView';
+import ChemicalRegistryView from '@/components/views/ChemicalRegistryView';
 import { useAuth } from '@/context/AuthContext';
 
 /**
@@ -61,7 +65,16 @@ export default function NavigationController() {
             return <AutoControlListView />;
         case 'blocked-mac-list':
             return <BlockedMacListView />;
+        case 'hse-dashboard':
+            return <HseDashboardView />;
+        case 'action-plan':
+            return <ActionPlanView />;
+        case 'habilitation-list':
+            return <HabilitationListView />;
+        case 'chemical-registry':
+            return <ChemicalRegistryView />;
         default:
             return <HomeView />;
     }
 }
+

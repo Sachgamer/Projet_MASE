@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from dj_rest_auth.serializers import UserDetailsSerializer
-from .models import User, BlockedMacAddress
+from .models import User, BlockedMacAddress, Habilitation
 
 # Convertit les données utilisateur au format JSON pour les envoyer au site
 class UserSerializer(serializers.ModelSerializer):
@@ -31,5 +31,25 @@ class BlockedMacAddressSerializer(serializers.ModelSerializer):
         if obj.user:
             return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username
         return None
+
+class HabilitationSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    user_fullname = serializers.SerializerMethodField(read_only=True)
+    type_name_display = serializers.CharField(source='get_type_name_display', read_only=True)
+
+    class Meta:
+        model = Habilitation
+        fields = [
+            'id', 'user', 'username', 'user_fullname', 'type_name', 'type_name_display',
+            'custom_title', 'obtained_date', 'expiration_date', 'certificate', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def get_user_fullname(self, obj):
+        if obj.user:
+            fullname = f"{obj.user.first_name} {obj.user.last_name}".strip()
+            return fullname or obj.user.username
+        return ""
+
 
 

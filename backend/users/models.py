@@ -121,3 +121,31 @@ class BlockedMacAddress(models.Model):
         # Envoi d'un mail si la MAC est nouvellement bloquée (soit création active, soit passage à actif)
         if (is_new and self.is_active) or (not is_new and self.is_active and not was_active):
             self.send_blocking_email()
+
+
+class Habilitation(models.Model):
+    TYPE_CHOICES = [
+        ('sst', 'Sauveteur Secouriste du Travail (SST)'),
+        ('caces', 'CACES (Engins de chantier)'),
+        ('elec', 'Habilitation Électrique'),
+        ('hauteur', 'Travail en Hauteur'),
+        ('medical', 'Visite Médicale Périodique'),
+        ('other', 'Autre Certification'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='habilitations')
+    type_name = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    custom_title = models.CharField(max_length=255, blank=True, null=True, verbose_name="Intitulé précis")
+    obtained_date = models.DateField(verbose_name="Date d'obtention")
+    expiration_date = models.DateField(verbose_name="Date d'expiration")
+    certificate = models.FileField(upload_to='habilitations/', null=True, blank=True, verbose_name="Justificatif PDF")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['expiration_date']
+        verbose_name = "Habilitation"
+        verbose_name_plural = "Habilitations"
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_type_name_display()} ({self.custom_title or ''})"
+

@@ -183,6 +183,7 @@ class QuizViewSet(viewsets.ModelViewSet):
             
         # Un quiz est réussi si le score est supérieur ou égal au score de passage requis
         is_passed = score >= quiz.passing_score
+        signature = request.data.get('signature', '')
         
         # Enregistrer la soumission dans la base de données
         from .models import QuizSubmission
@@ -192,7 +193,8 @@ class QuizViewSet(viewsets.ModelViewSet):
             defaults={
                 'score': score,
                 'total_questions': total_questions,
-                'is_passed': is_passed
+                'is_passed': is_passed,
+                'signature': signature
             }
         )
         
@@ -207,8 +209,10 @@ class QuizViewSet(viewsets.ModelViewSet):
             score=score,
             total_questions=total_questions,
             is_passed=is_passed,
-            qa_pairs=qa_pairs
+            qa_pairs=qa_pairs,
+            signature_base64=signature
         )
+
         
         import re
         username = request.user.username if request.user else 'unknown'
