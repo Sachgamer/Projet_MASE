@@ -96,6 +96,7 @@ export default function HseDashboardView() {
     const [recentInspections, setRecentInspections] = useState<Inspection[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedTab, setSelectedTab] = useState<'overview' | 'accidents' | 'inspections'>('overview');
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchStatsAndDetails();
@@ -103,29 +104,33 @@ export default function HseDashboardView() {
 
     const fetchStatsAndDetails = async () => {
         setLoading(true);
+        setError(null);
 
         try {
             // Fetch aggregated stats
             const statsResponse = await getHseStats();
             setStats(statsResponse.data);
-        } catch (error) {
-            console.error("Erreur lors de la récupération des stats HSE:", error);
+        } catch (err: any) {
+            console.error("Erreur lors de la récupération des stats HSE:", err);
+            const status = err.response?.status;
+            const detail = err.response?.data?.detail || JSON.stringify(err.response?.data) || err.message;
+            setError(status ? `Erreur API (${status}) : ${detail}` : `Erreur de connexion : ${err.message}`);
         }
 
         try {
             // Fetch detailed list of accidents/incidents
             const accidentsResponse = await getReports();
             setRecentAccidents(accidentsResponse.data);
-        } catch (error) {
-            console.error("Erreur lors de la récupération des rapports d'accidents:", error);
+        } catch (err: any) {
+            console.error("Erreur lors de la récupération des rapports d'accidents:", err);
         }
 
         try {
             // Fetch detailed list of inspections
             const inspectionsResponse = await api.get('/api/controls/inspections/');
             setRecentInspections(inspectionsResponse.data);
-        } catch (error) {
-            console.error("Erreur lors de la récupération des inspections:", error);
+        } catch (err: any) {
+            console.error("Erreur lors de la récupération des inspections:", err);
         }
 
         setLoading(false);
@@ -135,6 +140,20 @@ export default function HseDashboardView() {
         return (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex justify-center items-center h-96">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center text-white space-y-6">
+                <div className="p-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl max-w-xl mx-auto shadow-lg backdrop-blur-md">
+                    <p className="font-extrabold text-xl mb-2">Impossible de charger le tableau de bord HSE</p>
+                    <p className="text-sm opacity-90 leading-relaxed font-mono">{error}</p>
+                </div>
+                <Button className="px-6 py-3 text-sm font-semibold rounded-xl" onClick={fetchStatsAndDetails}>
+                    Réessayer de charger
+                </Button>
             </div>
         );
     }
