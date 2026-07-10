@@ -102,23 +102,33 @@ export default function HseDashboardView() {
     }, []);
 
     const fetchStatsAndDetails = async () => {
+        setLoading(true);
+
         try {
             // Fetch aggregated stats
             const statsResponse = await getHseStats();
             setStats(statsResponse.data);
+        } catch (error) {
+            console.error("Erreur lors de la récupération des stats HSE:", error);
+        }
 
+        try {
             // Fetch detailed list of accidents/incidents
             const accidentsResponse = await getReports();
             setRecentAccidents(accidentsResponse.data);
+        } catch (error) {
+            console.error("Erreur lors de la récupération des rapports d'accidents:", error);
+        }
 
+        try {
             // Fetch detailed list of inspections
             const inspectionsResponse = await api.get('/api/controls/inspections/');
             setRecentInspections(inspectionsResponse.data);
         } catch (error) {
-            console.error("Erreur lors de la récupération des données HSE:", error);
-        } finally {
-            setLoading(false);
+            console.error("Erreur lors de la récupération des inspections:", error);
         }
+
+        setLoading(false);
     };
 
     if (loading) {

@@ -113,13 +113,28 @@ class HseStatsView(APIView):
         worked_hours_per_month = active_users * 150
         
         for i in range(5, -1, -1):
-            # Reculer de i mois de manière robuste
-            first_day_of_curr_month = (now.replace(day=1) - timedelta(days=i*30)).replace(hour=0, minute=0, second=0, microsecond=0)
-            if first_day_of_curr_month.month == 12:
-                next_month = first_day_of_curr_month.replace(year=first_day_of_curr_month.year+1, month=1)
-            else:
-                next_month = first_day_of_curr_month.replace(month=first_day_of_curr_month.month+1)
-            last_day_of_curr_month = next_month - timedelta(seconds=1)
+            # Calculer l'année et le mois cibles en reculant de i mois de manière 100% robuste
+            target_year = now.year
+            target_month = now.month - i
+            while target_month <= 0:
+                target_month += 12
+                target_year -= 1
+                
+            first_day_of_curr_month = timezone.make_aware(
+                timezone.datetime(target_year, target_month, 1, 0, 0, 0)
+            )
+            
+            # Calculer le premier jour du mois suivant pour délimiter le dernier jour
+            next_month = target_month + 1
+            next_year = target_year
+            if next_month > 12:
+                next_month = 1
+                next_year += 1
+                
+            next_month_first_day = timezone.make_aware(
+                timezone.datetime(next_year, next_month, 1, 0, 0, 0)
+            )
+            last_day_of_curr_month = next_month_first_day - timedelta(seconds=1)
             
             # Nom français du mois pour l'affichage
             month_names_fr = {
