@@ -268,19 +268,19 @@ export default function Navbar() {
 
     return (
         <nav className="bg-secondary/60 border-b border-border/40 backdrop-blur-md sticky top-0 z-[100]">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-4">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between h-16">
                     <div className="flex items-center">
                         {/* Logo / Titre -> Retour à l'accueil */}
                         <button
                             onClick={() => setView('home')}
-                            className="flex-shrink-0 flex items-center font-black text-2xl text-primary tracking-tighter hover:opacity-80 transition-opacity border-0 bg-transparent cursor-pointer mr-4"
+                            className="flex-shrink-0 flex items-center font-black text-2xl text-primary tracking-tighter hover:opacity-80 transition-opacity border-0 bg-transparent cursor-pointer mr-3"
                         >
                             Web<span className="text-white">MASE</span>
                         </button>
                         
                         {/* Liens Desktop (Affichés sur grands écrans) */}
-                        <div className="hidden lg:flex items-center space-x-1 border-l border-border/30 pl-4 gap-1.5">
+                        <div className="hidden lg:flex items-center space-x-1 pl-2 gap-1.5">
                             {mainLinks.map((link) => (
                                 <button
                                     key={link.view}
