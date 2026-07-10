@@ -55,10 +55,16 @@ class AccidentReport(models.Model):
     days_lost = models.IntegerField(default=0, verbose_name="Jours d'arrêt")
     # Indique si le rapport est validé et visible par tous
     published = models.BooleanField(default=False)
+    # Indique si le rapport est supprimé (soft delete)
+    is_deleted = models.BooleanField(default=False, verbose_name="Supprimé logiquement")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.severity} - {self.location} ({self.reporter.username})"
+
+    def delete(self, *args, **kwargs):
+        self.is_deleted = True
+        self.save()
 
 class AccidentReportPhoto(models.Model):
     report = models.ForeignKey(AccidentReport, on_delete=models.CASCADE, related_name='photos')

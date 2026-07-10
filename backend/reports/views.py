@@ -42,8 +42,8 @@ class AccidentReportViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
 
     def get_queryset(self):
-        # Tous les rapports sont visibles par tout le monde
-        return AccidentReport.objects.all()
+        # Ne retourne que les rapports non supprimés
+        return AccidentReport.objects.filter(is_deleted=False)
 
     def perform_create(self, serializer):
         # Récupère toutes les photos envoyées dans le champ 'photos'
