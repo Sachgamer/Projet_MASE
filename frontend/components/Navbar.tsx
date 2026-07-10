@@ -285,7 +285,7 @@ export default function Navbar() {
                                 <button
                                     key={link.view}
                                     onClick={() => setView(link.view)}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all bg-transparent border-0 cursor-pointer"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap"
                                 >
                                     <link.icon className="w-4 h-4 opacity-70" />
                                     {link.label}
@@ -300,7 +300,7 @@ export default function Navbar() {
                                         setIsRegistriesOpen(false);
                                         setIsAdminOpen(false);
                                     }}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all bg-transparent border-0 cursor-pointer ${isReportsOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap ${isReportsOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
                                 >
                                     <AlertTriangle className="w-4 h-4 opacity-70 text-orange-500" />
                                     Remontées
@@ -333,7 +333,7 @@ export default function Navbar() {
                                         setIsReportsOpen(false);
                                         setIsAdminOpen(false);
                                     }}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all bg-transparent border-0 cursor-pointer ${isRegistriesOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap ${isRegistriesOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
                                 >
                                     <Database className="w-4 h-4 opacity-70 text-blue-500" />
                                     Registres
@@ -415,7 +415,7 @@ export default function Navbar() {
                                                 setIsReportsOpen(false);
                                                 setIsRegistriesOpen(false);
                                             }}
-                                            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold transition-all bg-transparent border-0 cursor-pointer ${isAdminOpen ? 'text-primary bg-primary/10' : 'text-primary hover:bg-primary/5'}`}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap ${isAdminOpen ? 'text-primary bg-primary/10' : 'text-primary hover:bg-primary/5'}`}
                                         >
                                             <Settings className="w-4 h-4" />
                                             Admin

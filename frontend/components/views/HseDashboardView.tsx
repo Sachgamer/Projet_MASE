@@ -84,7 +84,7 @@ export default function HseDashboardView() {
 
     if (loading) {
         return (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center items-center h-96">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 flex justify-center items-center h-96">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
             </div>
         );
@@ -92,8 +92,8 @@ export default function HseDashboardView() {
 
     if (!stats || stats.months.length === 0) {
         return (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center text-white">
-                <p>Aucune donnée disponible pour le moment.</p>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center text-white">
+                <p className="text-gray-400 text-lg">Aucune donnée disponible pour le moment.</p>
             </div>
         );
     }
@@ -107,102 +107,102 @@ export default function HseDashboardView() {
     const maxTg = Math.max(...stats.months.map(m => m.tg), 1);
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-white space-y-8 animate-in fade-in duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-white space-y-12 animate-in fade-in duration-300">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md">
                 <div>
                     <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
                         Indicateurs & Stats HSE
                     </h1>
-                    <p className="text-gray-400 mt-1">
+                    <p className="text-gray-400 mt-1.5">
                         Tableau de bord de suivi de la sécurité au travail (SST) - Conformité MASE.
                     </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" className="text-white border-white/20" onClick={() => setView('report-create')}>
+                <div className="flex flex-wrap gap-3">
+                    <Button variant="outline" className="text-white border-white/20 px-5" onClick={() => setView('report-create')}>
                         Signaler un Incident
                     </Button>
-                    <Button onClick={() => setView('action-plan')}>
+                    <Button className="px-5" onClick={() => setView('action-plan')}>
                         Plan d'Actions
                     </Button>
                 </div>
             </div>
 
             {/* Quick Stats Banner */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* TF Card */}
-                <div className="bg-gradient-to-br from-red-500/10 to-orange-500/5 border border-red-500/20 rounded-2xl p-6 hover:scale-[1.02] transition-transform duration-200">
+                <div className="bg-gradient-to-br from-red-500/10 to-orange-500/5 border border-red-500/20 rounded-2xl p-8 hover:scale-[1.02] transition-transform duration-200 shadow-lg">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-semibold text-red-400 uppercase tracking-widest">Taux de Fréquence (TF)</p>
-                            <h3 className="text-3xl font-black mt-2 text-white">{latestMonth.tf}</h3>
+                            <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Taux de Fréquence (TF)</p>
+                            <h3 className="text-4xl font-black mt-3 text-white">{latestMonth.tf}</h3>
                         </div>
-                        <div className="p-3 rounded-lg bg-red-500/10 text-red-500">
+                        <div className="p-3.5 rounded-xl bg-red-500/10 text-red-500">
                             <Activity className="w-6 h-6" />
                         </div>
                     </div>
-                    <div className="mt-4 text-xs text-gray-400 flex items-center gap-1">
-                        <TrendingUp className="w-3.5 h-3.5 text-red-400" />
+                    <div className="mt-6 text-xs text-gray-400 flex items-center gap-1.5">
+                        <TrendingUp className="w-4 h-4 text-red-400" />
                         <span>Mois : {latestMonth.month}</span>
                     </div>
                 </div>
 
                 {/* TG Card */}
-                <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border border-yellow-500/20 rounded-2xl p-6 hover:scale-[1.02] transition-transform duration-200">
+                <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border border-yellow-500/20 rounded-2xl p-8 hover:scale-[1.02] transition-transform duration-200 shadow-lg">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-semibold text-yellow-400 uppercase tracking-widest">Taux de Gravité (TG)</p>
-                            <h3 className="text-3xl font-black mt-2 text-white">{latestMonth.tg}</h3>
+                            <p className="text-xs font-bold text-yellow-400 uppercase tracking-widest">Taux de Gravité (TG)</p>
+                            <h3 className="text-4xl font-black mt-3 text-white">{latestMonth.tg}</h3>
                         </div>
-                        <div className="p-3 rounded-lg bg-yellow-500/10 text-yellow-500">
+                        <div className="p-3.5 rounded-xl bg-yellow-500/10 text-yellow-500">
                             <AlertTriangle className="w-6 h-6" />
                         </div>
                     </div>
-                    <div className="mt-4 text-xs text-gray-400">
-                        <span>Arrêt de travail : {latestMonth.days_lost} jours</span>
+                    <div className="mt-6 text-xs text-gray-400">
+                        <span>Arrêt de travail : <strong className="text-white">{latestMonth.days_lost}</strong> jours</span>
                     </div>
                 </div>
 
                 {/* Inspection Compliance */}
-                <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-2xl p-6 hover:scale-[1.02] transition-transform duration-200">
+                <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-2xl p-8 hover:scale-[1.02] transition-transform duration-200 shadow-lg">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-semibold text-green-400 uppercase tracking-widest">Conformité Équipements</p>
-                            <h3 className="text-3xl font-black mt-2 text-white">{latestMonth.inspections.compliance_rate}%</h3>
+                            <p className="text-xs font-bold text-green-400 uppercase tracking-widest">Conformité Équipements</p>
+                            <h3 className="text-4xl font-black mt-3 text-white">{latestMonth.inspections.compliance_rate}%</h3>
                         </div>
-                        <div className="p-3 rounded-lg bg-green-500/10 text-green-500">
+                        <div className="p-3.5 rounded-xl bg-green-500/10 text-green-500">
                             <CheckCircle className="w-6 h-6" />
                         </div>
                     </div>
-                    <div className="mt-4 text-xs text-gray-400">
-                        <span>{latestMonth.inspections.valid} conformes / {latestMonth.inspections.total} contrôles</span>
+                    <div className="mt-6 text-xs text-gray-400">
+                        <span><strong className="text-white">{latestMonth.inspections.valid}</strong> conformes / {latestMonth.inspections.total} contrôles</span>
                     </div>
                 </div>
 
                 {/* Quiz Success */}
-                <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border border-blue-500/20 rounded-2xl p-6 hover:scale-[1.02] transition-transform duration-200">
+                <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border border-blue-500/20 rounded-2xl p-8 hover:scale-[1.02] transition-transform duration-200 shadow-lg">
                     <div className="flex justify-between items-start">
                         <div>
-                            <p className="text-xs font-semibold text-blue-400 uppercase tracking-widest">Réussite Formations</p>
-                            <h3 className="text-3xl font-black mt-2 text-white">{latestMonth.quiz.pass_rate}%</h3>
+                            <p className="text-xs font-bold text-blue-400 uppercase tracking-widest">Réussite Formations</p>
+                            <h3 className="text-4xl font-black mt-3 text-white">{latestMonth.quiz.pass_rate}%</h3>
                         </div>
-                        <div className="p-3 rounded-lg bg-blue-500/10 text-blue-500">
+                        <div className="p-3.5 rounded-xl bg-blue-500/10 text-blue-500">
                             <GraduationCap className="w-6 h-6" />
                         </div>
                     </div>
-                    <div className="mt-4 text-xs text-gray-400">
-                        <span>{latestMonth.quiz.passed} quiz réussis / {latestMonth.quiz.total} validés</span>
+                    <div className="mt-6 text-xs text-gray-400">
+                        <span><strong className="text-white">{latestMonth.quiz.passed}</strong> réussis / {latestMonth.quiz.total} validés</span>
                     </div>
                 </div>
             </div>
 
             {/* Main Tabs */}
-            <div className="flex gap-2 border-b border-white/10 pb-1">
+            <div className="flex gap-4 border-b border-white/10 pb-2">
                 {(['overview', 'accidents', 'inspections'] as const).map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setSelectedTab(tab)}
-                        className={`px-4 py-2 text-sm font-semibold rounded-t-lg transition-all border-b-2 bg-transparent ${selectedTab === tab ? 'border-primary text-primary bg-white/5' : 'border-transparent text-gray-400 hover:text-white'}`}
+                        className={`px-5 py-3 text-sm font-bold rounded-t-xl transition-all border-b-2 bg-transparent cursor-pointer ${selectedTab === tab ? 'border-primary text-primary bg-white/5' : 'border-transparent text-gray-400 hover:text-white'}`}
                     >
                         {tab === 'overview' ? 'Vue Globale' : tab === 'accidents' ? 'Accidents & Incidents' : 'Auto-contrôles'}
                     </button>
@@ -211,51 +211,51 @@ export default function HseDashboardView() {
 
             {/* Overview Tab Content */}
             {selectedTab === 'overview' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Accidents Chart */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md lg:col-span-2 flex flex-col justify-between">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md lg:col-span-2 flex flex-col justify-between space-y-8">
                         <div>
-                            <h3 className="text-lg font-bold mb-1">Évolution des Signalements (Incidents)</h3>
-                            <p className="text-xs text-gray-400 mb-6">Accidents, situations dangereuses et presque accidents par mois.</p>
+                            <h3 className="text-xl font-bold mb-1.5">Évolution des Signalements (Incidents)</h3>
+                            <p className="text-sm text-gray-400">Accidents, situations dangereuses et presque accidents par mois.</p>
                         </div>
                         {/* Custom Chart */}
-                        <div className="h-64 flex items-end gap-4 px-2">
+                        <div className="h-80 flex items-end gap-6 px-4">
                             {stats.months.map((m, idx) => {
                                 const total = m.incidents.total;
-                                const heightPercent = total > 0 ? (total / maxIncidents) * 100 : 0;
                                 return (
                                     <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer">
-                                        <div className="w-full flex flex-col justify-end items-center relative gap-0.5">
+                                        <div className="w-full flex flex-col justify-end items-center relative gap-1 h-[80%]">
                                             {/* Tooltip */}
-                                            <div className="absolute -top-12 bg-gray-900 border border-white/10 rounded px-2 py-1 text-[10px] hidden group-hover:block z-10 whitespace-nowrap">
-                                                Accidents : {m.incidents.accident}<br />
-                                                Presque : {m.incidents.near_miss}<br />
-                                                Situations : {m.incidents.dangerous_situation}
+                                            <div className="absolute -top-16 bg-gray-900 border border-white/10 rounded-lg p-2.5 text-[11px] leading-relaxed hidden group-hover:block z-10 whitespace-nowrap shadow-2xl">
+                                                <strong className="text-white block border-b border-white/10 pb-1 mb-1">{m.month}</strong>
+                                                Accidents : <span className="text-red-400 font-bold">{m.incidents.accident}</span><br />
+                                                Presque : <span className="text-orange-400 font-bold">{m.incidents.near_miss}</span><br />
+                                                Situations : <span className="text-blue-400 font-bold">{m.incidents.dangerous_situation}</span>
                                             </div>
-                                            {/* Bar Parts */}
+                                            {/* Bar Parts using responsive percentage sizing */}
                                             {m.incidents.accident > 0 && (
                                                 <div 
-                                                    className="w-full bg-red-500 rounded-t"
-                                                    style={{ height: `${(m.incidents.accident / maxIncidents) * 120}px` }}
+                                                    className="w-full bg-red-500 rounded-t-sm"
+                                                    style={{ height: `${(m.incidents.accident / maxIncidents) * 100}%` }}
                                                 />
                                             )}
                                             {m.incidents.near_miss > 0 && (
                                                 <div 
                                                     className="w-full bg-orange-500" 
-                                                    style={{ height: `${(m.incidents.near_miss / maxIncidents) * 120}px` }}
+                                                    style={{ height: `${(m.incidents.near_miss / maxIncidents) * 100}%` }}
                                                 />
                                             )}
                                             {m.incidents.dangerous_situation > 0 && (
                                                 <div 
-                                                    className="w-full bg-blue-400 rounded-b" 
-                                                    style={{ height: `${(m.incidents.dangerous_situation / maxIncidents) * 120}px` }}
+                                                    className="w-full bg-blue-400 rounded-b-sm" 
+                                                    style={{ height: `${(m.incidents.dangerous_situation / maxIncidents) * 100}%` }}
                                                 />
                                             )}
                                             {total === 0 && (
                                                 <div className="w-full h-1 bg-white/10 rounded" />
                                             )}
                                         </div>
-                                        <span className="text-[10px] text-gray-400 mt-2 text-center whitespace-nowrap overflow-hidden text-ellipsis w-full">
+                                        <span className="text-xs text-gray-400 mt-3 text-center whitespace-nowrap overflow-hidden text-ellipsis w-full font-medium">
                                             {m.month.split(' ')[0]}
                                         </span>
                                     </div>
@@ -263,55 +263,55 @@ export default function HseDashboardView() {
                             })}
                         </div>
                         {/* Legend */}
-                        <div className="flex gap-4 mt-6 text-xs justify-center border-t border-white/5 pt-4">
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 bg-red-500 rounded" />
-                                <span>Accidents</span>
+                        <div className="flex flex-wrap gap-6 mt-4 text-xs justify-center border-t border-white/5 pt-6">
+                            <div className="flex items-center gap-2">
+                                <span className="w-3.5 h-3.5 bg-red-500 rounded-sm" />
+                                <span className="font-semibold">Accidents</span>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 bg-orange-500 rounded" />
-                                <span>Presque Accidents</span>
+                            <div className="flex items-center gap-2">
+                                <span className="w-3.5 h-3.5 bg-orange-500 rounded-sm" />
+                                <span className="font-semibold">Presque Accidents</span>
                             </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 bg-blue-400 rounded" />
-                                <span>Situations dangereuses</span>
+                            <div className="flex items-center gap-2">
+                                <span className="w-3.5 h-3.5 bg-blue-400 rounded-sm" />
+                                <span className="font-semibold">Situations dangereuses</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Action Plan CAPA Progress Card */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md flex flex-col justify-between space-y-8">
                         <div>
-                            <h3 className="text-lg font-bold mb-1">Plan d'Actions (CAPA)</h3>
-                            <p className="text-xs text-gray-400 mb-6">État des actions de sécurité ouvertes.</p>
+                            <h3 className="text-xl font-bold mb-1.5">Plan d'Actions (CAPA)</h3>
+                            <p className="text-sm text-gray-400">État des actions de sécurité ouvertes.</p>
                         </div>
                         
-                        {/* Progress ring or status breakdown */}
-                        <div className="space-y-4 flex-1 flex flex-col justify-center">
-                            <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                                <span className="text-red-400 flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                        {/* Status breakdown */}
+                        <div className="space-y-5 flex-1 flex flex-col justify-center">
+                            <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
+                                <span className="text-red-400 flex items-center gap-2.5 font-semibold">
+                                    <span className="w-3 h-3 rounded-full bg-red-500"></span>
                                     À faire
                                 </span>
-                                <span className="font-bold">{stats.actions.todo}</span>
+                                <span className="font-black text-white">{stats.actions.todo}</span>
                             </div>
-                            <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                                <span className="text-orange-400 flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+                            <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
+                                <span className="text-orange-400 flex items-center gap-2.5 font-semibold">
+                                    <span className="w-3 h-3 rounded-full bg-orange-500"></span>
                                     En cours
                                 </span>
-                                <span className="font-bold">{stats.actions.in_progress}</span>
+                                <span className="font-black text-white">{stats.actions.in_progress}</span>
                             </div>
-                            <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                                <span className="text-green-400 flex items-center gap-2">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                            <div className="flex justify-between items-center text-sm border-b border-white/5 pb-3">
+                                <span className="text-green-400 flex items-center gap-2.5 font-semibold">
+                                    <span className="w-3 h-3 rounded-full bg-green-500"></span>
                                     Clôturées
                                 </span>
-                                <span className="font-bold">{stats.actions.done}</span>
+                                <span className="font-black text-white">{stats.actions.done}</span>
                             </div>
                             
                             {/* Horizontal cumulative progress bar */}
-                            <div className="w-full h-3 rounded-full overflow-hidden bg-white/10 flex mt-4">
+                            <div className="w-full h-3 rounded-full overflow-hidden bg-white/10 flex mt-6">
                                 {stats.actions.total > 0 ? (
                                     <>
                                         <div className="bg-red-500" style={{ width: `${(stats.actions.todo / stats.actions.total) * 100}%` }} />
@@ -324,14 +324,14 @@ export default function HseDashboardView() {
                             </div>
                         </div>
 
-                        <div className="mt-6 border-t border-white/5 pt-4">
+                        <div className="pt-4">
                             <Button 
                                 variant="outline" 
-                                className="w-full text-white border-white/20 hover:bg-white/5 flex items-center justify-center gap-1 text-xs"
+                                className="w-full text-white border-white/20 hover:bg-white/5 flex items-center justify-center gap-1.5 text-xs py-5"
                                 onClick={() => setView('action-plan')}
                             >
                                 Gérer le plan d'actions
-                                <ChevronRight className="w-3.5 h-3.5" />
+                                <ChevronRight className="w-4 h-4" />
                             </Button>
                         </div>
                     </div>
@@ -340,23 +340,25 @@ export default function HseDashboardView() {
 
             {/* Accidents Detailed Tab Content */}
             {selectedTab === 'accidents' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* TF Chart */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
-                        <h3 className="text-lg font-bold mb-1 text-red-400">Évolution du Taux de Fréquence (TF)</h3>
-                        <p className="text-xs text-gray-400 mb-6">Objectif national standard : inférieur à 10.</p>
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md space-y-8">
+                        <div>
+                            <h3 className="text-xl font-bold mb-1.5 text-red-400">Évolution du Taux de Fréquence (TF)</h3>
+                            <p className="text-sm text-gray-400">Objectif national standard : inférieur à 10.</p>
+                        </div>
                         
-                        <div className="h-64 flex items-end gap-4 px-2">
+                        <div className="h-80 flex items-end gap-6 px-4">
                             {stats.months.map((m, idx) => (
                                 <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer">
-                                    <div className="text-xs font-bold mb-1 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="text-xs font-bold mb-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                         {m.tf}
                                     </div>
                                     <div 
-                                        className="w-full bg-red-600/30 border border-red-500 rounded-t"
-                                        style={{ height: `${m.tf > 0 ? (m.tf / maxTf) * 180 : 2}px` }}
+                                        className="w-full bg-red-600/30 border border-red-500 rounded-t-md transition-all group-hover:bg-red-600/50"
+                                        style={{ height: `${m.tf > 0 ? (m.tf / maxTf) * 100 : 2}%` }}
                                     />
-                                    <span className="text-[10px] text-gray-400 mt-2 text-center whitespace-nowrap overflow-hidden text-ellipsis w-full">
+                                    <span className="text-xs text-gray-400 mt-3 text-center whitespace-nowrap overflow-hidden text-ellipsis w-full font-medium">
                                         {m.month.split(' ')[0]}
                                     </span>
                                 </div>
@@ -365,21 +367,23 @@ export default function HseDashboardView() {
                     </div>
 
                     {/* TG Chart */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
-                        <h3 className="text-lg font-bold mb-1 text-yellow-400">Évolution du Taux de Gravité (TG)</h3>
-                        <p className="text-xs text-gray-400 mb-6">Nombre de journées d'arrêt de travail par millier d'heures.</p>
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md space-y-8">
+                        <div>
+                            <h3 className="text-xl font-bold mb-1.5 text-yellow-400">Évolution du Taux de Gravité (TG)</h3>
+                            <p className="text-sm text-gray-400">Nombre de journées d'arrêt de travail par millier d'heures.</p>
+                        </div>
                         
-                        <div className="h-64 flex items-end gap-4 px-2">
+                        <div className="h-80 flex items-end gap-6 px-4">
                             {stats.months.map((m, idx) => (
                                 <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer">
-                                    <div className="text-xs font-bold mb-1 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="text-xs font-bold mb-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                         {m.tg}
                                     </div>
                                     <div 
-                                        className="w-full bg-yellow-500/30 border border-yellow-500 rounded-t"
-                                        style={{ height: `${m.tg > 0 ? (m.tg / maxTg) * 180 : 2}px` }}
+                                        className="w-full bg-yellow-500/30 border border-yellow-500 rounded-t-md transition-all group-hover:bg-yellow-500/50"
+                                        style={{ height: `${m.tg > 0 ? (m.tg / maxTg) * 100 : 2}%` }}
                                     />
-                                    <span className="text-[10px] text-gray-400 mt-2 text-center whitespace-nowrap overflow-hidden text-ellipsis w-full">
+                                    <span className="text-xs text-gray-400 mt-3 text-center whitespace-nowrap overflow-hidden text-ellipsis w-full font-medium">
                                         {m.month.split(' ')[0]}
                                     </span>
                                 </div>
@@ -391,23 +395,25 @@ export default function HseDashboardView() {
 
             {/* Inspections Tab Content */}
             {selectedTab === 'inspections' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Compliance Chart */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
-                        <h3 className="text-lg font-bold mb-1 text-green-400">Taux de Conformité des Auto-contrôles</h3>
-                        <p className="text-xs text-gray-400 mb-6">Pourcentage d'équipements/véhicules validés sans défaut.</p>
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md space-y-8">
+                        <div>
+                            <h3 className="text-xl font-bold mb-1.5 text-green-400">Taux de Conformité des Auto-contrôles</h3>
+                            <p className="text-sm text-gray-400">Pourcentage d'équipements/véhicules validés sans défaut.</p>
+                        </div>
                         
-                        <div className="h-64 flex items-end gap-4 px-2">
+                        <div className="h-80 flex items-end gap-6 px-4">
                             {stats.months.map((m, idx) => (
                                 <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer">
-                                    <div className="text-xs font-bold mb-1 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="text-xs font-bold mb-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                         {m.inspections.compliance_rate}%
                                     </div>
                                     <div 
-                                        className="w-full bg-green-500/30 border border-green-500 rounded-t"
-                                        style={{ height: `${(m.inspections.compliance_rate / 100) * 180}px` }}
+                                        className="w-full bg-green-500/30 border border-green-500 rounded-t-md transition-all group-hover:bg-green-500/50"
+                                        style={{ height: `${m.inspections.compliance_rate}%` }}
                                     />
-                                    <span className="text-[10px] text-gray-400 mt-2 text-center whitespace-nowrap overflow-hidden text-ellipsis w-full">
+                                    <span className="text-xs text-gray-400 mt-3 text-center whitespace-nowrap overflow-hidden text-ellipsis w-full font-medium">
                                         {m.month.split(' ')[0]}
                                     </span>
                                 </div>
@@ -416,25 +422,25 @@ export default function HseDashboardView() {
                     </div>
 
                     {/* Controls Done Details */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-md flex flex-col justify-between space-y-8">
                         <div>
-                            <h3 className="text-lg font-bold mb-1">Volume d'Auto-contrôles Mensuels</h3>
-                            <p className="text-xs text-gray-400 mb-6">Nombre total d'inspections d'équipements réalisées par les techniciens.</p>
+                            <h3 className="text-xl font-bold mb-1.5">Volume d'Auto-contrôles Mensuels</h3>
+                            <p className="text-sm text-gray-400">Nombre total d'inspections d'équipements réalisées par les techniciens.</p>
                         </div>
                         
-                        <div className="h-48 flex items-end gap-4 px-2">
+                        <div className="h-64 flex items-end gap-6 px-4">
                             {stats.months.map((m, idx) => {
                                 const maxVol = Math.max(...stats.months.map(m => m.inspections.total), 5);
                                 return (
                                     <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group cursor-pointer">
-                                        <div className="text-xs font-bold mb-1 text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="text-xs font-bold mb-2 text-white opacity-0 group-hover:opacity-100 transition-opacity">
                                             {m.inspections.total}
                                         </div>
                                         <div 
-                                            className="w-full bg-blue-500/40 border border-blue-400 rounded-t"
-                                            style={{ height: `${m.inspections.total > 0 ? (m.inspections.total / maxVol) * 140 : 2}px` }}
+                                            className="w-full bg-blue-500/40 border border-blue-400 rounded-t-md transition-all group-hover:bg-blue-500/60"
+                                            style={{ height: `${m.inspections.total > 0 ? (m.inspections.total / maxVol) * 100 : 2}%` }}
                                         />
-                                        <span className="text-[10px] text-gray-400 mt-2 text-center">
+                                        <span className="text-xs text-gray-400 mt-3 text-center font-medium">
                                             {m.month.split(' ')[0]}
                                         </span>
                                     </div>
@@ -442,14 +448,14 @@ export default function HseDashboardView() {
                             })}
                         </div>
 
-                        <div className="mt-6 border-t border-white/5 pt-4">
+                        <div className="pt-4">
                             <Button 
                                 variant="outline" 
-                                className="w-full text-white border-white/20 hover:bg-white/5 flex items-center justify-center gap-1 text-xs"
+                                className="w-full text-white border-white/20 hover:bg-white/5 flex items-center justify-center gap-1.5 text-xs py-5"
                                 onClick={() => setView('controle')}
                             >
                                 Effectuer un auto-contrôle
-                                <ChevronRight className="w-3.5 h-3.5" />
+                                <ChevronRight className="w-4 h-4" />
                             </Button>
                         </div>
                     </div>
