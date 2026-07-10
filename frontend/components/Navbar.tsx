@@ -268,24 +268,24 @@ export default function Navbar() {
 
     return (
         <nav className="bg-secondary/60 border-b border-border/40 backdrop-blur-md sticky top-0 z-[100]">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-4">
                 <div className="flex justify-between h-16">
                     <div className="flex items-center">
                         {/* Logo / Titre -> Retour à l'accueil */}
                         <button
                             onClick={() => setView('home')}
-                            className="flex-shrink-0 flex items-center font-black text-2xl text-primary tracking-tighter hover:opacity-80 transition-opacity border-0 bg-transparent cursor-pointer mr-6"
+                            className="flex-shrink-0 flex items-center font-black text-2xl text-primary tracking-tighter hover:opacity-80 transition-opacity border-0 bg-transparent cursor-pointer mr-4"
                         >
                             Web<span className="text-white">MASE</span>
                         </button>
                         
                         {/* Liens Desktop (Affichés sur grands écrans) */}
-                        <div className="hidden lg:flex items-center space-x-1 border-l border-border/30 pl-6 gap-2">
+                        <div className="hidden lg:flex items-center space-x-1 border-l border-border/30 pl-4 gap-1.5">
                             {mainLinks.map((link) => (
                                 <button
                                     key={link.view}
                                     onClick={() => setView(link.view)}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap"
+                                    className="flex items-center gap-1.5 px-2.5 py-2 rounded-md text-[13px] font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap"
                                 >
                                     <link.icon className="w-4 h-4 opacity-70" />
                                     {link.label}
@@ -300,7 +300,7 @@ export default function Navbar() {
                                         setIsRegistriesOpen(false);
                                         setIsAdminOpen(false);
                                     }}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap ${isReportsOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+                                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-md text-[13px] font-medium transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap ${isReportsOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
                                 >
                                     <AlertTriangle className="w-4 h-4 opacity-70 text-orange-500" />
                                     Remontées
@@ -333,7 +333,7 @@ export default function Navbar() {
                                         setIsReportsOpen(false);
                                         setIsAdminOpen(false);
                                     }}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap ${isRegistriesOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
+                                    className={`flex items-center gap-1.5 px-2.5 py-2 rounded-md text-[13px] font-medium transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap ${isRegistriesOpen ? 'text-white bg-white/10' : 'text-gray-300 hover:text-white hover:bg-white/5'}`}
                                 >
                                     <Database className="w-4 h-4 opacity-70 text-blue-500" />
                                     Registres
@@ -415,7 +415,7 @@ export default function Navbar() {
                                                 setIsReportsOpen(false);
                                                 setIsRegistriesOpen(false);
                                             }}
-                                            className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-bold transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap ${isAdminOpen ? 'text-primary bg-primary/10' : 'text-primary hover:bg-primary/5'}`}
+                                            className={`flex items-center gap-1.5 px-2.5 py-2 rounded-md text-[13px] font-bold transition-all bg-transparent border-0 cursor-pointer whitespace-nowrap ${isAdminOpen ? 'text-primary bg-primary/10' : 'text-primary hover:bg-primary/5'}`}
                                         >
                                             <Settings className="w-4 h-4" />
                                             Admin
