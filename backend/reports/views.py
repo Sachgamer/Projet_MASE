@@ -2,6 +2,8 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from django.db.models import Q
 from django.http import FileResponse
+from django.utils import timezone
+from datetime import timedelta
 from .models import AccidentReport, WorkSite, Action
 from .serializers import AccidentReportSerializer, WorkSiteSerializer, ActionSerializer
 from .utils import generate_accident_pdf
