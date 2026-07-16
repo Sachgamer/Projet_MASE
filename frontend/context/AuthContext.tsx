@@ -5,7 +5,7 @@
 'use client';
 
 
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
 
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     // Fonction pour connecter l'utilisateur et enregistrer son jeton
-    const login = async (token: string) => {
+    const login = useCallback(async (token: string) => {
         localStorage.setItem('token', token);
         document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Strict`;
         try {
@@ -65,10 +65,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (error: any) {
             console.error("Login fetch user failed:", error.message);
         }
-    };
+    }, []);
 
     // Fonction pour déconnecter l'utilisateur
-    const logout = async () => {
+    const logout = useCallback(async () => {
         try {
             // Informe le serveur de la déconnexion
             await api.post('/auth/logout/');
@@ -79,7 +79,51 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem('token');
         document.cookie = `token=; path=/; max-age=0;`;
         setUser(null);
-    };
+    }, []);
+
+    // Gestion de la déconnexion automatique en cas d'inactivité (10 minutes)
+    useEffect(() => {
+        if (!user) return;
+
+        const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes en ms
+        let timeoutId: NodeJS.Timeout;
+        let lastReset = Date.now();
+
+        const performLogout = () => {
+            console.log("Inactivité détectée, déconnexion automatique...");
+            logout();
+        };
+
+        const resetTimer = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(performLogout, INACTIVITY_TIMEOUT);
+        };
+
+        const handleActivity = () => {
+            const now = Date.now();
+            // Limiter la réinitialisation du timer à une fois toutes les 5 secondes pour les performances
+            if (now - lastReset > 5000) {
+                lastReset = now;
+                resetTimer();
+            }
+        };
+
+        const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'click', 'touchstart'];
+
+        events.forEach(event => {
+            window.addEventListener(event, handleActivity);
+        });
+
+        // Initialiser le premier timer
+        resetTimer();
+
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            events.forEach(event => {
+                window.removeEventListener(event, handleActivity);
+            });
+        };
+    }, [user, logout]);
 
     return (
         <AuthContext.Provider value={{ user, loading, login, logout }}>

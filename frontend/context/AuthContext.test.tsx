@@ -95,4 +95,36 @@ describe('AuthContext', () => {
     expect(screen.getByTestId('user')).toHaveTextContent('Aucun');
     expect(localStorage.getItem('token')).toBeNull();
   });
+
+  it('déconnecte l\'utilisateur automatiquement après inactivité', async () => {
+    jest.useFakeTimers();
+    localStorage.setItem('token', 'real-token');
+    (api.get as jest.Mock).mockResolvedValueOnce({ data: { username: 'testuser' } });
+
+    render(
+      <AuthProvider>
+        <DummyComponent />
+      </AuthProvider>
+    );
+
+    // Attente du chargement initial
+    await waitFor(() => expect(screen.queryByText('Chargement...')).not.toBeInTheDocument());
+    expect(screen.getByTestId('user')).toHaveTextContent('testuser');
+
+    // Avancer le temps de 9 minutes 59 secondes (l'utilisateur ne doit pas être déconnecté)
+    jest.advanceTimersByTime(10 * 60 * 1000 - 1000);
+    expect(screen.getByTestId('user')).toHaveTextContent('testuser');
+
+    // Avancer le temps de 2 secondes supplémentaires (inactivité de 10 minutes atteinte)
+    (api.post as jest.Mock).mockResolvedValueOnce({});
+    jest.advanceTimersByTime(2000);
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/auth/logout/');
+    });
+    expect(screen.getByTestId('user')).toHaveTextContent('Aucun');
+    expect(localStorage.getItem('token')).toBeNull();
+
+    jest.useRealTimers();
+  });
 });
