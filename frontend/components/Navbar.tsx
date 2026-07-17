@@ -34,7 +34,7 @@ import {
 
 // Composant Barre de Navigation : Présent sur toutes les pages après connexion
 export default function Navbar() {
-    const { user, logout } = useAuth();
+    const { user, loading, logout } = useAuth();
     const { setView } = useView();
     const [isMenuOpen, setIsMenuOpen] = useState(false); // État du menu mobile
     const [isReportsOpen, setIsReportsOpen] = useState(false); // État du menu déroulant "Remontées"
@@ -265,6 +265,10 @@ export default function Navbar() {
         { view: 'chemical-registry', label: 'Risques Chimiques / FDS', icon: FlaskConical },
         { view: 'habilitation-list', label: 'Habilitations & Visites', icon: Award },
     ] as const;
+
+    if (loading || !user) {
+        return null;
+    }
 
     return (
         <nav className="bg-secondary/60 border-b border-border/40 backdrop-blur-md sticky top-0 z-[100]">
