@@ -43,6 +43,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     console.error("Auth check failed:", error.message);
                     // Si le jeton est invalide, on le supprime
                     localStorage.removeItem('token');
+                    localStorage.removeItem('currentView');
+                    localStorage.removeItem('viewParams');
                     document.cookie = `token=; path=/; max-age=0;`;
                 } finally {
                     setLoading(false);
@@ -77,6 +79,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
         // Supprime les données de connexion locales
         localStorage.removeItem('token');
+        localStorage.removeItem('currentView');
+        localStorage.removeItem('viewParams');
         document.cookie = `token=; path=/; max-age=0;`;
         setUser(null);
     }, []);

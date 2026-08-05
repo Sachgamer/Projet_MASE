@@ -24,10 +24,33 @@ export function ViewProvider({ children }: { children: React.ReactNode }) {
     const [currentView, setCurrentView] = useState<View>('home');
     const [viewParams, setViewParams] = useState<any>({});
 
+    // Récupère la page et ses paramètres sauvegardés au démarrage
+    useEffect(() => {
+        const savedView = localStorage.getItem('currentView') as View | null;
+        const savedParams = localStorage.getItem('viewParams');
+        
+        if (savedView) {
+            setCurrentView(savedView);
+        }
+        if (savedParams) {
+            try {
+                setViewParams(JSON.parse(savedParams));
+            } catch (e) {
+                console.error("Erreur lors de la lecture des paramètres de vue depuis localStorage:", e);
+            }
+        }
+    }, []);
+
     // Change la page affichée et remonte en haut de l'écran
     const setView = (view: View, params: any = {}) => {
         setCurrentView(view);
         setViewParams(params);
+        try {
+            localStorage.setItem('currentView', view);
+            localStorage.setItem('viewParams', JSON.stringify(params));
+        } catch (e) {
+            console.error("Erreur lors de la sauvegarde de la vue dans localStorage:", e);
+        }
         window.scrollTo(0, 0);
     };
 
