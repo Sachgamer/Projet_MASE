@@ -165,8 +165,8 @@ export default function ChemicalRegistryView() {
             </div>
 
             {/* Warning alert */}
-            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex gap-3 text-sm text-yellow-200">
-                <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0" />
+            <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20 rounded-xl p-4 flex gap-3 text-sm text-yellow-800 dark:text-yellow-200">
+                <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 shrink-0" />
                 <div>
                     <span className="font-bold">Rappel Réglementaire MASE :</span> L'utilisation de tout produit chimique sur chantier est strictement conditionnée à la possession de sa FDS à jour (moins de 5 ans) et à la connaissance des équipements de protection individuelle (EPI) associés.
                 </div>
