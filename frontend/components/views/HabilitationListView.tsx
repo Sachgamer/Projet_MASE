@@ -1,13 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { getHabilitations, createHabilitation, deleteHabilitation } from '@/lib/api';
-import { useAuth } from '@/context/AuthContext';
+import { getHabilitations } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { 
     Award, 
-    Plus, 
-    Trash2, 
     Calendar, 
     User, 
     FileText, 
@@ -31,37 +28,14 @@ interface Habilitation {
     created_at: string;
 }
 
-interface UserOption {
-    id: number;
-    username: string;
-    first_name: string;
-    last_name: string;
-}
-
 export default function HabilitationListView() {
-    const { user } = useAuth();
     const [habilitations, setHabilitations] = useState<Habilitation[]>([]);
-    const [users, setUsers] = useState<UserOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    
-    // Create form state
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [formUser, setFormUser] = useState('');
-    const [formType, setFormType] = useState('sst');
-    const [formTitle, setFormTitle] = useState('');
-    const [formObtainedDate, setFormObtainedDate] = useState('');
-    const [formExpirationDate, setFormExpirationDate] = useState('');
-    const [formFile, setFormFile] = useState<File | null>(null);
-
-    const isAdmin = user && (user.is_staff || user.is_superuser);
 
     useEffect(() => {
         fetchHabilitations();
-        if (isAdmin) {
-            fetchUsers();
-        }
-    }, [isAdmin]);
+    }, []);
 
     const fetchHabilitations = async () => {
         try {
@@ -74,63 +48,6 @@ export default function HabilitationListView() {
         }
     };
 
-    const fetchUsers = async () => {
-        try {
-            const response = await api.get('/api/users/');
-            setUsers(response.data);
-        } catch (error) {
-            console.error("Erreur de récupération des utilisateurs:", error);
-        }
-    };
-
-    const handleCreateHabilitation = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!formObtainedDate || !formExpirationDate) return;
-
-        try {
-            const formData = new FormData();
-            // If admin, use selected user. Otherwise, backend defaults to logged user.
-            if (isAdmin && formUser) {
-                formData.append('user', formUser);
-            }
-            formData.append('type_name', formType);
-            formData.append('custom_title', formTitle);
-            formData.append('obtained_date', formObtainedDate);
-            formData.append('expiration_date', formExpirationDate);
-            if (formFile) {
-                formData.append('certificate', formFile);
-            }
-
-            await createHabilitation(formData);
-
-            // Reset
-            setFormUser('');
-            setFormType('sst');
-            setFormTitle('');
-            setFormObtainedDate('');
-            setFormExpirationDate('');
-            setFormFile(null);
-            setShowCreateModal(false);
-
-            fetchHabilitations();
-        } catch (error) {
-            console.error("Erreur de création de l'habilitation:", error);
-            alert("Erreur lors de la création");
-        }
-    };
-
-    const handleDeleteHabilitation = async (id: number) => {
-        if (window.confirm("Voulez-vous vraiment supprimer cette habilitation ?")) {
-            try {
-                await deleteHabilitation(id);
-                setHabilitations(prev => prev.filter(h => h.id !== id));
-            } catch (error) {
-                console.error("Erreur de suppression:", error);
-            }
-        }
-    };
-
-    // Expiry check logic
     const getExpirationStatus = (expDateStr: string) => {
         const expDate = new Date(expDateStr);
         const today = new Date();
@@ -182,12 +99,6 @@ export default function HabilitationListView() {
                         Consultez et suivez la conformité des habilitations (SST, CACES, Électrique) et examens médicaux de vos équipes.
                     </p>
                 </div>
-                {isAdmin && (
-                    <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
-                        <Plus className="w-5 h-5" />
-                        Ajouter un Certificat
-                    </Button>
-                )}
             </div>
 
             {/* Filter / Search Bar */}
@@ -268,16 +179,6 @@ export default function HabilitationListView() {
                                             Aucun Fichier
                                         </Button>
                                     )}
-
-                                    {isAdmin && (
-                                        <Button 
-                                            variant="destructive" 
-                                            className="p-2"
-                                            onClick={() => handleDeleteHabilitation(hab.id)}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    )}
                                 </div>
                             </div>
                         );
@@ -288,112 +189,6 @@ export default function HabilitationListView() {
                             <p className="text-gray-400">Aucun enregistrement d'habilitation ou visite médicale trouvé.</p>
                         </div>
                     )}
-                </div>
-            )}
-
-            {/* Create Certification Modal */}
-            {showCreateModal && (
-                <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex justify-center items-center p-4">
-                    <div className="bg-secondary/95 border border-white/10 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in duration-200">
-                        <div className="p-6 border-b border-white/10 flex justify-between items-center">
-                            <h3 className="text-xl font-bold">Consigner un Certificat</h3>
-                            <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer text-xl">×</button>
-                        </div>
-                        <form onSubmit={handleCreateHabilitation} className="p-6 space-y-4">
-                            {isAdmin && (
-                                <div>
-                                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Collaborateur *</label>
-                                    <select
-                                        required
-                                        value={formUser}
-                                        onChange={(e) => setFormUser(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary"
-                                    >
-                                        <option value="">Sélectionner un collaborateur...</option>
-                                        {users.map(u => (
-                                            <option key={u.id} value={u.id}>
-                                                {`${u.first_name} ${u.last_name}`.trim() || u.username}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Type de document *</label>
-                                <select
-                                    required
-                                    value={formType}
-                                    onChange={(e) => setFormType(e.target.value)}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary"
-                                >
-                                    <option value="sst">Sauveteur Secouriste du Travail (SST)</option>
-                                    <option value="caces">CACES (Engins de chantier)</option>
-                                    <option value="elec">Habilitation Électrique</option>
-                                    <option value="hauteur">Travail en Hauteur</option>
-                                    <option value="medical">Visite Médicale Périodique</option>
-                                    <option value="other">Autre Habilitation / Certificat</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Intitulé personnalisé (optionnel)</label>
-                                <input
-                                    type="text"
-                                    value={formTitle}
-                                    onChange={(e) => setFormTitle(e.target.value)}
-                                    placeholder="Ex: H0B0 - Basse Tension"
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Date d'obtention *</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={formObtainedDate}
-                                        onChange={(e) => setFormObtainedDate(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Date d'expiration *</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={formExpirationDate}
-                                        onChange={(e) => setFormExpirationDate(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Justificatif PDF (optionnel)</label>
-                                <input
-                                    type="file"
-                                    accept=".pdf"
-                                    onChange={(e) => {
-                                        if (e.target.files && e.target.files.length > 0) {
-                                            setFormFile(e.target.files[0]);
-                                        }
-                                    }}
-                                    className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:opacity-90 file:cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="pt-4 border-t border-white/10 flex justify-end gap-2">
-                                <Button type="button" variant="outline" className="text-white border-white/20" onClick={() => setShowCreateModal(false)}>
-                                    Annuler
-                                </Button>
-                                <Button type="submit">
-                                    Enregistrer
-                                </Button>
-                            </div>
-                        </form>
-                    </div>
                 </div>
             )}
         </div>

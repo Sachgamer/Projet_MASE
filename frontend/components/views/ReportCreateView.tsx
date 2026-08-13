@@ -1277,8 +1277,7 @@ export default function ReportCreateView() {
                             {[
                                 { id: 'dangerous_situation', label: 'Situation dangereuse', color: 'border-yellow-500/30 dark:border-yellow-500/20 hover:border-yellow-500 text-yellow-600 dark:text-yellow-400' },
                                 { id: 'near_miss', label: 'Presque accident', color: 'border-orange-500/30 dark:border-orange-500/20 hover:border-orange-500 text-orange-600 dark:text-orange-400' },
-                                { id: 'accident', label: 'Accident', color: 'border-red-500/30 dark:border-red-500/20 hover:border-red-500 text-red-600 dark:text-red-400' },
-                                { id: 'fatal_accident', label: 'Accident mortel', color: 'border-red-700/30 dark:border-red-900/40 hover:border-red-600 text-red-700 dark:text-red-500 bg-red-500/5 dark:bg-red-950/10' }
+                                { id: 'accident', label: 'Accident', color: 'border-red-500/30 dark:border-red-500/20 hover:border-red-500 text-red-600 dark:text-red-400' }
                             ].map((cat) => {
                                 const isSelected = formData.incident_type === cat.id;
                                 return (

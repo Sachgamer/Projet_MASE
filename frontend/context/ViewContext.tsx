@@ -8,7 +8,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 // Liste des différentes pages disponibles sur le site
-type View = 'home' | 'dashboard' | 'login' | 'slideshow-detail' | 'slideshow-create' | 'files' | 'report-create' | 'report-list' | 'controle' | 'quiz' | 'quiz-manage' | 'auto-control-list' | 'blocked-mac-list' | 'hse-dashboard' | 'action-plan' | 'habilitation-list' | 'chemical-registry';
+type View = 'home' | 'dashboard' | 'login' | 'slideshow-detail' | 'slideshow-create' | 'files' | 'report-create' | 'report-list' | 'controle' | 'quiz' | 'quiz-manage' | 'auto-control-list' | 'blocked-mac-list' | 'hse-dashboard' | 'action-plan' | 'habilitation-list' | 'chemical-registry' | 'admin-habilitation';
 
 
 interface ViewContextType {

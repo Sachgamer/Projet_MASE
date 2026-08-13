@@ -375,7 +375,6 @@ export default function ReportListView() {
                             <option value="dangerous_situation" className="bg-background text-foreground">Situation dangereuse</option>
                             <option value="near_miss" className="bg-background text-foreground">Presque accident</option>
                             <option value="accident" className="bg-background text-foreground">Accident</option>
-                            <option value="fatal_accident" className="bg-background text-foreground">Accident mortel</option>
                         </select>
                     </div>
 

@@ -93,7 +93,22 @@ class ActionViewSet(viewsets.ModelViewSet):
         return Action.objects.filter(Q(assigned_to=user) | Q(reporter=user)).distinct()
 
     def perform_create(self, serializer):
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les administrateurs peuvent créer des actions.")
         serializer.save(reporter=self.request.user)
+
+    def perform_update(self, serializer):
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les administrateurs peuvent modifier des actions.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les administrateurs peuvent supprimer des actions.")
+        instance.delete()
 
 from rest_framework.views import APIView
 from rest_framework.response import Response

@@ -17,6 +17,7 @@ import BlockedMacListView from '@/components/views/BlockedMacListView';
 import HseDashboardView from '@/components/views/HseDashboardView';
 import ActionPlanView from '@/components/views/ActionPlanView';
 import HabilitationListView from '@/components/views/HabilitationListView';
+import AdminHabilitationView from '@/components/views/AdminHabilitationView';
 import ChemicalRegistryView from '@/components/views/ChemicalRegistryView';
 import { useAuth } from '@/context/AuthContext';
 
@@ -71,6 +72,8 @@ export default function NavigationController() {
             return <ActionPlanView />;
         case 'habilitation-list':
             return <HabilitationListView />;
+        case 'admin-habilitation':
+            return <AdminHabilitationView />;
         case 'chemical-registry':
             return <ChemicalRegistryView />;
         default:

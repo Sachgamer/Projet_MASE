@@ -45,7 +45,8 @@ export default function ActionPlanView() {
     const [actions, setActions] = useState<Action[]>([]);
     const [users, setUsers] = useState<UserOption[]>([]);
     const [loading, setLoading] = useState(true);
-    const [layoutMode, setLayoutMode] = useState<'kanban' | 'list'>('kanban');
+    const [layoutMode, setLayoutMode] = useState<'kanban' | 'list'>('list');
+    const isAdmin = user && (user.is_staff || user.is_superuser);
     
     // Filters
     const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -177,10 +178,12 @@ export default function ActionPlanView() {
                         Consignez et pilotez les actions de réduction des risques de l'entreprise.
                     </p>
                 </div>
-                <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
-                    <Plus className="w-5 h-5" />
-                    Nouvelle Action
-                </Button>
+                {isAdmin && (
+                    <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
+                        <Plus className="w-5 h-5" />
+                        Nouvelle Action
+                    </Button>
+                )}
             </div>
 
             {/* Filters Bar */}
@@ -217,22 +220,24 @@ export default function ActionPlanView() {
                 </div>
 
                 {/* Layout Mode Switcher */}
-                <div className="flex bg-white/5 border border-white/10 rounded-lg p-1 gap-1">
-                    <button
-                        onClick={() => setLayoutMode('kanban')}
-                        className={`p-1.5 rounded-md transition-colors bg-transparent border-0 cursor-pointer ${layoutMode === 'kanban' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white'}`}
-                        title="Vue Tableau Kanban"
-                    >
-                        <KanbanSquare className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={() => setLayoutMode('list')}
-                        className={`p-1.5 rounded-md transition-colors bg-transparent border-0 cursor-pointer ${layoutMode === 'list' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white'}`}
-                        title="Vue Liste"
-                    >
-                        <ListTodo className="w-5 h-5" />
-                    </button>
-                </div>
+                {isAdmin && (
+                    <div className="flex bg-white/5 border border-white/10 rounded-lg p-1 gap-1">
+                        <button
+                            onClick={() => setLayoutMode('kanban')}
+                            className={`p-1.5 rounded-md transition-colors bg-transparent border-0 cursor-pointer ${layoutMode === 'kanban' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white'}`}
+                            title="Vue Tableau Kanban"
+                        >
+                            <KanbanSquare className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={() => setLayoutMode('list')}
+                            className={`p-1.5 rounded-md transition-colors bg-transparent border-0 cursor-pointer ${layoutMode === 'list' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white'}`}
+                            title="Vue Liste"
+                        >
+                            <ListTodo className="w-5 h-5" />
+                        </button>
+                    </div>
+                )}
             </div>
 
             {loading ? (
@@ -251,7 +256,7 @@ export default function ActionPlanView() {
                                     <th className="px-6 py-4">Priorité</th>
                                     <th className="px-6 py-4">Échéance</th>
                                     <th className="px-6 py-4">Responsable</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
+                                    {isAdmin && <th className="px-6 py-4 text-right">Actions</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/10">
@@ -286,39 +291,41 @@ export default function ActionPlanView() {
                                                     <span>{act.assigned_to_fullname || act.assigned_to_name || 'Non assigné'}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex justify-end gap-1.5">
-                                                    {act.status !== 'done' && (
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline" 
-                                                            className="text-green-400 border-green-500/20 bg-green-500/10 hover:bg-green-500 hover:text-white"
-                                                            onClick={() => handleUpdateStatus(act.id, 'done')}
-                                                        >
-                                                            Clôturer
-                                                        </Button>
-                                                    )}
-                                                    {act.status === 'todo' && (
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline" 
-                                                            className="text-orange-400 border-orange-500/20 bg-orange-500/10 hover:bg-orange-500 hover:text-white"
-                                                            onClick={() => handleUpdateStatus(act.id, 'in_progress')}
-                                                        >
-                                                            Démarrer
-                                                        </Button>
-                                                    )}
-                                                    {isOwner && (
-                                                        <button 
-                                                            onClick={() => handleDeleteAction(act.id)}
-                                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-lg bg-transparent border-0 cursor-pointer"
-                                                            title="Supprimer"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
+                                            {isAdmin && (
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex justify-end gap-1.5">
+                                                        {act.status !== 'done' && (
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline" 
+                                                                className="text-green-400 border-green-500/20 bg-green-500/10 hover:bg-green-500 hover:text-white"
+                                                                onClick={() => handleUpdateStatus(act.id, 'done')}
+                                                            >
+                                                                Clôturer
+                                                            </Button>
+                                                        )}
+                                                        {act.status === 'todo' && (
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="outline" 
+                                                                className="text-orange-400 border-orange-500/20 bg-orange-500/10 hover:bg-orange-500 hover:text-white"
+                                                                onClick={() => handleUpdateStatus(act.id, 'in_progress')}
+                                                            >
+                                                                Démarrer
+                                                            </Button>
+                                                        )}
+                                                        {isOwner && (
+                                                            <button 
+                                                                onClick={() => handleDeleteAction(act.id)}
+                                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-lg bg-transparent border-0 cursor-pointer"
+                                                                title="Supprimer"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            )}
                                         </tr>
                                     );
                                 })}

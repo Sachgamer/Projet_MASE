@@ -441,6 +441,18 @@ export default function Navbar() {
                                                 </button>
                                                 <button 
                                                     onClick={() => {
+                                                        setView('admin-habilitation');
+                                                        setIsAdminOpen(false);
+                                                    }}
+                                                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-left text-gray-300 hover:text-white hover:bg-white/10 transition-colors bg-transparent border-0 cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Award className="w-4 h-4 text-teal-400" />
+                                                        Habilitations Techniciens
+                                                    </div>
+                                                </button>
+                                                <button 
+                                                    onClick={() => {
                                                         setView('blocked-mac-list');
                                                         setIsAdminOpen(false);
                                                     }}
@@ -621,6 +633,16 @@ export default function Navbar() {
                                 >
                                     <CheckSquare className="w-5 h-5 text-orange-400" />
                                     Rapports d'Auto-contrôle
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setView('admin-habilitation');
+                                        setIsMenuOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-4 px-4 py-4 text-lg font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-xl bg-transparent border-0 text-left"
+                                >
+                                    <Award className="w-5 h-5 text-teal-400" />
+                                    Habilitations Techniciens
                                 </button>
                                 <button 
                                     onClick={() => {
