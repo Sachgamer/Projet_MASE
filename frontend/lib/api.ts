@@ -91,7 +91,7 @@ export const createChemicalProduct = (formData: FormData) => api.post('/api/chem
 export const deleteChemicalProduct = (id: number) => api.delete(`/api/chemical-products/${id}/`);
 
 // Habilitations (Certifications & Visites)
-export const getHabilitations = () => api.get('/api/habilitations/');
+export const getHabilitations = (all?: boolean) => api.get(all ? '/api/habilitations/?all=true' : '/api/habilitations/');
 export const createHabilitation = (formData: FormData) => api.post('/api/habilitations/', formData);
 export const deleteHabilitation = (id: number) => api.delete(`/api/habilitations/${id}/`);
 

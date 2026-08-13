@@ -65,7 +65,7 @@ export default function AdminHabilitationView() {
 
     const fetchHabilitations = async () => {
         try {
-            const response = await getHabilitations();
+            const response = await getHabilitations(true);
             setHabilitations(response.data);
         } catch (error) {
             console.error("Erreur de récupération des habilitations:", error);

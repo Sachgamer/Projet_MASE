@@ -245,7 +245,8 @@ class HabilitationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff or user.is_superuser:
+        show_all = self.request.query_params.get('all') == 'true'
+        if (user.is_staff or user.is_superuser) and show_all:
             return Habilitation.objects.all().order_by('expiration_date')
         return Habilitation.objects.filter(user=user).order_by('expiration_date')
 
