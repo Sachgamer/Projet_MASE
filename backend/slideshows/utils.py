@@ -40,7 +40,7 @@ def wrap_text(text, max_chars=85):
         lines.append(" ".join(current_line))
     return lines
 
-def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_questions, is_passed, qa_pairs, signature_base64=""):
+def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_questions, is_passed, qa_pairs, signature_base64="", presenter_name=""):
     # 1. Préparation calque
     overlay_buffer = BytesIO()
     c = canvas.Canvas(overlay_buffer, pagesize=A4)
@@ -55,14 +55,21 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
     # Date du contrôle
     c.drawString(265, 616.4, remove_emojis(date_str))
     
-    # Thèmes de la causerie
-    c.drawString(475, 616.4, remove_emojis(causerie_title))
+    # Présentateur de la causerie
+    c.drawString(495, 616.4, remove_emojis(presenter_name))
+    
+    # Thème de la causerie
+    c.drawString(175, 560.0, remove_emojis(causerie_title))
     
     # Réussite au quiz et score
-    result_text = f"{'Oui' if is_passed else 'Non'} (Score : {score}/{total_questions})"
-    c.setFillColor(colors.HexColor('#008000') if is_passed else colors.HexColor('#FF0000'))
+    result_label = "Résultat du quiz :"
+    result_val = f"{'Réussi' if is_passed else 'Échoué'} (Score : {score}/{total_questions})"
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(190, 560.0, result_text)
+    c.drawString(71.0, 525.0, result_label)
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.HexColor('#008000') if is_passed else colors.HexColor('#FF0000'))
+    c.drawString(165.0, 525.0, result_val)
+    c.setFillColor(colors.black)
     
     # 3. Remplissage des questions et réponses dans l'espace vide
     y_pos = 475
@@ -77,12 +84,12 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
         c.setFont("Helvetica-Bold", 8)
         c.setFillColor(colors.black)
         for line in q_lines:
-            c.drawString(35, y_pos, remove_emojis(line))
+            c.drawString(45, y_pos, remove_emojis(line))
             y_pos -= 11
             
         c.setFont("Helvetica", 8)
         c.setFillColor(colors.black)
-        c.drawString(50, y_pos, "Réponse apportée : ")
+        c.drawString(60, y_pos, "Réponse apportée : ")
         
         # Colorer la réponse apportée (vert si correct, rouge si incorrect)
         if is_correct:
@@ -92,10 +99,10 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
             
         # Envelopper le texte du choix si nécessaire
         a_lines = wrap_text(a_text, max_chars=80)
-        c.drawString(135, y_pos, remove_emojis(a_lines[0]))
+        c.drawString(145, y_pos, remove_emojis(a_lines[0]))
         y_pos -= 11
         for line in a_lines[1:]:
-            c.drawString(135, y_pos, remove_emojis(line))
+            c.drawString(145, y_pos, remove_emojis(line))
             y_pos -= 11
             
         y_pos -= 5 # Espacement supplémentaire entre les questions

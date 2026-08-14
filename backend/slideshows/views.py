@@ -201,6 +201,7 @@ class QuizViewSet(viewsets.ModelViewSet):
         user_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username
         date_str = timezone.localtime().strftime("%d/%m/%Y %H:%M")
         causerie_title = quiz.slideshow.title
+        presenter_name = f"{quiz.slideshow.creator.first_name} {quiz.slideshow.creator.last_name}".strip() or quiz.slideshow.creator.username
         
         buffer = generate_quiz_pdf(
             user_name=user_name,
@@ -210,7 +211,8 @@ class QuizViewSet(viewsets.ModelViewSet):
             total_questions=total_questions,
             is_passed=is_passed,
             qa_pairs=qa_pairs,
-            signature_base64=signature
+            signature_base64=signature,
+            presenter_name=presenter_name
         )
 
         
