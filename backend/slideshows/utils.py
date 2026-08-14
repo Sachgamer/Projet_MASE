@@ -50,36 +50,22 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
     
     # 2. Remplissage des informations du haut
     # Nom de la personne interrogée
-    # Correction de "Nom de la personne interrogé :" en "Nom de la personne interrogée :"
-    c.setFillColor(colors.white)
-    c.rect(35, 644, 138, 12, fill=True, stroke=False)
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica", 10)
-    c.drawString(35, 648, "Nom de la personne interrogée :")
-
-    c.drawString(175, 648, remove_emojis(user_name))
+    c.drawString(70, 616.4, remove_emojis(user_name))
     
     # Date du contrôle
-    c.drawString(115, 615, remove_emojis(date_str))
+    c.drawString(265, 616.4, remove_emojis(date_str))
     
     # Thèmes de la causerie
-    c.drawString(145, 583, remove_emojis(causerie_title))
+    c.drawString(475, 616.4, remove_emojis(causerie_title))
     
-    # Réussi ou non
+    # Réussite au quiz et score
     result_text = f"{'Oui' if is_passed else 'Non'} (Score : {score}/{total_questions})"
     c.setFillColor(colors.HexColor('#008000') if is_passed else colors.HexColor('#FF0000'))
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(115, 552, result_text)
+    c.drawString(190, 560.0, result_text)
     
-    # 3. Remplissage des questions et réponses dans l'espace vide (y de ~495 à ~150)
-    # Correction de "Question posés durant le quiz :" en "Questions posées durant le quiz :"
-    c.setFillColor(colors.white)
-    c.rect(35, 516, 175, 12, fill=True, stroke=False)
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica", 10)
-    c.drawString(35, 520.2, "Questions posées durant le quiz :")
-
-    y_pos = 495
+    # 3. Remplissage des questions et réponses dans l'espace vide
+    y_pos = 475
     for idx, qa in enumerate(qa_pairs):
         q_text = qa['question_text']
         a_text = qa['answer_text']
@@ -114,7 +100,7 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
             
         y_pos -= 5 # Espacement supplémentaire entre les questions
         
-    # 3.5 Signature de l'utilisateur (si présente)
+    # 3.5 Signature de l'utilisateur (dans le cadre de signature droite y=123.0 à y=165.9)
     if signature_base64:
         try:
             import base64
@@ -127,22 +113,12 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
             img_buffer = BytesIO(img_data)
             img = ImageReader(img_buffer)
             
-            c.setFont("Helvetica-Bold", 8)
-            c.setFillColor(colors.black)
-            c.drawString(410, 110, "Signature du participant :")
-            c.drawImage(img, 410, 45, width=120, height=60, mask='auto')
+            c.drawImage(img, 370, 126, width=180, height=32, mask='auto')
         except Exception as e:
             c.setFont("Helvetica-Oblique", 8)
             c.setFillColor(colors.HexColor('#FF0000'))
-            c.drawString(410, 110, f"Erreur signature : {str(e)[:25]}")
+            c.drawString(370, 135, f"Erreur signature : {str(e)[:25]}")
             c.setFillColor(colors.black)
-
-    # Correction de "Personne interrogé" en "Personne interrogée"
-    c.setFillColor(colors.white)
-    c.rect(35, 112, 100, 12, fill=True, stroke=False)
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica", 10)
-    c.drawString(38.9, 116.0, "Personne interrogée")
 
     c.save()
 
