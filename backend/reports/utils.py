@@ -72,17 +72,12 @@ def generate_accident_pdf(report):
     # Lieu de l'incident
     c.drawString(130, 583, remove_emojis(report.location))
     
-    # 3. Description dans un cadre (x=35, y=360, width=525, height=165)
-    c.setStrokeColor(colors.HexColor('#CCCCCC'))
-    c.setLineWidth(1)
-    c.roundRect(35, 360, 525, 165, 4, stroke=1, fill=0)
-    
     # Texte de la description
     description_lines = wrap_text(report.description, max_chars=90)
     y_text = 510
     c.setFont("Helvetica", 9)
     c.setFillColor(colors.black)
-    for line in description_lines[:12]:  # Limiter le nombre de lignes pour ne pas déborder du cadre
+    for line in description_lines[:7]:  # Limiter le nombre de lignes pour ne pas déborder du cadre
         c.drawString(45, y_text, remove_emojis(line))
         y_text -= 12
         
