@@ -53,35 +53,27 @@ def generate_accident_pdf(report):
     # 2. Remplissage des informations du haut
     # Nom du déclarant (personne)
     reporter_name = f"{report.reporter.first_name} {report.reporter.last_name}".strip() or report.reporter.username
-    
-    # Correction de "Nom de la personne contrôlé :" en "Nom du déclarant :"
-    c.setFillColor(colors.white)
-    c.rect(35, 644, 138, 15, fill=True, stroke=False)
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica", 10)
-    c.drawString(35, 648, "Nom du déclarant :")
-    
-    c.drawString(175, 648, remove_emojis(reporter_name))
+    c.drawString(70, 616.4, remove_emojis(reporter_name))
     
     # Date de l'incident
     from django.utils import timezone
     local_date = timezone.localtime(report.incident_date) if report.incident_date else timezone.localtime()
     date_str = local_date.strftime("%d/%m/%Y à %H:%M")
-    c.drawString(140, 615, date_str)
+    c.drawString(265, 616.4, date_str)
     
     # Lieu de l'incident
-    c.drawString(130, 583, remove_emojis(report.location))
+    c.drawString(450, 616.4, remove_emojis(report.location))
     
     # Texte de la description
     description_lines = wrap_text(report.description, max_chars=90)
-    y_text = 510
+    y_text = 540
     c.setFont("Helvetica", 9)
     c.setFillColor(colors.black)
-    for line in description_lines[:7]:  # Limiter le nombre de lignes pour ne pas déborder du cadre
+    for line in description_lines[:8]:  # Limiter le nombre de lignes pour ne pas déborder du cadre de la description (y=444.3 à y=555.1)
         c.drawString(45, y_text, remove_emojis(line))
         y_text -= 12
         
-    # 4. Photos (en dessous, max 3 côte à côte)
+    # 4. Photos (en dessous, dans le cadre photo y=197.0 à y=398.8)
     photos = report.photos.all()
     if photos.exists():
         for idx, photo_obj in enumerate(photos[:3]):
@@ -89,42 +81,34 @@ def generate_accident_pdf(report):
                 img_path = photo_obj.image.path
                 if os.path.exists(img_path):
                     x_pos = 45 + (idx * 175)
-                    y_pos = 175
-                    c.drawImage(img_path, x_pos, y_pos, width=165, height=120, preserveAspectRatio=True)
+                    y_pos = 215
+                    c.drawImage(img_path, x_pos, y_pos, width=160, height=160, preserveAspectRatio=True)
             except Exception:
                 x_pos = 45 + (idx * 175)
-                y_pos = 175
+                y_pos = 215
                 c.setStrokeColor(colors.red)
-                c.rect(x_pos, y_pos, 165, 120, stroke=1, fill=0)
+                c.rect(x_pos, y_pos, 160, 160, stroke=1, fill=0)
                 c.setFont("Helvetica-Bold", 8)
                 c.setFillColor(colors.red)
-                c.drawCentredString(x_pos + 82, y_pos + 65, "Image corrompue")
-                c.drawCentredString(x_pos + 82, y_pos + 50, "ou non supportée")
+                c.drawCentredString(x_pos + 80, y_pos + 85, "Image corrompue")
+                c.drawCentredString(x_pos + 80, y_pos + 70, "ou non supportée")
                 c.setFillColor(colors.black)
     elif report.image:
         try:
             img_path = report.image.path
             if os.path.exists(img_path):
-                c.drawImage(img_path, 45, 175, width=250, height=150, preserveAspectRatio=True)
+                c.drawImage(img_path, 45, 210, width=250, height=170, preserveAspectRatio=True)
         except Exception:
             c.setStrokeColor(colors.red)
-            c.rect(45, 175, 250, 150, stroke=1, fill=0)
+            c.rect(45, 210, 250, 170, stroke=1, fill=0)
             c.setFont("Helvetica-Bold", 8)
             c.setFillColor(colors.red)
-            c.drawCentredString(170, 255, "Image corrompue ou non supportée")
+            c.drawCentredString(170, 295, "Image corrompue ou non supportée")
             c.setFillColor(colors.black)
             
-    # 5. Signature
-    # Correction des labels de signatures du template
-    c.setFillColor(colors.white)
-    c.rect(35, 118, 100, 15, fill=True, stroke=False) # Masquer "Technicien"
-    c.rect(300, 118, 100, 15, fill=True, stroke=False) # Masquer "Client"
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica", 10)
-    c.drawString(35, 122.1, "Déclarant :")
-    
+    # 5. Signature (dans le cadre de signature y=123.1 à y=165.4)
     c.setFont("Helvetica-Oblique", 8)
-    c.drawString(40, 100, f"Signé par : {remove_emojis(reporter_name)}")
+    c.drawString(45, 135, f"Signé par : {remove_emojis(reporter_name)}")
     
     c.save()
     overlay_buffer.seek(0)
