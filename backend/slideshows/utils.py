@@ -50,6 +50,13 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
     
     # 2. Remplissage des informations du haut
     # Nom de la personne interrogée
+    # Correction de "Nom de la personne interrogé :" en "Nom de la personne interrogée :"
+    c.setFillColor(colors.white)
+    c.rect(35, 644, 138, 12, fill=True, stroke=False)
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica", 10)
+    c.drawString(35, 648, "Nom de la personne interrogée :")
+
     c.drawString(175, 648, remove_emojis(user_name))
     
     # Date du contrôle
@@ -65,6 +72,13 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
     c.drawString(115, 552, result_text)
     
     # 3. Remplissage des questions et réponses dans l'espace vide (y de ~495 à ~150)
+    # Correction de "Question posés durant le quiz :" en "Questions posées durant le quiz :"
+    c.setFillColor(colors.white)
+    c.rect(35, 516, 175, 12, fill=True, stroke=False)
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica", 10)
+    c.drawString(35, 520.2, "Questions posées durant le quiz :")
+
     y_pos = 495
     for idx, qa in enumerate(qa_pairs):
         q_text = qa['question_text']
@@ -122,6 +136,13 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
             c.setFillColor(colors.HexColor('#FF0000'))
             c.drawString(410, 110, f"Erreur signature : {str(e)[:25]}")
             c.setFillColor(colors.black)
+
+    # Correction de "Personne interrogé" en "Personne interrogée"
+    c.setFillColor(colors.white)
+    c.rect(35, 112, 100, 12, fill=True, stroke=False)
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica", 10)
+    c.drawString(38.9, 116.0, "Personne interrogée")
 
     c.save()
 

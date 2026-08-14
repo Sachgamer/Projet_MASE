@@ -53,6 +53,14 @@ def generate_accident_pdf(report):
     # 2. Remplissage des informations du haut
     # Nom du déclarant (personne)
     reporter_name = f"{report.reporter.first_name} {report.reporter.last_name}".strip() or report.reporter.username
+    
+    # Correction de "Nom de la personne contrôlé :" en "Nom du déclarant :"
+    c.setFillColor(colors.white)
+    c.rect(35, 644, 138, 15, fill=True, stroke=False)
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica", 10)
+    c.drawString(35, 648, "Nom du déclarant :")
+    
     c.drawString(175, 648, remove_emojis(reporter_name))
     
     # Date de l'incident
@@ -112,6 +120,14 @@ def generate_accident_pdf(report):
             c.setFillColor(colors.black)
             
     # 5. Signature
+    # Correction des labels de signatures du template
+    c.setFillColor(colors.white)
+    c.rect(35, 118, 100, 15, fill=True, stroke=False) # Masquer "Technicien"
+    c.rect(300, 118, 100, 15, fill=True, stroke=False) # Masquer "Client"
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica", 10)
+    c.drawString(35, 122.1, "Déclarant :")
+    
     c.setFont("Helvetica-Oblique", 8)
     c.drawString(40, 100, f"Signé par : {remove_emojis(reporter_name)}")
     

@@ -28,6 +28,16 @@ interface Quiz {
     questions: Question[];
 }
 
+// Fonction pour mélanger un tableau (Algorithme de Fisher-Yates)
+function shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
+
 // Vue permettant à l'utilisateur de passer le quiz d'une formation
 export default function QuizView() {
     const { viewParams, setView } = useView();
@@ -52,7 +62,11 @@ export default function QuizView() {
             try {
                 const response = await api.get(`/api/slideshows/${id}/`);
                 if (response.data.quiz) {
-                    setQuiz(response.data.quiz);
+                    const quizData = response.data.quiz;
+                    if (quizData.questions) {
+                        quizData.questions = shuffleArray(quizData.questions);
+                    }
+                    setQuiz(quizData);
                 }
             } catch (error: any) {
                 console.error("Failed to fetch quiz:", error.message);
@@ -136,6 +150,20 @@ export default function QuizView() {
         }
     };
 
+    const handleRestart = () => {
+        setShowResults(false);
+        setCurrentQuestionIndex(0);
+        setScore(0);
+        setAnswers([]);
+        setSignatureData('');
+        if (quiz && quiz.questions) {
+            setQuiz({
+                ...quiz,
+                questions: shuffleArray(quiz.questions)
+            });
+        }
+    };
+
     if (loading) return <div className="p-8 text-white">Chargement...</div>;
     if (!quiz) return <div className="p-8 text-white">Aucun quizz n'est disponible pour cette présentation.</div>;
     if (!quiz.questions || quiz.questions.length === 0) return <div className="p-8 text-white">Aucune question n'est disponible.</div>;
@@ -198,7 +226,7 @@ export default function QuizView() {
                 )}
 
                 <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-                    <Button onClick={() => { setShowResults(false); setCurrentQuestionIndex(0); setScore(0); setAnswers([]); setSignatureData(''); }}>Recommencer</Button>
+                    <Button onClick={handleRestart}>Recommencer</Button>
                     <Button 
                         onClick={handleDownloadPDF} 
                         disabled={downloading || (isPassed && !signatureData)}

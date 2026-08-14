@@ -46,6 +46,13 @@ def generate_inspection_pdf(inspection):
     is_vehicule = (inspection.item.category == 'VEHICULE')
     
     if is_vehicule:
+        # Correction de "Nom de la personne contrôlé :" en "Nom du collaborateur contrôlé :"
+        c.setFillColor(colors.white)
+        c.rect(35, 663, 142, 12, fill=True, stroke=False)
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica", 10)
+        c.drawString(35, 667, "Nom du collaborateur contrôlé :")
+
         c.drawString(180, 667, name)
         c.drawString(130, 647, date_str)
         
@@ -110,10 +117,24 @@ def generate_inspection_pdf(inspection):
         c.drawString(40, 100, f"Technicien: {name}")
     else:
         # EPI ou EQUIPEMENT (controle_template.pdf)
+        # Correction de "Nom de la personne contrôlé :" en "Nom du collaborateur contrôlé :"
+        c.setFillColor(colors.white)
+        c.rect(35, 661.8, 142, 12, fill=True, stroke=False)
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica", 10)
+        c.drawString(35, 665.8, "Nom du collaborateur contrôlé :")
+
         c.drawString(180, 665.8, name)
         c.drawString(130, 632.7, date_str)
         
         # Expiration date
+        # Correction de "Dates avant le prochain contrôle :" en "Date avant le prochain contrôle :"
+        c.setFillColor(colors.white)
+        c.rect(20, 607.7, 175, 12, fill=True, stroke=False)
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica", 10)
+        c.drawString(35, 611.7, "Date avant le prochain contrôle :")
+
         exp_date = inspection.item.expiration_date
         exp_date_str = exp_date.strftime("%d/%m/%Y") if exp_date else "N/A"
         c.drawString(200, 611.7, exp_date_str)
