@@ -56,7 +56,7 @@ def generate_quiz_pdf(user_name, date_str, causerie_title, score, total_question
     c.drawString(265, 616.4, remove_emojis(date_str))
     
     # Présentateur de la causerie
-    c.drawString(495, 616.4, remove_emojis(presenter_name))
+    c.drawString(432, 616.4, remove_emojis(presenter_name))
     
     # Thème de la causerie
     c.drawString(175, 560.0, remove_emojis(causerie_title))
