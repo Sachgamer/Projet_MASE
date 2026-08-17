@@ -3,28 +3,36 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Cream White Background */
-  --background: #faf7f0;
-  /* Dark Slate Foreground */
-  --foreground: #292524;
+  /* Cream White Background - Stone 50 */
+  --background: #fafaf9;
+  /* Dark Slate Foreground - Stone 900 */
+  --foreground: #1c1917;
 
   /* Orange Accent */
   --primary: #f97316;
   --primary-foreground: #ffffff;
 
-  /* Secondary Light Warm Beige */
-  --secondary: #f4efe6;
-  --secondary-foreground: #292524;
+  /* Secondary Light Warm Beige - Stone 100 */
+  --secondary: #f5f5f4;
+  --secondary-foreground: #1c1917;
 
-  --muted: #eaddcd;
+  /* Muted - Stone 200 / 500 */
+  --muted: #e7e5e4;
   --muted-foreground: #78716c;
 
-  --border: #e2dcd0;
+  --border: #e7e5e4;
   --input: #ffffff;
   --ring: #f97316;
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
+
+  /* Variables CSS pour les pages de Guides (Mode Lecture Clair) */
+  --guide-bg: #faf7f2;
+  --guide-ink: #211b14;
+  --guide-primary: #ea580c;
+  --guide-muted: #78716c;
+  --guide-border: #e7e5e4;
 }
 
 .dark {
@@ -50,6 +58,13 @@
 
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
+
+  /* Variables CSS pour les pages de Guides (Mode Lecture Sombre) */
+  --guide-bg: #121214;
+  --guide-ink: #e4e4e7;
+  --guide-primary: #fdba74;
+  --guide-muted: #a1a1aa;
+  --guide-border: #27272a;
 }
 
 @theme {
@@ -68,7 +83,13 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Redéfinition des rayons de courbure selon les directives UX */
+  --radius-lg: 12px;  /* rounded-lg est maintenant à 12px pour boutons/inputs */
+  --radius-xl: 16px;  /* rounded-xl est maintenant à 16px pour cartes/panneaux */
+  --radius-2xl: 20px; /* rounded-2xl est maintenant à 20px pour modales/bannières */
 }
+
 
 body {
   background: var(--background);
@@ -208,7 +229,7 @@ html:not(.dark) .bg-gray-750, html:not(.dark) .bg-gray-700 {
   color: var(--foreground) !important;
 }
 html:not(.dark) .bg-gray-900\/50 {
-  background-color: rgba(244, 239, 230, 0.5) !important;
+  background-color: rgba(245, 245, 244, 0.5) !important;
   backdrop-filter: blur(4px);
 }
 html:not(.dark) .bg-gray-50 {
