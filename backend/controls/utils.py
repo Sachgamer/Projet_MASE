@@ -63,75 +63,88 @@ def generate_inspection_pdf(inspection):
     is_vehicule = (inspection.item.category == 'VEHICULE')
     
     if is_vehicule:
-        # Correction de "Nom de la personne contrôlé :" en "Nom du collaborateur contrôlé :"
-        c.setFillColor(colors.white)
-        c.rect(35, 663, 142, 12, fill=True, stroke=False)
+        # Remplissage des informations du haut (sur la ligne unique y=626.0)
+        c.drawString(70, 626.0, name)
+        c.drawString(262, 626.0, date_str)
+        
+        exp_date = inspection.item.expiration_date
+        exp_date_str = exp_date.strftime("%d/%m/%Y") if exp_date else "N/A"
+        c.drawString(470, 626.0, exp_date_str)
+        
+        # Détails du matériel à y=598.9
+        c.drawString(120, 598.9, remove_emojis(inspection.item.get_category_display()))
+        
+        designation_sn = f"{inspection.item.type_name} (S/N: {inspection.item.serial_number or 'N/A'})"
+        c.drawString(275, 598.9, remove_emojis(designation_sn))
+        
+        # Contrôle status
+        c.setFont("Helvetica-Bold", 10)
+        if inspection.is_valid:
+            c.setFillColor(colors.green)
+            c.drawString(441, 598.9, "CONFORME")
+        else:
+            c.setFillColor(colors.red)
+            c.drawString(441, 598.9, "NON CONFORME")
         c.setFillColor(colors.black)
         c.setFont("Helvetica", 10)
-        c.drawString(35, 667, "Nom du collaborateur contrôlé :")
-
-        c.drawString(180, 667, name)
-        c.drawString(130, 647, date_str)
         
-        # Check technique du véhicule
+        # Check technique du véhicule (lignes y=555.6 et y=529.1)
         if inspection.vehicle_checks:
-            checks_y = {
-                'Feux (Avant/Arrière/Signalisation)': 606,
-                'Carrosserie': 591,
-                'Propreté (Intérieur/Extérieur)': 575,
-                'Documents techniques présents': 560,
-                'État des pneus': 545,
-                'Niveaux (Huile/Liquide de refroidissement)': 529,
-                'Freins': 514
-            }
-            for check_name, y_pos in checks_y.items():
-                val = inspection.vehicle_checks.get(check_name)
+            checks_positions = [
+                ('Feux (Avant/Arrière/Signalisation)', 147, 555.6),
+                ('Carrosserie', 258, 555.6),
+                ('Propreté (Intérieur/Extérieur)', 368, 555.6),
+                ('Freins', 470, 555.6),
+                ('Documents techniques présents', 127, 529.1),
+                ('État des pneus', 260, 529.1),
+                ('Niveaux (Huile/Liquide de refroidissement)', 488, 529.1)
+            ]
+            c.setFont("Helvetica-Bold", 9)
+            for db_key, x_pos, y_pos in checks_positions:
+                val = inspection.vehicle_checks.get(db_key)
                 if val is True:
                     c.setFillColor(colors.green)
-                    c.drawString(250, y_pos, "Valide")
+                    c.drawString(x_pos, y_pos, "Valide")
                 elif val is False:
                     c.setFillColor(colors.red)
-                    c.drawString(250, y_pos, "Non Valide")
-                c.setFillColor(colors.black)
-                
-        # 3. Tableau
-        y_table = 455 
-        c.drawCentredString(67, y_table, remove_emojis(inspection.item.get_category_display())) # Type
-        c.drawCentredString(130, y_table, remove_emojis(inspection.item.serial_number or "N/A")) # S/N
-        c.drawCentredString(321, y_table, remove_emojis(inspection.item.type_name)) # Désignation
-        
-        # Contrôle
-        c.setFont("Helvetica", 8)
-        c.drawCentredString(520, y_table, "CONFORME" if inspection.is_valid else "NON CONFORME")
-        c.setFont("Helvetica", 10) 
-        
-        # 4. Photos
+                    c.drawString(x_pos, y_pos, "Non Valide")
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica", 10)
+            
+        # Commentaire de l'inspection (dans le cadre "Description de l'incident" y=374.5 à y=475.6)
+        comments_text = inspection.comments or ""
+        if comments_text:
+            c.setFont("Helvetica", 9)
+            comment_lines = wrap_text(comments_text, max_chars=95)
+            y_comm = 460
+            for line in comment_lines[:8]:  # Limiter à 8 lignes pour rester dans le cadre
+                c.drawString(45, y_comm, remove_emojis(line))
+                y_comm -= 12
+            c.setFont("Helvetica", 10)
+            
+        # Photos dans la zone dédiée (y=165.7 à y=335.4, hauteur 169.7)
         photos = inspection.photos.all()
         if photos.exists():
-            for idx, photo_obj in enumerate(photos[:3]): 
+            for idx, photo_obj in enumerate(photos[:3]):
                 img_path = photo_obj.image.path
                 if os.path.exists(img_path):
-                    x_pos = 40 + (idx * 160)
-                    y_pos = 280
+                    x_pos = 45 + (idx * 175)
+                    y_pos = 180
                     try:
-                        c.drawImage(img_path, x_pos, y_pos, width=150, height=100, preserveAspectRatio=True)
+                        c.drawImage(img_path, x_pos, y_pos, width=160, height=135, preserveAspectRatio=True)
                     except Exception:
                         c.setStrokeColor(colors.red)
-                        c.rect(x_pos, y_pos, 150, 100, stroke=1, fill=0)
+                        c.rect(x_pos, y_pos, 160, 135, stroke=1, fill=0)
                         c.setFont("Helvetica-Bold", 8)
                         c.setFillColor(colors.red)
-                        c.drawCentredString(x_pos + 75, y_pos + 55, "Image corrompue")
-                        c.drawCentredString(x_pos + 75, y_pos + 40, "ou non supportée")
+                        c.drawCentredString(x_pos + 80, y_pos + 70, "Image corrompue")
+                        c.drawCentredString(x_pos + 80, y_pos + 55, "ou non supportée")
                         c.setFillColor(colors.black)
                         c.setFont("Helvetica", 10)
-    
-        # 5. Commentaire
-        if inspection.comments:
-            c.drawString(45, 220, remove_emojis(inspection.comments[:1000])) 
             
-        # 6. Signatures 
+        # Signatures (dans le cadre de signature gauche y=112.5 à y=155.2)
         c.setFont("Helvetica-Oblique", 8)
-        c.drawString(40, 100, f"Technicien: {name}")
+        c.drawString(45, 127, f"Signé par : {name}")
     else:
         # EPI ou EQUIPEMENT (controle_template.pdf)
         # Remplissage des informations du haut (sur la ligne unique y=626.0)
