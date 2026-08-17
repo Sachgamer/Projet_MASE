@@ -75,16 +75,16 @@ def generate_inspection_pdf(inspection):
         c.drawString(120, 598.9, remove_emojis(inspection.item.get_category_display()))
         
         designation_sn = f"{inspection.item.type_name} (S/N: {inspection.item.serial_number or 'N/A'})"
-        c.drawString(275, 598.9, remove_emojis(designation_sn))
+        c.drawString(258, 598.9, remove_emojis(designation_sn))
         
         # Contrôle status
         c.setFont("Helvetica-Bold", 10)
         if inspection.is_valid:
             c.setFillColor(colors.green)
-            c.drawString(441, 598.9, "CONFORME")
+            c.drawString(458, 598.9, "CONFORME")
         else:
             c.setFillColor(colors.red)
-            c.drawString(441, 598.9, "NON CONFORME")
+            c.drawString(458, 598.9, "NON CONFORME")
         c.setFillColor(colors.black)
         c.setFont("Helvetica", 10)
         
