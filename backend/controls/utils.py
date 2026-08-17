@@ -23,6 +23,23 @@ def remove_emojis(text):
             continue
     return "".join(cleaned)
 
+def wrap_text(text, max_chars=85):
+    words = text.split(' ')
+    lines = []
+    current_line = []
+    current_len = 0
+    for word in words:
+        if current_len + len(word) + 1 > max_chars:
+            lines.append(" ".join(current_line))
+            current_line = [word]
+            current_len = len(word)
+        else:
+            current_line.append(word)
+            current_len += len(word) + 1
+    if current_line:
+        lines.append(" ".join(current_line))
+    return lines
+
 def generate_inspection_pdf(inspection):
     # 1. preparation calque
     overlay_buffer = BytesIO()
