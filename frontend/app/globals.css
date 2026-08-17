@@ -88,6 +88,31 @@
   --radius-lg: 12px;  /* rounded-lg est maintenant à 12px pour boutons/inputs */
   --radius-xl: 16px;  /* rounded-xl est maintenant à 16px pour cartes/panneaux */
   --radius-2xl: 20px; /* rounded-2xl est maintenant à 20px pour modales/bannières */
+
+  /* Override global de la famille de couleur gray vers la palette Stone */
+  --color-gray-50: #fafaf9;   /* stone-50 */
+  --color-gray-100: #f5f5f4;  /* stone-100 */
+  --color-gray-200: #e7e5e4;  /* stone-200 */
+  --color-gray-300: #d6d3d1;  /* stone-300 */
+  --color-gray-400: #a8a29e;  /* stone-400 */
+  --color-gray-500: #78716c;  /* stone-500 */
+  --color-gray-600: #57534e;  /* stone-600 */
+  --color-gray-700: #44403c;  /* stone-700 */
+  --color-gray-800: #292524;  /* stone-800 */
+  --color-gray-900: #1c1917;  /* stone-900 */
+  --color-gray-950: #0c0a09;  /* stone-950 */
+
+  /* Override global de la famille orange vers un orange électrique / coucher de soleil plus moderne */
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #fed7aa;
+  --color-orange-300: #fdbb2d;
+  --color-orange-400: #ff8d5c;  /* orange plus vif */
+  --color-orange-500: #ff733b;  /* orange coucher de soleil électrique */
+  --color-orange-600: #ff5a1f;  /* orange électrique vif */
+  --color-orange-700: #ea580c;
+  --color-orange-800: #c2410c;
+  --color-orange-900: #7c2d12;
 }
 
 
