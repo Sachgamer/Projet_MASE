@@ -206,48 +206,36 @@ def generate_inspection_pdf(inspection):
             c.setFillColor(colors.black)
             c.setFont("Helvetica", 10)
             
-        # Commentaires et Photos dans la zone y=175.1 à y=361.9 (hauteur 186.7)
+        # Commentaire de l'inspection (dans le cadre "Description de l'incident" y=401.0 à y=502.1)
         comments_text = inspection.comments or ""
+        if comments_text:
+            c.setFont("Helvetica", 9)
+            comment_lines = wrap_text(comments_text, max_chars=95)
+            y_comm = 487
+            for line in comment_lines[:8]:  # Limiter à 8 lignes pour rester dans le cadre
+                c.drawString(45, y_comm, remove_emojis(line))
+                y_comm -= 12
+            c.setFont("Helvetica", 10)
+            
+        # Photos dans la zone dédiée (y=175.1 à y=361.9, hauteur 186.7)
         photos = inspection.photos.all()
-        
         if photos.exists():
-            # Dessiner les photos en haut de la zone
             for idx, photo_obj in enumerate(photos[:3]):
                 img_path = photo_obj.image.path
                 if os.path.exists(img_path):
                     x_pos = 45 + (idx * 175)
-                    y_pos = 220
+                    y_pos = 195
                     try:
-                        c.drawImage(img_path, x_pos, y_pos, width=160, height=130, preserveAspectRatio=True)
+                        c.drawImage(img_path, x_pos, y_pos, width=160, height=150, preserveAspectRatio=True)
                     except Exception:
                         c.setStrokeColor(colors.red)
-                        c.rect(x_pos, y_pos, 160, 130, stroke=1, fill=0)
+                        c.rect(x_pos, y_pos, 160, 150, stroke=1, fill=0)
                         c.setFont("Helvetica-Bold", 8)
                         c.setFillColor(colors.red)
-                        c.drawCentredString(x_pos + 80, y_pos + 70, "Image corrompue")
-                        c.drawCentredString(x_pos + 80, y_pos + 55, "ou non supportée")
+                        c.drawCentredString(x_pos + 80, y_pos + 80, "Image corrompue")
+                        c.drawCentredString(x_pos + 80, y_pos + 65, "ou non supportée")
                         c.setFillColor(colors.black)
                         c.setFont("Helvetica", 10)
-            
-            # Dessiner le commentaire en dessous des photos
-            if comments_text:
-                c.setFont("Helvetica", 8)
-                comment_lines = wrap_text(comments_text, max_chars=120)
-                y_comm = 205
-                for line in comment_lines[:3]:  # Max 3 lignes sous les photos
-                    c.drawString(45, y_comm, remove_emojis(line))
-                    y_comm -= 10
-                c.setFont("Helvetica", 10)
-        else:
-            # Pas de photos: utiliser toute la zone pour les commentaires
-            if comments_text:
-                c.setFont("Helvetica", 9)
-                comment_lines = wrap_text(comments_text, max_chars=100)
-                y_comm = 345
-                for line in comment_lines[:13]:  # Max 13 lignes
-                    c.drawString(45, y_comm, remove_emojis(line))
-                    y_comm -= 12
-                c.setFont("Helvetica", 10)
             
         # Signatures (dans le cadre de signature gauche y=118.4 à y=160.7)
         c.setFont("Helvetica-Oblique", 8)
