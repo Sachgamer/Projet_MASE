@@ -117,121 +117,124 @@ def generate_inspection_pdf(inspection):
         c.drawString(40, 100, f"Technicien: {name}")
     else:
         # EPI ou EQUIPEMENT (controle_template.pdf)
-        # Correction de "Nom de la personne contrôlé :" en "Nom du collaborateur contrôlé :"
-        c.setFillColor(colors.white)
-        c.rect(35, 661.8, 142, 12, fill=True, stroke=False)
-        c.setFillColor(colors.black)
-        c.setFont("Helvetica", 10)
-        c.drawString(35, 665.8, "Nom du collaborateur contrôlé :")
-
-        c.drawString(180, 665.8, name)
-        c.drawString(130, 632.7, date_str)
+        # Remplissage des informations du haut (sur la ligne unique y=626.0)
+        c.drawString(70, 626.0, name)
+        c.drawString(262, 626.0, date_str)
         
-        # Expiration date
-        # Correction de "Dates avant le prochain contrôle :" en "Date avant le prochain contrôle :"
-        c.setFillColor(colors.white)
-        c.rect(20, 607.7, 175, 12, fill=True, stroke=False)
-        c.setFillColor(colors.black)
-        c.setFont("Helvetica", 10)
-        c.drawString(35, 611.7, "Date avant le prochain contrôle :")
-
         exp_date = inspection.item.expiration_date
         exp_date_str = exp_date.strftime("%d/%m/%Y") if exp_date else "N/A"
-        c.drawString(200, 611.7, exp_date_str)
+        c.drawString(470, 626.0, exp_date_str)
         
-        # Table content at y=560
-        c.drawCentredString(74.7, 560, remove_emojis(inspection.item.get_category_display()))
+        # Détails du matériel à y=598.9
+        c.drawString(120, 598.9, remove_emojis(inspection.item.get_category_display()))
         
         designation_sn = f"{inspection.item.type_name} (S/N: {inspection.item.serial_number or 'N/A'})"
-        c.drawCentredString(322.4, 560, remove_emojis(designation_sn))
+        c.drawString(275, 598.9, remove_emojis(designation_sn))
         
-        # Contrôle status at x=500
+        # Contrôle status
         c.setFont("Helvetica-Bold", 10)
         if inspection.is_valid:
             c.setFillColor(colors.green)
-            c.drawCentredString(500, 560, "CONFORME")
+            c.drawString(441, 598.9, "CONFORME")
         else:
             c.setFillColor(colors.red)
-            c.drawCentredString(500, 560, "NON CONFORME")
+            c.drawString(441, 598.9, "NON CONFORME")
         c.setFillColor(colors.black)
         c.setFont("Helvetica", 10)
         
-        # Defects checklist
-        # Check if EQUIPEMENT to mask labels
+        # Checklist de défauts (y=553.7)
         if inspection.item.category == 'EQUIPEMENT':
+            # Masquer la ligne par défaut
             c.setFillColor(colors.white)
-            # Cover Trou (y=499.1)
-            c.rect(30, 493, 150, 15, fill=True, stroke=False)
-            # Cover Déchirure (y=468.9)
-            c.rect(30, 463, 150, 15, fill=True, stroke=False)
-            # Cover Cassé (y=438.7)
-            c.rect(30, 433, 150, 15, fill=True, stroke=False)
-            
+            c.rect(35, 546, 420, 14, fill=True, stroke=False)
             c.setFillColor(colors.black)
-            c.drawString(35.1, 499.1, "Dysfonctionnement :")
-            c.drawString(35.1, 468.9, "HS :")
-            c.drawString(35.1, 438.7, "Altéré :")
             
-            # Values mapping
-            defects_to_check = [
-                ('Dysfonctionnement', 499.1),
-                ('HS', 468.9),
-                ('Altéré', 438.7)
+            # Dessiner les nouveaux labels d'équipement
+            c.drawString(42.2, 553.7, "Dysfonctionnement :")
+            c.drawString(210, 553.7, "HS :")
+            c.drawString(310, 553.7, "Altéré :")
+            
+            defects_positions = [
+                ('Dysfonctionnement', 140),
+                ('HS', 240),
+                ('Altéré', 355)
             ]
         else:
             # EPI
-            defects_to_check = [
-                ('Trou', 499.1),
-                ('Déchirure', 468.9),
-                ('Cassé', 438.7)
+            defects_positions = [
+                ('Trou', 70),
+                ('Déchirure', 200),
+                ('Cassé', 320),
+                ('Autres', 434)
             ]
             
-        # Draw status for each defect
-        for defect_name, y_pos in defects_to_check:
+        # Dessiner le statut de chaque défaut ("Oui" en rouge si défaut, "Non" en vert si conforme)
+        c.setFont("Helvetica-Bold", 9)
+        for defect_name, x_pos in defects_positions:
             is_defective = inspection.defects.get(defect_name, False)
             if is_defective:
                 c.setFillColor(colors.red)
-                c.drawString(250, y_pos, "NON CONFORME")
+                c.drawString(x_pos, 553.7, "Oui")
             else:
                 c.setFillColor(colors.green)
-                c.drawString(250, y_pos, "CONFORME")
-            c.setFillColor(colors.black)
+                c.drawString(x_pos, 553.7, "Non")
+        c.setFillColor(colors.black)
+        c.setFont("Helvetica", 10)
             
-        # Handle optional Absent defect warning
+        # Avertissement d'absence de l'EPI
         if inspection.item.category == 'EPI' and inspection.defects.get('Absent', False):
             c.setFillColor(colors.red)
             c.setFont("Helvetica-Bold", 10)
-            c.drawString(35.1, 418, "ATTENTION : Équipement signalé comme ABSENT")
+            c.drawString(42.2, 525, "ATTENTION : Équipement signalé comme ABSENT")
             c.setFillColor(colors.black)
             c.setFont("Helvetica", 10)
             
-        # Photos
+        # Commentaires et Photos dans la zone y=175.1 à y=361.9 (hauteur 186.7)
+        comments_text = inspection.comments or ""
         photos = inspection.photos.all()
+        
         if photos.exists():
-            for idx, photo_obj in enumerate(photos[:3]): 
+            # Dessiner les photos en haut de la zone
+            for idx, photo_obj in enumerate(photos[:3]):
                 img_path = photo_obj.image.path
                 if os.path.exists(img_path):
-                    x_pos = 40 + (idx * 160)
-                    y_pos = 315
+                    x_pos = 45 + (idx * 175)
+                    y_pos = 220
                     try:
-                        c.drawImage(img_path, x_pos, y_pos, width=120, height=80, preserveAspectRatio=True)
+                        c.drawImage(img_path, x_pos, y_pos, width=160, height=130, preserveAspectRatio=True)
                     except Exception:
                         c.setStrokeColor(colors.red)
-                        c.rect(x_pos, y_pos, 120, 80, stroke=1, fill=0)
+                        c.rect(x_pos, y_pos, 160, 130, stroke=1, fill=0)
                         c.setFont("Helvetica-Bold", 8)
                         c.setFillColor(colors.red)
-                        c.drawCentredString(x_pos + 60, y_pos + 45, "Image corrompue")
-                        c.drawCentredString(x_pos + 60, y_pos + 30, "ou non supportée")
+                        c.drawCentredString(x_pos + 80, y_pos + 70, "Image corrompue")
+                        c.drawCentredString(x_pos + 80, y_pos + 55, "ou non supportée")
                         c.setFillColor(colors.black)
                         c.setFont("Helvetica", 10)
-                        
-        # Commentaire
-        if inspection.comments:
-            c.drawString(45, 280, remove_emojis(inspection.comments[:1000]))
             
-        # Signatures
+            # Dessiner le commentaire en dessous des photos
+            if comments_text:
+                c.setFont("Helvetica", 8)
+                comment_lines = wrap_text(comments_text, max_chars=120)
+                y_comm = 205
+                for line in comment_lines[:3]:  # Max 3 lignes sous les photos
+                    c.drawString(45, y_comm, remove_emojis(line))
+                    y_comm -= 10
+                c.setFont("Helvetica", 10)
+        else:
+            # Pas de photos: utiliser toute la zone pour les commentaires
+            if comments_text:
+                c.setFont("Helvetica", 9)
+                comment_lines = wrap_text(comments_text, max_chars=100)
+                y_comm = 345
+                for line in comment_lines[:13]:  # Max 13 lignes
+                    c.drawString(45, y_comm, remove_emojis(line))
+                    y_comm -= 12
+                c.setFont("Helvetica", 10)
+            
+        # Signatures (dans le cadre de signature gauche y=118.4 à y=160.7)
         c.setFont("Helvetica-Oblique", 8)
-        c.drawString(40, 100, f"Technicien: {name}")
+        c.drawString(45, 130, f"Signé par : {name}")
 
     c.save()
     overlay_buffer.seek(0)
