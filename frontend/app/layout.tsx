@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ViewProvider } from "@/context/ViewContext";
 import Navbar from "@/components/Navbar";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "WebMASE",
@@ -22,7 +19,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <AuthProvider>
           <ViewProvider>
             <Navbar />

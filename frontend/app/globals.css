@@ -81,7 +81,7 @@
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: Arial, Helvetica, sans-serif;
   --font-mono: var(--font-geist-mono);
 
   /* Redéfinition des rayons de courbure selon les directives UX */
