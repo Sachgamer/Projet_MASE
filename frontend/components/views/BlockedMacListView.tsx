@@ -84,7 +84,7 @@ export default function BlockedMacListView() {
         <div className="max-w-7xl mx-auto px-4 py-12 text-white">
             <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-6">
                 <div>
-                    <h1 className="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
+                    <h1 className="text-4xl font-extrabold text-white">
                         Adresses MAC Bloquées
                     </h1>
                     <p className="text-gray-400 mt-2">Gestion des machines bannies après plusieurs tentatives 2FA infructueuses</p>

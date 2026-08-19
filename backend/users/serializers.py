@@ -1,14 +1,39 @@
 from rest_framework import serializers
 from dj_rest_auth.serializers import UserDetailsSerializer
-from .models import User, BlockedMacAddress, Habilitation
+from .models import User, BlockedMacAddress, Habilitation, Agency
+
+class AgencySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Agency
+        fields = '__all__'
 
 # Convertit les données utilisateur au format JSON pour les envoyer au site
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+    agency_name = serializers.CharField(source='agency.name', read_only=True, allow_null=True)
+    agency_region = serializers.CharField(source='agency.region', read_only=True, allow_null=True)
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'is_active', 'agency', 'agency_name', 'agency_region', 'min_slideshows_per_year', 'password')
         # Ces champs ne peuvent pas être modifiés par l'utilisateur
         read_only_fields = ('is_staff', 'is_superuser')
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().create(validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
 
 # Définit les informations nécessaires pour valider la double authentification (2FA)
 class Verify2FASerializer(serializers.Serializer):

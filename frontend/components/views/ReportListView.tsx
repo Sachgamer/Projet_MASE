@@ -25,7 +25,9 @@ import {
     ArrowUpDown, 
     ChevronDown, 
     ChevronUp,
-    FileText
+    FileText,
+    Edit,
+    X
 } from 'lucide-react';
 
 // Interfaces représentant les photos et les remontées
@@ -75,6 +77,42 @@ export default function ReportListView() {
     // États pour la pagination
     const [currentPage, setCurrentPage] = useState(1);
     const reportsPerPage = 10;
+
+    // États pour la modification de rapport
+    const [editingReport, setEditingReport] = useState<AccidentReport | null>(null);
+    const [editLocation, setEditLocation] = useState('');
+    const [editDescription, setEditDescription] = useState('');
+    const [editIncidentDate, setEditIncidentDate] = useState('');
+    const [editSeverity, setEditSeverity] = useState('');
+    const [editIncidentType, setEditIncidentType] = useState('');
+
+    const startEditing = (report: AccidentReport) => {
+        setEditingReport(report);
+        setEditLocation(report.location);
+        setEditDescription(report.description);
+        const localDateStr = report.incident_date ? new Date(report.incident_date).toISOString().slice(0, 16) : '';
+        setEditIncidentDate(localDateStr);
+        setEditSeverity(report.severity);
+        setEditIncidentType(report.incident_type);
+    };
+
+    const handleSaveEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingReport) return;
+        try {
+            await updateReport(editingReport.id, {
+                location: editLocation,
+                description: editDescription,
+                incident_date: new Date(editIncidentDate).toISOString(),
+                severity: editSeverity,
+                incident_type: editIncidentType
+            });
+            setEditingReport(null);
+            loadReports();
+        } catch (err) {
+            alert("Erreur lors de la modification du rapport");
+        }
+    };
 
     useEffect(() => {
         loadReports();
@@ -195,13 +233,14 @@ export default function ReportListView() {
         }
     };
 
-    // Utilitaire pour obtenir le label et le style selon la catégorie d'incident
+    // Utilitaire pour obtenir le label et le style selon la catégorie de remontée
     const getCategoryDetails = (category: string) => {
         switch (category) {
             case 'dangerous_situation': return { color: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20', label: 'Situation dangereuse' };
             case 'near_miss': return { color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20', label: 'Presque accident' };
             case 'accident': return { color: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20', label: 'Accident' };
             case 'fatal_accident': return { color: 'bg-red-900/10 dark:bg-red-900/20 text-red-700 dark:text-red-500 border-red-900/30 bg-red-500/5 dark:bg-red-950/20', label: 'Accident mortel' };
+            case 'terrain_other': return { color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20', label: 'Terrain (Autres)' };
             default: return { color: 'bg-muted/20 text-muted-foreground border-border', label: category };
         }
     };
@@ -486,7 +525,7 @@ export default function ReportListView() {
                                             </h3>
                                             <span className="text-xs text-blue-600 dark:text-blue-400 font-medium bg-blue-500/10 px-2 py-1 rounded-md flex items-center gap-1 border border-blue-500/20">
                                                 <User className="w-3 h-3 text-blue-500" />
-                                                Signaleur : {report.reporter_name}
+                                                Créé par : {report.reporter_name}
                                             </span>
                                         </div>
 
@@ -572,67 +611,107 @@ export default function ReportListView() {
                                         ) : null}
 
                                         {/* Actions de la carte */}
-                                        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/80 pt-4">
-                                            <div className="flex flex-wrap gap-2">
-                                                {/* Actions administrateur */}
-                                                {(user?.is_staff || user?.is_superuser) && (
-                                                    <>
+                                        <div className="flex flex-col gap-3 border-t border-border/80 pt-4">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {/* Actions administrateur */}
+                                                    {(user?.is_staff || user?.is_superuser) && (
+                                                        <>
+                                                            <Button 
+                                                                variant="destructive" 
+                                                                size="sm" 
+                                                                className="gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer border-0"
+                                                                onClick={() => handleDelete(report.id)}
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                Supprimer
+                                                            </Button>
+                                                            
+                                                            {!report.published ? (
+                                                                <Button 
+                                                                    className="bg-green-600 hover:bg-green-500 text-white gap-1.5 px-3 py-1.5 rounded-lg text-xs border-0 cursor-pointer" 
+                                                                    size="sm" 
+                                                                    onClick={() => handleValidate(report.id)}
+                                                                >
+                                                                    <CheckCircle className="w-3.5 h-3.5" />
+                                                                    Valider
+                                                                </Button>
+                                                            ) : (
+                                                                <Button 
+                                                                    className="bg-yellow-600 hover:bg-yellow-500 text-white gap-1.5 px-3 py-1.5 rounded-lg text-xs border-0 cursor-pointer" 
+                                                                    size="sm" 
+                                                                    onClick={() => handleUnvalidate(report.id)}
+                                                                >
+                                                                    <Undo className="w-3.5 h-3.5" />
+                                                                    Dé-valider
+                                                                </Button>
+                                                            )}
+                                                        </>
+                                                    )}
+
+                                                    {/* Modification pour le créateur ou l'admin */}
+                                                    {(user?.id === report.reporter || user?.is_staff || user?.is_superuser) && (
                                                         <Button 
-                                                            variant="destructive" 
+                                                            variant="outline" 
                                                             size="sm" 
-                                                            className="gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer border-0"
-                                                            onClick={() => handleDelete(report.id)}
+                                                            className="gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer border-white/20 text-white hover:bg-white/5"
+                                                            onClick={() => startEditing(report)}
                                                         >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                            Supprimer
+                                                            <Edit className="w-3.5 h-3.5 text-primary" />
+                                                            Modifier
                                                         </Button>
-                                                        
-                                                        {!report.published ? (
-                                                            <Button 
-                                                                className="bg-green-600 hover:bg-green-500 text-white gap-1.5 px-3 py-1.5 rounded-lg text-xs border-0 cursor-pointer" 
-                                                                size="sm" 
-                                                                onClick={() => handleValidate(report.id)}
-                                                            >
-                                                                <CheckCircle className="w-3.5 h-3.5" />
-                                                                Valider
-                                                            </Button>
-                                                        ) : (
-                                                            <Button 
-                                                                className="bg-yellow-600 hover:bg-yellow-500 text-white gap-1.5 px-3 py-1.5 rounded-lg text-xs border-0 cursor-pointer" 
-                                                                size="sm" 
-                                                                onClick={() => handleUnvalidate(report.id)}
-                                                            >
-                                                                <Undo className="w-3.5 h-3.5" />
-                                                                Dé-valider
-                                                            </Button>
-                                                        )}
-                                                    </>
+                                                    )}
+                                                    
+                                                    <Button 
+                                                        className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5 px-3 py-1.5 rounded-lg text-xs border-0 cursor-pointer" 
+                                                        size="sm" 
+                                                        onClick={() => {
+                                                            const dateStr = new Date(report.incident_date || report.created_at).toISOString().split('T')[0].replace(/-/g, '');
+                                                            const username = report.reporter_name || 'unknown';
+                                                            const fn = `${username}_-${dateStr}_Remontées-Accident.pdf`;
+                                                            downloadAccidentPdf(report.id, fn);
+                                                        }}
+                                                    >
+                                                        <Download className="w-3.5 h-3.5" />
+                                                        Télécharger PDF
+                                                    </Button>
+                                                </div>
+
+                                                {report.description.length > 150 && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => toggleExpand(report.id)}
+                                                        className="border-border bg-transparent text-muted-foreground hover:bg-secondary/40 hover:text-foreground px-3 py-1 rounded-lg text-xs cursor-pointer"
+                                                    >
+                                                        {isExpanded ? 'Masquer' : 'Voir plus'}
+                                                    </Button>
                                                 )}
-                                                
-                                                <Button 
-                                                    className="bg-blue-600 hover:bg-blue-500 text-white gap-1.5 px-3 py-1.5 rounded-lg text-xs border-0 cursor-pointer" 
-                                                    size="sm" 
-                                                    onClick={() => {
-                                                        const dateStr = new Date(report.incident_date || report.created_at).toISOString().split('T')[0].replace(/-/g, '');
-                                                        const username = report.reporter_name || 'unknown';
-                                                        const fn = `${username}_-${dateStr}_Remontées-Accident.pdf`;
-                                                        downloadAccidentPdf(report.id, fn);
-                                                    }}
-                                                >
-                                                    <Download className="w-3.5 h-3.5" />
-                                                    Télécharger PDF
-                                                </Button>
                                             </div>
 
-                                            {report.description.length > 150 && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => toggleExpand(report.id)}
-                                                    className="border-border bg-transparent text-muted-foreground hover:bg-secondary/40 hover:text-foreground px-3 py-1 rounded-lg text-xs cursor-pointer"
-                                                >
-                                                    {isExpanded ? 'Masquer' : 'Voir plus'}
-                                                </Button>
+                                            {/* Sélecteur de Recatégorisation Admin */}
+                                            {(user?.is_staff || user?.is_superuser) && (
+                                                <div className="flex items-center gap-2 mt-1 bg-white/5 border border-white/10 p-2 rounded-xl text-xs w-fit">
+                                                    <span className="font-bold text-gray-400">Recatégoriser (Admin) :</span>
+                                                    <select
+                                                        value={report.incident_type}
+                                                        onChange={async (e) => {
+                                                            const newType = e.target.value;
+                                                            try {
+                                                                await updateReport(report.id, { incident_type: newType });
+                                                                setReports(prev => prev.map(r => r.id === report.id ? { ...r, incident_type: newType } : r));
+                                                            } catch (err) {
+                                                                alert('Erreur lors de la recatégorisation');
+                                                            }
+                                                        }}
+                                                        className="bg-gray-900 border border-white/20 rounded px-2 py-0.5 text-[11px] text-white focus:outline-none cursor-pointer"
+                                                    >
+                                                        <option value="accident">Accident</option>
+                                                        <option value="near_miss">Presque accident</option>
+                                                        <option value="dangerous_situation">Situation dangereuse</option>
+                                                        <option value="terrain_other">Terrain (Autres)</option>
+                                                    </select>
+                                                </div>
                                             )}
                                         </div>
                                     </motion.div>
@@ -750,6 +829,107 @@ export default function ReportListView() {
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                         </button>
+                    </div>
+                </div>
+            {/* Modal de Modification (Edit Modal) */}
+            {editingReport && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl relative space-y-4">
+                        <button 
+                            type="button"
+                            onClick={() => setEditingReport(null)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        
+                        <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                            <Edit className="w-5 h-5 text-primary" />
+                            Modifier la remontée
+                        </h2>
+                        
+                        <form onSubmit={handleSaveEdit} className="space-y-4">
+                            {/* Type */}
+                            <div className="space-y-1">
+                                <label className="block text-xs font-bold text-gray-400 uppercase">Type de remontée</label>
+                                <select 
+                                    value={editIncidentType}
+                                    onChange={(e) => setEditIncidentType(e.target.value)}
+                                    className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none"
+                                >
+                                    <option value="dangerous_situation">Situation dangereuse</option>
+                                    <option value="near_miss">Presque accident</option>
+                                    <option value="accident">Accident</option>
+                                    <option value="terrain_other">Terrain (Autres)</option>
+                                </select>
+                            </div>
+                            
+                            {/* Gravité */}
+                            <div className="space-y-1">
+                                <label className="block text-xs font-bold text-gray-400 uppercase">Niveau de gravité</label>
+                                <select 
+                                    value={editSeverity}
+                                    onChange={(e) => setEditSeverity(e.target.value)}
+                                    className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none"
+                                >
+                                    <option value="low">Faible</option>
+                                    <option value="medium">Moyenne</option>
+                                    <option value="high">Élevée</option>
+                                    <option value="critical">Critique</option>
+                                </select>
+                            </div>
+
+                            {/* Lieu */}
+                            <div className="space-y-1">
+                                <label className="block text-xs font-bold text-gray-400 uppercase">Lieu</label>
+                                <input 
+                                    type="text"
+                                    value={editLocation}
+                                    onChange={(e) => setEditLocation(e.target.value)}
+                                    className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none"
+                                    required
+                                />
+                            </div>
+
+                            {/* Date */}
+                            <div className="space-y-1">
+                                <label className="block text-xs font-bold text-gray-400 uppercase">Date / Heure</label>
+                                <input 
+                                    type="datetime-local"
+                                    value={editIncidentDate}
+                                    onChange={(e) => setEditIncidentDate(e.target.value)}
+                                    className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none"
+                                    required
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div className="space-y-1">
+                                <label className="block text-xs font-bold text-gray-400 uppercase">Description</label>
+                                <textarea 
+                                    value={editDescription}
+                                    onChange={(e) => setEditDescription(e.target.value)}
+                                    rows={4}
+                                    className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none resize-none"
+                                    required
+                                />
+                            </div>
+
+                            {/* Submit */}
+                            <div className="flex gap-3 justify-end pt-2">
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    className="border-white/20 text-white hover:bg-white/5"
+                                    onClick={() => setEditingReport(null)}
+                                >
+                                    Annuler
+                                </Button>
+                                <Button type="submit">
+                                    Enregistrer
+                                </Button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

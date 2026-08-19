@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { getActions, createAction, updateAction, deleteAction } from '@/lib/api';
+import api, { getActions, createAction, updateAction, deleteAction, prolongAction } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -47,7 +47,27 @@ export default function ActionPlanView() {
     const [loading, setLoading] = useState(true);
     const [layoutMode, setLayoutMode] = useState<'kanban' | 'list'>('list');
     const isAdmin = user && (user.is_staff || user.is_superuser);
-    
+
+    const isNearExpiration = (dateStr: string | null) => {
+        if (!dateStr) return false;
+        const limitDate = new Date(dateStr);
+        const today = new Date();
+        const diffTime = limitDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 30;
+    };
+
+    const handleProlongAction = async (id: number) => {
+        try {
+            await prolongAction(id);
+            alert("Échéance de l'action prolongée de 30 jours !");
+            fetchActions();
+        } catch (error) {
+            console.error("Erreur de prolongation:", error);
+            alert("Impossible de prolonger l'échéance de cette action.");
+        }
+    };
+
     // Filters
     const [filterStatus, setFilterStatus] = useState<string>('all');
     const [filterPriority, setFilterPriority] = useState<string>('all');
@@ -171,7 +191,7 @@ export default function ActionPlanView() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
                 <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-extrabold tracking-tight text-white">
                         Plan d'Actions Correctives
                     </h1>
                     <p className="text-gray-400 mt-1">
@@ -280,9 +300,24 @@ export default function ActionPlanView() {
                                             </td>
                                             <td className="px-6 py-4">{getPriorityBadge(act.priority)}</td>
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                                                    <Calendar className="w-3.5 h-3.5" />
-                                                    {act.due_date ? new Date(act.due_date).toLocaleDateString('fr-FR') : 'Non planifiée'}
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                                                        <Calendar className="w-3.5 h-3.5" />
+                                                        <span className={`${(act.status !== 'done' && act.status !== 'canceled' && isNearExpiration(act.due_date)) ? 'text-red-400 font-bold' : ''}`}>
+                                                            {act.due_date ? new Date(act.due_date).toLocaleDateString('fr-FR') : 'Non planifiée'}
+                                                        </span>
+                                                        {(act.status !== 'done' && act.status !== 'canceled' && isNearExpiration(act.due_date)) && (
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                                                        )}
+                                                    </div>
+                                                    {(act.status !== 'done' && act.status !== 'canceled' && isNearExpiration(act.due_date)) && (
+                                                        <button 
+                                                            onClick={() => handleProlongAction(act.id)}
+                                                            className="text-[10px] text-primary hover:underline font-bold flex items-center gap-0.5 bg-transparent border-0 cursor-pointer text-left w-fit"
+                                                        >
+                                                            Rallonger de 30j
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -363,6 +398,7 @@ export default function ActionPlanView() {
                                     onDelete={handleDeleteAction} 
                                     user={user}
                                     getPriorityBadge={getPriorityBadge}
+                                    onProlong={handleProlongAction}
                                 />
                             ))}
                         </div>
@@ -388,6 +424,7 @@ export default function ActionPlanView() {
                                     onDelete={handleDeleteAction} 
                                     user={user}
                                     getPriorityBadge={getPriorityBadge}
+                                    onProlong={handleProlongAction}
                                 />
                             ))}
                         </div>
@@ -413,6 +450,7 @@ export default function ActionPlanView() {
                                     onDelete={handleDeleteAction} 
                                     user={user}
                                     getPriorityBadge={getPriorityBadge}
+                                    onProlong={handleProlongAction}
                                 />
                             ))}
                         </div>
@@ -514,13 +552,15 @@ function KanbanCard({
     onUpdate, 
     onDelete, 
     user,
-    getPriorityBadge
+    getPriorityBadge,
+    onProlong
 }: { 
     action: Action; 
     onUpdate: (id: number, s: Action['status']) => void; 
     onDelete: (id: number) => void;
     user: any;
     getPriorityBadge: (prio: string) => React.ReactNode;
+    onProlong: (id: number) => void;
 }) {
     const isOwner = user && (user.id === action.reporter || user.is_staff || user.is_superuser);
     
@@ -552,9 +592,41 @@ function KanbanCard({
                     <span className="truncate">Responsable : {action.assigned_to_fullname || action.assigned_to_name || 'Non assigné'}</span>
                 </div>
                 {action.due_date && (
-                    <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3 h-3 text-gray-400" />
-                        <span>Échéance : {new Date(action.due_date).toLocaleDateString('fr-FR')}</span>
+                    <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3 h-3 text-gray-400" />
+                            <span className={`${(action.status !== 'done' && action.status !== 'canceled' && (() => {
+                                const limitDate = new Date(action.due_date);
+                                const today = new Date();
+                                const diffTime = limitDate.getTime() - today.getTime();
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                return diffDays >= 0 && diffDays <= 30;
+                            })()) ? 'text-red-400 font-bold flex items-center gap-1' : ''}`}>
+                                Échéance : {new Date(action.due_date).toLocaleDateString('fr-FR')}
+                                {(action.status !== 'done' && action.status !== 'canceled' && (() => {
+                                    const limitDate = new Date(action.due_date);
+                                    const today = new Date();
+                                    const diffTime = limitDate.getTime() - today.getTime();
+                                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                    return diffDays >= 0 && diffDays <= 30;
+                                })()) && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
+                            </span>
+                        </div>
+                        {(action.status !== 'done' && action.status !== 'canceled' && (() => {
+                            const limitDate = new Date(action.due_date);
+                            const today = new Date();
+                            const diffTime = limitDate.getTime() - today.getTime();
+                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                            return diffDays >= 0 && diffDays <= 30;
+                        })()) && (
+                            <button 
+                                onClick={() => onProlong(action.id)}
+                                className="text-[10px] text-primary hover:underline font-bold flex items-center gap-0.5 bg-transparent border-0 cursor-pointer text-left mt-0.5"
+                            >
+                                <Clock className="w-3 h-3 text-primary mr-0.5" />
+                                Rallonger de 30j
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

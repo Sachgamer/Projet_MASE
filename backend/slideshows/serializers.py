@@ -30,10 +30,32 @@ class QuestionSerializer(serializers.ModelSerializer):
 # Transforme un Quiz (avec ses questions) en JSON
 class QuizSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
+    user_submissions = serializers.SerializerMethodField()
+    average_score = serializers.SerializerMethodField()
 
     class Meta:
         model = Quiz
-        fields = ['id', 'slideshow', 'title', 'passing_score', 'questions']
+        fields = ['id', 'slideshow', 'title', 'passing_score', 'questions', 'user_submissions', 'average_score']
+
+    def get_user_submissions(self, obj):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            from .models import QuizSubmission
+            subs = QuizSubmission.objects.filter(quiz=obj, user=request.user).order_by('submitted_at')
+            return [{
+                'id': s.id,
+                'score': s.score,
+                'total_questions': s.total_questions,
+                'is_passed': s.is_passed,
+                'submitted_at': s.submitted_at
+            } for s in subs]
+        return []
+
+    def get_average_score(self, obj):
+        from .models import QuizSubmission
+        from django.db.models import Avg
+        avg = QuizSubmission.objects.filter(quiz=obj).aggregate(avg=Avg('score'))['avg']
+        return round(avg, 1) if avg is not None else None
 
 # Transforme une Diapositive en JSON
 class SlideSerializer(serializers.ModelSerializer):

@@ -31,6 +31,7 @@ class AccidentReport(models.Model):
         ('near_miss', 'Presque accident'),
         ('accident', 'Accident'),
         ('fatal_accident', 'Accident mortel'),
+        ('terrain_other', 'Terrain (Autres)'),
     ]
 
     # Utilisateur qui a signalé l'incident

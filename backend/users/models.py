@@ -6,12 +6,27 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+class Agency(models.Model):
+    name = models.CharField(max_length=255, unique=True, verbose_name="Nom de l'agence")
+    region = models.CharField(max_length=255, verbose_name="Région")
+
+    class Meta:
+        verbose_name = "Agence"
+        verbose_name_plural = "Agences"
+
+    def __str__(self):
+        return f"{self.name} ({self.region})"
+
 # Modèle Utilisateur personnalisé pour l'application
 class User(AbstractUser):
     # Code temporaire pour la double authentification (2FA) envoyé par email
     two_factor_code = models.CharField(max_length=6, blank=True, null=True)
     # Date et heure d'expiration du code 2FA
     two_factor_code_expires_at = models.DateTimeField(blank=True, null=True)
+    
+    agency = models.ForeignKey(Agency, on_delete=models.SET_NULL, null=True, blank=True, related_name='users', verbose_name="Agence")
+    min_slideshows_per_year = models.IntegerField(default=10, verbose_name="Nombre minimum de causeries par an")
+
 
 
 # Modèle pour stocker les adresses MAC bloquées après 5 tentatives 2FA infructueuses

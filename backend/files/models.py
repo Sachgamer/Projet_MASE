@@ -45,3 +45,29 @@ class ChemicalProduct(models.Model):
     def __str__(self):
         return self.name
 
+
+class PeriodicVisit(models.Model):
+    VISIT_TYPE_CHOICES = [
+        ('electricity', 'Électricité'),
+        ('water', 'Eaux'),
+        ('harness', 'Harnais'),
+        ('other', 'Autre'),
+    ]
+    visit_type = models.CharField(max_length=50, choices=VISIT_TYPE_CHOICES, default='electricity', verbose_name="Type de visite")
+    custom_type = models.CharField(max_length=255, blank=True, null=True, verbose_name="Type de visite personnalisé")
+    date = models.DateField(verbose_name="Date de la visite")
+    next_due_date = models.DateField(blank=True, null=True, verbose_name="Prochaine échéance")
+    comments = models.TextField(blank=True, null=True, verbose_name="Commentaires / Observations")
+    inspector = models.CharField(max_length=255, blank=True, null=True, verbose_name="Organisme / Inspecteur")
+    document = models.FileField(upload_to='periodic_visits/', blank=True, null=True, verbose_name="Rapport PDF")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Visite périodique"
+        verbose_name_plural = "Visites périodiques"
+        ordering = ['-date']
+
+    def __str__(self):
+        type_display = self.get_visit_type_display() if self.visit_type != 'other' else (self.custom_type or 'Autre')
+        return f"Visite {type_display} du {self.date}"
+

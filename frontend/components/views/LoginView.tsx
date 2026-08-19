@@ -119,12 +119,13 @@ export default function LoginView() {
     return (
         <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
             <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-                <div className="flex justify-center mt-10">
+                <div className="flex flex-col items-center justify-center mt-10 gap-4">
+                    <img src="/logo.png" alt="GORON SYSTEMES Logo" className="h-24 w-24 object-contain" />
                     <span className="font-black text-4xl text-primary tracking-tighter select-none">
                         Web<span className="text-white">MASE</span>
                     </span>
                 </div>
-                <h2 className="mt-4 text-center text-2xl font-bold leading-9 tracking-tight text-white">
+                <h2 className="mt-6 text-center text-2xl font-bold leading-9 tracking-tight text-white">
                     {step === 'login' ? 'Connectez-vous' : 'Vérification en deux étapes'}
                 </h2>
                 {step === '2fa' && (

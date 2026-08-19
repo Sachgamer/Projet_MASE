@@ -19,6 +19,8 @@ import ActionPlanView from '@/components/views/ActionPlanView';
 import HabilitationListView from '@/components/views/HabilitationListView';
 import AdminHabilitationView from '@/components/views/AdminHabilitationView';
 import ChemicalRegistryView from '@/components/views/ChemicalRegistryView';
+import UserManagementView from '@/components/views/UserManagementView';
+import PeriodicVisitsView from '@/components/views/PeriodicVisitsView';
 import { useAuth } from '@/context/AuthContext';
 
 /**
@@ -76,6 +78,10 @@ export default function NavigationController() {
             return <AdminHabilitationView />;
         case 'chemical-registry':
             return <ChemicalRegistryView />;
+        case 'user-management':
+            return <UserManagementView />;
+        case 'periodic-visits':
+            return <PeriodicVisitsView />;
         default:
             return <HomeView />;
     }

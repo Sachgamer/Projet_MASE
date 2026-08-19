@@ -100,7 +100,29 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 import sys
-if 'test' in sys.argv or os.environ.get('USE_SQLITE') == 'True':
+
+USE_SQLITE = os.environ.get('USE_SQLITE') == 'True'
+
+# En mode DEBUG (développement local), si PostgreSQL n'est pas actif/accessible, 
+# on bascule automatiquement sur SQLite pour éviter des erreurs 500 de connexion.
+if not USE_SQLITE and 'test' not in sys.argv and DEBUG:
+    try:
+        import psycopg2
+        conn = psycopg2.connect(
+            dbname='projet_mase',
+            user='postgres',
+            password='Sachgamerrap93!',
+            host='localhost',
+            port='5432',
+            connect_timeout=1
+        )
+        conn.close()
+    except Exception as e:
+        print("⚠️ [WARNING] Connexion PostgreSQL échouée (localhost:5432).")
+        print("Bascule automatique vers SQLite pour le développement local.")
+        USE_SQLITE = True
+
+if 'test' in sys.argv or USE_SQLITE:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

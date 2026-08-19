@@ -3,12 +3,13 @@ from django.utils import timezone
 from datetime import timedelta
 from django.core.mail import send_mail
 from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from dj_rest_auth.views import LoginView
-from .models import User, BlockedMacAddress, Habilitation
-from .serializers import UserSerializer, Verify2FASerializer, BlockedMacAddressSerializer, HabilitationSerializer
+from .models import User, BlockedMacAddress, Habilitation, Agency
+from .serializers import UserSerializer, Verify2FASerializer, BlockedMacAddressSerializer, HabilitationSerializer, AgencySerializer
 
 
 # Gère la connexion personnalisée avec envoi de code 2FA par email
@@ -225,12 +226,21 @@ class CustomLogoutView(APIView):
             pass
         return Response({'detail': 'Déconnecté avec succès.'}, status=status.HTTP_200_OK)
 
-# Permet d'afficher la liste des utilisateurs
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
+# Permet de gérer les utilisateurs
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), permissions.IsAdminUser()]
+
+# Permet de gérer les agences
+class AgencyViewSet(viewsets.ModelViewSet):
+    queryset = Agency.objects.all().order_by('name')
+    serializer_class = AgencySerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 # Permet de gérer les adresses MAC bloquées (réservé aux administrateurs)
 class BlockedMacAddressViewSet(viewsets.ModelViewSet):
@@ -248,6 +258,8 @@ class HabilitationViewSet(viewsets.ModelViewSet):
         show_all = self.request.query_params.get('all') == 'true'
         if (user.is_staff or user.is_superuser) and show_all:
             return Habilitation.objects.all().order_by('expiration_date')
+        if user.agency:
+            return Habilitation.objects.filter(user__agency=user.agency).order_by('expiration_date')
         return Habilitation.objects.filter(user=user).order_by('expiration_date')
 
     def perform_create(self, serializer):
@@ -256,4 +268,17 @@ class HabilitationViewSet(viewsets.ModelViewSet):
             serializer.save(user=user)
         else:
             serializer.save()
+
+    @action(detail=True, methods=['post'])
+    def prolong(self, request, pk=None):
+        habilitation = self.get_object()
+        if habilitation.user != request.user and not (request.user.is_staff or request.user.is_superuser):
+            return Response({'detail': "Vous n'avez pas l'autorisation de prolonger cette habilitation."}, status=status.HTTP_403_FORBIDDEN)
+        
+        habilitation.expiration_date = habilitation.expiration_date + timedelta(days=30)
+        habilitation.save()
+        return Response({
+            'detail': 'Date butoir prolongée de 30 jours.',
+            'new_expiration_date': habilitation.expiration_date
+        }, status=status.HTTP_200_OK)
 

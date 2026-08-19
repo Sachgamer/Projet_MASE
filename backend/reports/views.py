@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from django.db.models import Q
 from django.http import FileResponse
@@ -23,18 +23,16 @@ class WorkSiteViewSet(viewsets.ModelViewSet):
 # Définit qui peut voir ou créer des rapports d'accident
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
-        # La lecture est autorisée pour tout le monde (transparence)
         if request.method in permissions.SAFE_METHODS:
             return True
-        # L'utilisateur doit être connecté pour effectuer une action
-        if not request.user.is_authenticated:
-            return False
+        return request.user and request.user.is_authenticated
 
-        # Tout utilisateur connecté peut créer un nouveau rapport
-        if request.method == 'POST' and view.action == 'create':
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
             return True
-        # Seuls les administrateurs peuvent modifier ou supprimer un rapport
-        return request.user.is_staff or request.user.is_superuser
+        if request.method == 'DELETE':
+            return request.user.is_staff or request.user.is_superuser
+        return obj.reporter == request.user or request.user.is_staff or request.user.is_superuser
 
 # Gère la consultation et la création de rapports d'accident
 class AccidentReportViewSet(viewsets.ModelViewSet):
@@ -42,8 +40,12 @@ class AccidentReportViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
 
     def get_queryset(self):
-        # Ne retourne que les rapports non supprimés
-        return AccidentReport.objects.filter(is_deleted=False)
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return AccidentReport.objects.filter(is_deleted=False)
+        if user.agency:
+            return AccidentReport.objects.filter(is_deleted=False, reporter__agency=user.agency)
+        return AccidentReport.objects.filter(is_deleted=False, reporter=user)
 
     def perform_create(self, serializer):
         # Récupère toutes les photos envoyées dans le champ 'photos'
@@ -90,6 +92,10 @@ class ActionViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.is_staff or user.is_superuser:
             return Action.objects.all()
+        if user.agency:
+            return Action.objects.filter(
+                Q(assigned_to__agency=user.agency) | Q(reporter__agency=user.agency) | Q(assigned_to=user) | Q(reporter=user)
+            ).distinct()
         return Action.objects.filter(Q(assigned_to=user) | Q(reporter=user)).distinct()
 
     def perform_create(self, serializer):
@@ -109,6 +115,22 @@ class ActionViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Seuls les administrateurs peuvent supprimer des actions.")
         instance.delete()
+
+    @action(detail=True, methods=['post'])
+    def prolong(self, request, pk=None):
+        action_item = self.get_object()
+        if action_item.assigned_to != request.user and action_item.reporter != request.user and not (request.user.is_staff or request.user.is_superuser):
+            return Response({'detail': "Vous n'avez pas l'autorisation de prolonger cette action."}, status=status.HTTP_403_FORBIDDEN)
+        
+        if not action_item.due_date:
+            action_item.due_date = timezone.now().date()
+            
+        action_item.due_date = action_item.due_date + timedelta(days=30)
+        action_item.save()
+        return Response({
+            'detail': 'Date d\'échéance de l\'action prolongée de 30 jours.',
+            'new_due_date': action_item.due_date
+        }, status=status.HTTP_200_OK)
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -237,6 +259,102 @@ class HseStatsView(APIView):
             'actions': actions_stats,
             'active_users': active_users,
             'worked_hours_monthly': worked_hours_per_month
+        })
+
+
+class UserDashboardView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        now = timezone.now()
+        today = now.date()
+
+        # 1. Prochain autocontrôle
+        from controls.models import EquipmentItem, Inspection
+        active_items = EquipmentItem.objects.filter(technician=user, is_active=True, expiration_date__isnull=False)
+        next_autocontrol = active_items.order_by('expiration_date').first()
+        next_autocontrol_date = next_autocontrol.expiration_date.strftime('%Y-%m-%d') if next_autocontrol else None
+
+        # 2. Future causerie du profil
+        from slideshows.models import Slideshow, QuizSubmission
+        upcoming_causeries_qs = Slideshow.objects.filter(
+            Q(scheduled_date__gt=now) & (Q(is_public=True) | Q(invited_users=user) | Q(creator=user))
+        ).distinct().order_by('scheduled_date')
+        next_causerie = upcoming_causeries_qs.first()
+        next_causerie_info = {
+            'id': next_causerie.id,
+            'title': next_causerie.title,
+            'scheduled_date': next_causerie.scheduled_date.isoformat()
+        } if next_causerie else None
+
+        # 3. Taux de conformité des auto-contrôles
+        user_inspections = Inspection.objects.filter(item__technician=user)
+        total_inspections = user_inspections.count()
+        if total_inspections > 0:
+            valid_inspections = user_inspections.filter(is_valid=True).count()
+            compliance_rate = round((valid_inspections / total_inspections) * 100, 1)
+        else:
+            compliance_rate = None  # Frontend matches N/A
+
+        # 4. Réussite Formations (pass rate)
+        user_submissions = QuizSubmission.objects.filter(user=user)
+        total_subs = user_submissions.count()
+        if total_subs > 0:
+            passed_subs = user_submissions.filter(is_passed=True).count()
+            quiz_pass_rate = round((passed_subs / total_subs) * 100, 1)
+        else:
+            quiz_pass_rate = 100.0
+
+        # 5. Dernière causerie
+        all_visible_causeries = Slideshow.objects.filter(
+            Q(is_public=True) | Q(invited_users=user) | Q(creator=user)
+        ).distinct().order_by('-created_at')
+        latest_causerie = all_visible_causeries.first()
+        latest_causerie_info = {
+            'id': latest_causerie.id,
+            'title': latest_causerie.title,
+            'description': latest_causerie.description,
+            'creator': latest_causerie.creator.username,
+            'created_at': latest_causerie.created_at.isoformat()
+        } if latest_causerie else None
+
+        # 6. Causeries à venir (upcoming list)
+        upcoming_list = []
+        for c in upcoming_causeries_qs[:5]:
+            upcoming_list.append({
+                'id': c.id,
+                'title': c.title,
+                'scheduled_date': c.scheduled_date.isoformat()
+            })
+
+        # 7. Actions faites et à faire
+        user_actions = Action.objects.filter(assigned_to=user)
+        todo_actions = user_actions.filter(status__in=['todo', 'in_progress']).order_by('due_date')
+        done_actions = user_actions.filter(status='done').order_by('-updated_at')
+
+        def serialize_action(act):
+            return {
+                'id': act.id,
+                'title': act.title,
+                'description': act.description,
+                'status': act.status,
+                'priority': act.priority,
+                'due_date': act.due_date.strftime('%Y-%m-%d') if act.due_date else None,
+                'created_at': act.created_at.isoformat()
+            }
+
+        return Response({
+            'next_autocontrol': next_autocontrol_date,
+            'next_causerie': next_causerie_info,
+            'compliance_rate': compliance_rate,
+            'quiz_pass_rate': quiz_pass_rate,
+            'latest_causerie': latest_causerie_info,
+            'upcoming_causeries': upcoming_list,
+            'actions': {
+                'todo': [serialize_action(a) for a in todo_actions],
+                'done': [serialize_action(a) for a in done_actions]
+            }
         })
 
 

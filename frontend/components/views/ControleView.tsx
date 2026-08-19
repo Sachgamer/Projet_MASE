@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import api, { getBaseURL, downloadInspectionPdf } from '@/lib/api';
+import api, { getBaseURL, downloadInspectionPdf, prolongEquipmentItem } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronRight, ChevronLeft, HardHat, Wrench, Truck, Plus, Save, X, Image as ImageIcon } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronRight, ChevronLeft, HardHat, Wrench, Truck, Plus, Save, X, Image as ImageIcon, Clock } from 'lucide-react';
 
 // Interface pour les utilisateurs (techniciens)
 interface UserItem {
@@ -21,12 +21,15 @@ interface EquipmentItem {
     type_name: string;
     serial_number: string;
     expiration_date: string;
-    technician: number; 
+    technician_name: string;
+    last_controlled_date: string | null;
+    is_valid: boolean;
 }
 
 // Vue principale pour effectuer un auto-contrôle (multistep form)
 export default function ControleView() {
     const { user } = useAuth();
+    const isAdmin = user?.is_staff || user?.is_superuser;
     const [step, setStep] = useState(1); // Étape du formulaire (1 à 4)
     const [category, setCategory] = useState<'EPI' | 'EQUIPEMENT' | 'VEHICULE' | null>(null);
     const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
@@ -50,7 +53,26 @@ export default function ControleView() {
         expiration_date: '',
         technician: ''
     });
-    const isAdmin = user?.is_staff || user?.is_superuser;
+
+    const isNearExpiration = (dateStr: string | null) => {
+        if (!dateStr) return false;
+        const limitDate = new Date(dateStr);
+        const today = new Date();
+        const diffTime = limitDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays <= 30;
+    };
+
+    const handleProlongEquipment = async (id: number) => {
+        try {
+            await prolongEquipmentItem(id);
+            alert("Échéance de l'équipement prolongée de 30 jours !");
+            fetchEquipment();
+        } catch (error) {
+            console.error("Erreur de prolongation:", error);
+            alert("Impossible de prolonger l'échéance de cet équipement.");
+        }
+    };
 
     useEffect(() => {
         if (user) {
@@ -271,7 +293,7 @@ export default function ControleView() {
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
             <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
-                <h1 className="text-4xl font-extrabold text-white text-center bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
+                <h1 className="text-4xl font-extrabold text-white text-center">
                     Auto-contrôle Technique & Sécurité
                 </h1>
                 {isAdmin && (
@@ -443,11 +465,28 @@ export default function ControleView() {
                                                 <p className="text-lg font-semibold text-white">{item.type_name}</p>
                                                 <p className="text-sm text-gray-400">{item.category === 'VEHICULE' ? "Plaque : " : "S/N : "}{item.serial_number}</p>
                                             </div>
-                                            <div className="text-right">
+                                            <div className="text-right flex flex-col items-end">
                                                 <p className="text-xs uppercase text-gray-500 mb-1">Date limite de contrôle</p>
-                                                <p className={`text-sm font-medium ${!item.expiration_date ? 'text-gray-400' : new Date(item.expiration_date) < new Date() ? 'text-red-400' : 'text-green-400'}`}>
-                                                    {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString() : 'N/A'}
-                                                </p>
+                                                <div className="flex items-center gap-1.5">
+                                                    {isNearExpiration(item.expiration_date) && (
+                                                        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                                    )}
+                                                    <p className={`text-sm font-medium ${!item.expiration_date ? 'text-gray-400' : new Date(item.expiration_date) < new Date() ? 'text-red-400' : isNearExpiration(item.expiration_date) ? 'text-red-400 font-bold' : 'text-green-400'}`}>
+                                                        {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString() : 'N/A'}
+                                                    </p>
+                                                </div>
+                                                {isNearExpiration(item.expiration_date) && (
+                                                    <div 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleProlongEquipment(item.id);
+                                                        }}
+                                                        className="mt-1 text-[11px] font-bold text-primary hover:underline flex items-center gap-0.5 cursor-pointer bg-white/5 px-2 py-0.5 rounded border border-white/10"
+                                                    >
+                                                        <Clock className="w-3 h-3" />
+                                                        +30 jours
+                                                    </div>
+                                                )}
                                             </div>
                                         </button>
                                     ))

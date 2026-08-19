@@ -33,7 +33,7 @@ class InspectionEmailAlertTestCase(TestCase):
             is_active=True
         )
 
-    def test_create_conforming_inspection_does_not_send_email(self):
+    def test_create_conforming_inspection_sends_email(self):
         # Initialement, aucun email envoyé
         self.assertEqual(len(mail.outbox), 0)
 
@@ -44,8 +44,9 @@ class InspectionEmailAlertTestCase(TestCase):
             comments="Tout est ok"
         )
 
-        # L'inspection est conforme -> pas de mail
-        self.assertEqual(len(mail.outbox), 0)
+        # L'inspection est conforme -> envoie 1 mail
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Auto-contrôle CONFORME", mail.outbox[0].subject)
 
     def test_create_non_conforming_inspection_sends_email(self):
         self.assertEqual(len(mail.outbox), 0)
@@ -63,7 +64,7 @@ class InspectionEmailAlertTestCase(TestCase):
         
         # Vérification du sujet et du corps de l'email
         email = mail.outbox[0]
-        self.assertIn("[WebMASE] ALERTE : Auto-contrôle NON CONFORME", email.subject)
+        self.assertIn("Auto-contrôle NON CONFORME", email.subject)
         self.assertIn("Harnais de sécurité", email.body)
         self.assertIn("Jean Dupont", email.body)
         self.assertIn("Trou : Présent", email.body)
@@ -77,15 +78,14 @@ class InspectionEmailAlertTestCase(TestCase):
             is_valid=True,
             comments="Tout est ok pour l'instant"
         )
-        self.assertEqual(len(mail.outbox), 0)
+        self.assertEqual(len(mail.outbox), 1)
 
         # Passage à non conforme
         inspection.is_valid = False
         inspection.defects = {"Cassé": True}
         inspection.save()
 
-        # Un email doit être envoyé
-        self.assertEqual(len(mail.outbox), 1)
-        email = mail.outbox[0]
+        # Un deuxième email doit être envoyé
+        self.assertEqual(len(mail.outbox), 2)
+        email = mail.outbox[1]
         self.assertIn("Cassé : Présent", email.body)
-

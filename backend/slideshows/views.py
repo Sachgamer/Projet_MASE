@@ -84,30 +84,34 @@ class SlideshowViewSet(viewsets.ModelViewSet):
         submissions = {}
         if quiz:
             from .models import QuizSubmission
-            subs = QuizSubmission.objects.filter(quiz=quiz)
+            subs = QuizSubmission.objects.filter(quiz=quiz).order_by('submitted_at')
             for s in subs:
-                submissions[s.user_id] = {
+                if s.user_id not in submissions:
+                    submissions[s.user_id] = []
+                submissions[s.user_id].append({
                     'score': s.score,
                     'total_questions': s.total_questions,
                     'is_passed': s.is_passed,
                     'submitted_at': timezone.localtime(s.submitted_at).strftime("%d/%m/%Y %H:%M") if s.submitted_at else None
-                }
+                })
                 
         report_data = []
         for u in invited:
             fullname = f"{u.first_name} {u.last_name}".strip() or u.username
-            sub_info = submissions.get(u.id)
+            sub_list = submissions.get(u.id, [])
+            latest_sub = sub_list[-1] if sub_list else None
             report_data.append({
                 'id': u.id,
                 'username': u.username,
                 'fullname': fullname,
                 'email': u.email,
                 'quiz_status': {
-                    'completed': sub_info is not None,
-                    'score': sub_info['score'] if sub_info else None,
-                    'total_questions': sub_info['total_questions'] if sub_info else None,
-                    'is_passed': sub_info['is_passed'] if sub_info else False,
-                    'submitted_at': sub_info['submitted_at'] if sub_info else None
+                    'completed': len(sub_list) > 0,
+                    'score': latest_sub['score'] if latest_sub else None,
+                    'total_questions': latest_sub['total_questions'] if latest_sub else None,
+                    'is_passed': latest_sub['is_passed'] if latest_sub else False,
+                    'submitted_at': latest_sub['submitted_at'] if latest_sub else None,
+                    'attempts': sub_list
                 }
             })
             
@@ -187,15 +191,18 @@ class QuizViewSet(viewsets.ModelViewSet):
         
         # Enregistrer la soumission dans la base de données
         from .models import QuizSubmission
-        QuizSubmission.objects.update_or_create(
+        attempts_count = QuizSubmission.objects.filter(user=request.user, quiz=quiz).count()
+        if attempts_count >= 2:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Vous avez déjà effectué les 2 tentatives autorisées pour ce quiz.")
+
+        QuizSubmission.objects.create(
             user=request.user,
             quiz=quiz,
-            defaults={
-                'score': score,
-                'total_questions': total_questions,
-                'is_passed': is_passed,
-                'signature': signature
-            }
+            score=score,
+            total_questions=total_questions,
+            is_passed=is_passed,
+            signature=signature
         )
         
         user_name = f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username

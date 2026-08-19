@@ -142,4 +142,28 @@ export const downloadAccidentPdf = async (id: number, filename?: string) => {
     link.remove();
 };
 
+// User Dashboard
+export const getUserDashboard = () => api.get('/api/user-dashboard/');
+
+// Agencies
+export const getAgencies = () => api.get('/api/agencies/');
+export const createAgency = (data: any) => api.post('/api/agencies/', data);
+
+// Users Management (Admin)
+export const getUsers = () => api.get('/api/users/');
+export const createUser = (data: any) => api.post('/api/users/', data);
+export const updateUser = (id: number, data: any) => api.patch(`/api/users/${id}/`, data);
+export const deleteUser = (id: number) => api.delete(`/api/users/${id}/`);
+
+// Periodic Visits Registry
+export const getPeriodicVisits = () => api.get('/api/periodic-visits/');
+export const createPeriodicVisit = (formData: FormData) => api.post('/api/periodic-visits/', formData);
+export const deletePeriodicVisit = (id: number) => api.delete(`/api/periodic-visits/${id}/`);
+
+// Prolong dates
+export const prolongAction = (id: number) => api.post(`/api/actions/${id}/prolong/`);
+export const prolongHabilitation = (id: number) => api.post(`/api/habilitations/${id}/prolong/`);
+export const prolongEquipmentItem = (id: number) => api.post(`/api/controls/equipment/${id}/prolong/`);
+export const prolongPeriodicVisit = (id: number) => api.post(`/api/periodic-visits/${id}/prolong/`);
+
 export default api;

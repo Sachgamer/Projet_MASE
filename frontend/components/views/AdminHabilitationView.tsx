@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { getHabilitations, createHabilitation, deleteHabilitation } from '@/lib/api';
+import api, { getHabilitations, createHabilitation, deleteHabilitation, prolongHabilitation } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { 
@@ -14,7 +14,8 @@ import {
     AlertTriangle, 
     CheckCircle2, 
     XCircle,
-    Search
+    Search,
+    Clock
 } from 'lucide-react';
 
 interface Habilitation {
@@ -55,6 +56,17 @@ export default function AdminHabilitationView() {
     const [formFile, setFormFile] = useState<File | null>(null);
 
     const isAdmin = user && (user.is_staff || user.is_superuser);
+
+    const handleProlongHabilitation = async (id: number) => {
+        try {
+            await prolongHabilitation(id);
+            alert("Échéance de l'habilitation prolongée de 30 jours !");
+            fetchHabilitations();
+        } catch (error) {
+            console.error("Erreur de prolongation:", error);
+            alert("Impossible de prolonger l'échéance de cette habilitation.");
+        }
+    };
 
     useEffect(() => {
         if (isAdmin) {
@@ -181,7 +193,7 @@ export default function AdminHabilitationView() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
                 <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
+                    <h1 className="text-3xl font-extrabold tracking-tight text-white">
                         Gestion des Habilitations (Admin)
                     </h1>
                     <p className="text-gray-400 mt-1">
@@ -249,6 +261,21 @@ export default function AdminHabilitationView() {
                                         <div>
                                             <span className="block text-[10px] uppercase text-gray-500">Expiration</span>
                                             <span className="font-bold text-white">{new Date(hab.expiration_date).toLocaleDateString('fr-FR')}</span>
+                                            {(() => {
+                                                const expD = new Date(hab.expiration_date);
+                                                const tod = new Date();
+                                                tod.setHours(0, 0, 0, 0);
+                                                const diff = Math.ceil((expD.getTime() - tod.getTime()) / (1000 * 3600 * 24));
+                                                return diff <= 30;
+                                            })() && (
+                                                <button 
+                                                    onClick={() => handleProlongHabilitation(hab.id)}
+                                                    className="text-[10px] text-primary hover:underline font-bold flex items-center gap-0.5 bg-transparent border-0 cursor-pointer text-left mt-1"
+                                                >
+                                                    <Clock className="w-3.5 h-3.5 text-primary" />
+                                                    Rallonger de 30j
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

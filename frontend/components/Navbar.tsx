@@ -264,6 +264,7 @@ export default function Navbar() {
     const registryLinks = [
         { view: 'chemical-registry', label: 'Risques Chimiques / FDS', icon: FlaskConical },
         { view: 'habilitation-list', label: 'Habilitations & Visites', icon: Award },
+        { view: 'periodic-visits', label: 'Visites Périodiques', icon: Shield },
     ] as const;
 
     if (loading || !user) {
@@ -280,6 +281,7 @@ export default function Navbar() {
                             onClick={() => setView('home')}
                             className="flex-shrink-0 flex items-center font-black text-2xl text-primary tracking-tighter hover:opacity-80 transition-opacity border-0 bg-transparent cursor-pointer mr-3"
                         >
+                            <img src="/logo.png" alt="GORON SYSTEMES Logo" className="h-8 w-8 mr-2 object-contain" />
                             Web<span className="text-white">MASE</span>
                         </button>
                         
@@ -427,6 +429,18 @@ export default function Navbar() {
                                         </button>
                                         {isAdminOpen && (
                                             <div className="absolute top-14 right-0 w-64 p-2 bg-secondary/95 border border-border/50 rounded-xl shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in duration-200">
+                                                <button 
+                                                    onClick={() => {
+                                                        setView('user-management');
+                                                        setIsAdminOpen(false);
+                                                    }}
+                                                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-left text-gray-300 hover:text-white hover:bg-white/10 transition-colors bg-transparent border-0 cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <User className="w-4 h-4 text-blue-400" />
+                                                        Gestion des Utilisateurs
+                                                    </div>
+                                                </button>
                                                 <button 
                                                     onClick={() => {
                                                         setView('auto-control-list');
@@ -624,6 +638,16 @@ export default function Navbar() {
                         {user && (user.is_staff || user.is_superuser) && (
                             <div className="space-y-2">
                                 <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest pl-2">Administration</h3>
+                                <button 
+                                    onClick={() => {
+                                        setView('user-management');
+                                        setIsMenuOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-4 px-4 py-4 text-lg font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-xl bg-transparent border-0 text-left"
+                                >
+                                    <User className="w-5 h-5 text-blue-400" />
+                                    Gestion des Utilisateurs
+                                </button>
                                 <button 
                                     onClick={() => {
                                         setView('auto-control-list');

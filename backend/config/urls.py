@@ -23,9 +23,9 @@ from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from slideshows.views import SlideshowViewSet, QuizViewSet, SlideViewSet, QuestionViewSet, ChoiceViewSet
-from files.views import PersonalFileViewSet, ChemicalProductViewSet
-from reports.views import AccidentReportViewSet, WorkSiteViewSet, ActionViewSet, HseStatsView
-from users.views import UserViewSet, BlockedMacAddressViewSet, CustomLoginView, Verify2FAView, CustomLogoutView, HabilitationViewSet
+from files.views import PersonalFileViewSet, ChemicalProductViewSet, PeriodicVisitViewSet
+from reports.views import AccidentReportViewSet, WorkSiteViewSet, ActionViewSet, HseStatsView, UserDashboardView
+from users.views import UserViewSet, BlockedMacAddressViewSet, CustomLoginView, Verify2FAView, CustomLogoutView, HabilitationViewSet, AgencyViewSet
 
 router = DefaultRouter()
 router.register(r'slideshows', SlideshowViewSet)
@@ -35,10 +35,12 @@ router.register(r'questions', QuestionViewSet)
 router.register(r'choices', ChoiceViewSet)
 router.register(r'files', PersonalFileViewSet, basename='personal-file')
 router.register(r'chemical-products', ChemicalProductViewSet, basename='chemical-product')
+router.register(r'periodic-visits', PeriodicVisitViewSet, basename='periodic-visit')
 router.register(r'reports', AccidentReportViewSet, basename='accident-report')
 router.register(r'worksites', WorkSiteViewSet, basename='worksite')
 router.register(r'actions', ActionViewSet, basename='action')
 router.register(r'users', UserViewSet, basename='user')
+router.register(r'agencies', AgencyViewSet, basename='agency')
 router.register(r'blocked-macs', BlockedMacAddressViewSet, basename='blocked-mac')
 router.register(r'habilitations', HabilitationViewSet, basename='habilitation')
 
@@ -48,6 +50,7 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/controls/', include('controls.urls')),
     path('api/hse-stats/', HseStatsView.as_view(), name='hse-stats'),
+    path('api/user-dashboard/', UserDashboardView.as_view(), name='user-dashboard'),
 
 
 

@@ -1,5 +1,6 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
+from rest_framework.response import Response
 from django.http import FileResponse
 from .models import EquipmentItem, Inspection
 from .serializers import EquipmentItemSerializer, InspectionSerializer
@@ -33,11 +34,30 @@ class EquipmentItemViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
 
     def get_queryset(self):
-        # Les admins voient tout l'équipement du parc
-        if self.request.user.is_staff or self.request.user.is_superuser:
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
             return self.queryset.all()
-        # Les techniciens ne voient que l'équipement qui leur est affecté
-        return self.queryset.filter(technician=self.request.user, is_active=True)
+        if user.agency:
+            return self.queryset.filter(technician__agency=user.agency, is_active=True)
+        return self.queryset.filter(technician=user, is_active=True)
+
+    @action(detail=True, methods=['post'])
+    def prolong(self, request, pk=None):
+        item = self.get_object()
+        if item.technician != request.user and not (request.user.is_staff or request.user.is_superuser):
+            return Response({'detail': "Vous n'avez pas l'autorisation de prolonger cet équipement."}, status=status.HTTP_403_FORBIDDEN)
+        
+        if not item.expiration_date:
+            from django.utils import timezone
+            item.expiration_date = timezone.now().date()
+            
+        from datetime import timedelta
+        item.expiration_date = item.expiration_date + timedelta(days=30)
+        item.save()
+        return Response({
+            'detail': 'Date de validité de l\'équipement prolongée de 30 jours.',
+            'new_expiration_date': item.expiration_date
+        }, status=status.HTTP_200_OK)
 
 # Gère les rapports d'auto-contrôle (consultation et création)
 class InspectionViewSet(viewsets.ModelViewSet):
@@ -46,11 +66,12 @@ class InspectionViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsAdminOrCreateOnly]
 
     def get_queryset(self):
-        # Les admins voient tous les rapports d'inspection
-        if self.request.user.is_staff or self.request.user.is_superuser:
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
             return self.queryset.all().order_by('-date')
-        # Les techniciens voient uniquement leurs propres contrôles
-        return self.queryset.filter(item__technician=self.request.user).order_by('-date')
+        if user.agency:
+            return self.queryset.filter(item__technician__agency=user.agency).order_by('-date')
+        return self.queryset.filter(item__technician=user).order_by('-date')
 
     def perform_create(self, serializer):
         # Enregistre le nouveau rapport dans la base de données

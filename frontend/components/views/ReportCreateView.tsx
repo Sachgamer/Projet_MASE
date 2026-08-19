@@ -1202,13 +1202,14 @@ export default function ReportCreateView() {
         }
     };
 
-    // Explications des 4 catégories
+    // Explications des catégories
     const getCategoryDetails = (cat: string) => {
         switch (cat) {
             case 'dangerous_situation': return { label: 'Situation dangereuse', desc: 'Comportement ou état de fait présentant un danger potentiel.' };
             case 'near_miss': return { label: 'Presque accident', desc: 'Événement qui aurait pu causer un accident mais a été évité de justesse.' };
             case 'accident': return { label: 'Accident', desc: 'Événement soudain ayant provoqué une blessure ou un dégât matériel.' };
             case 'fatal_accident': return { label: 'Accident mortel', desc: 'Accident du travail d\'une gravité majeure ayant entraîné un décès.' };
+            case 'terrain_other': return { label: 'Terrain (Autres)', desc: 'Autre signalement ou observation terrain QHSE.' };
             default: return { label: cat, desc: '' };
         }
     };
@@ -1252,7 +1253,7 @@ export default function ReportCreateView() {
                 {/* En-tête */}
                 <div className="mb-8 border-b border-border pb-6 flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-black tracking-tight bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent uppercase">
+                        <h1 className="text-2xl font-black tracking-tight text-white uppercase">
                             Déclarer une remontée
                         </h1>
                         <p className="text-xs text-muted-foreground mt-1">Formulaire de sécurité obligatoire conforme aux normes MASE.</p>
@@ -1268,33 +1269,43 @@ export default function ReportCreateView() {
                 {/* Indicateur d'Étapes supprimé - Formulaire en page unique */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     
-                    {/* 1. TYPE DE REMONTÉE (CATÉGORIE) */}
-                    <div className="space-y-3">
+                    {/* 1. TYPE DE REMONTÉE (CATÉGORIE PRINCIPALE & SOUS-CATÉGORIE) */}
+                    <div className="space-y-4">
                         <label className="block text-sm font-bold text-foreground">
                             Type de Remontée (Catégorie) *
                         </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        
+                        {/* Categories Selection */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {[
-                                { id: 'dangerous_situation', label: 'Situation dangereuse', color: 'border-yellow-500/30 dark:border-yellow-500/20 hover:border-yellow-500 text-yellow-600 dark:text-yellow-400' },
-                                { id: 'near_miss', label: 'Presque accident', color: 'border-orange-500/30 dark:border-orange-500/20 hover:border-orange-500 text-orange-600 dark:text-orange-400' },
-                                { id: 'accident', label: 'Accident', color: 'border-red-500/30 dark:border-red-500/20 hover:border-red-500 text-red-600 dark:text-red-400' }
+                                { id: 'accident', label: 'Accident', color: 'border-red-500/30 text-red-600 dark:text-red-400' },
+                                { id: 'near_miss', label: 'Presque accident', color: 'border-orange-500/30 text-orange-600 dark:text-orange-400' },
+                                { id: 'remontee', label: 'Remontées (Situation/Terrain)', color: 'border-yellow-500/30 text-yellow-600 dark:text-yellow-400' }
                             ].map((cat) => {
-                                const isSelected = formData.incident_type === cat.id;
+                                const isSelected = cat.id === 'remontee' 
+                                    ? (formData.incident_type === 'dangerous_situation' || formData.incident_type === 'terrain_other')
+                                    : formData.incident_type === cat.id;
+
                                 return (
                                     <button
                                         key={cat.id}
                                         type="button"
                                         onClick={() => {
+                                            let targetType = cat.id;
+                                            if (cat.id === 'remontee') {
+                                                targetType = formData.incident_type === 'terrain_other' ? 'terrain_other' : 'dangerous_situation';
+                                            }
                                             const severityMapping: Record<string, string> = {
                                                 dangerous_situation: 'low',
+                                                terrain_other: 'low',
                                                 near_miss: 'medium',
                                                 accident: 'high',
                                                 fatal_accident: 'critical'
                                             };
                                             setFormData(prev => ({
                                                 ...prev,
-                                                incident_type: cat.id,
-                                                severity: severityMapping[cat.id] || 'low'
+                                                incident_type: targetType,
+                                                severity: severityMapping[targetType] || 'low'
                                             }));
                                         }}
                                         className={`p-3 rounded-xl border text-left text-sm font-semibold transition-all duration-200 flex justify-between items-center cursor-pointer ${
@@ -1309,6 +1320,45 @@ export default function ReportCreateView() {
                                 );
                             })}
                         </div>
+
+                        {/* Sous-catégories pour les Remontées */}
+                        {(formData.incident_type === 'dangerous_situation' || formData.incident_type === 'terrain_other') && (
+                            <div className="space-y-3 animate-in fade-in duration-200 pl-4 border-l-2 border-primary/20 mt-3">
+                                <label className="block text-xs font-bold text-foreground uppercase tracking-wider">
+                                    Sous-catégorie *
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {[
+                                        { id: 'dangerous_situation', label: 'Situation dangereuse', desc: 'Comportement ou état de fait présentant un danger potentiel.' },
+                                        { id: 'terrain_other', label: 'Terrain (Autres)', desc: 'Autre signalement ou observation terrain QHSE.' }
+                                    ].map((sub) => {
+                                        const isSelected = formData.incident_type === sub.id;
+                                        return (
+                                            <button
+                                                key={sub.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        incident_type: sub.id,
+                                                        severity: 'low'
+                                                    }));
+                                                }}
+                                                className={`p-3 rounded-xl border text-left text-xs font-semibold transition-all duration-200 flex flex-col justify-between cursor-pointer ${
+                                                    isSelected 
+                                                        ? 'bg-primary/25 border-primary text-white shadow-md' 
+                                                        : 'bg-input text-foreground border-border hover:bg-secondary/40'
+                                                }`}
+                                            >
+                                                <span className="font-bold text-sm">{sub.label}</span>
+                                                <span className="text-[10px] text-gray-400 mt-1 font-normal">{sub.desc}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
                         <p className="text-[11px] text-muted-foreground italic bg-secondary/55 p-2 rounded-lg border border-border/50">
                             💡 {activeCategory.desc}
                         </p>

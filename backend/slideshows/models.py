@@ -78,7 +78,6 @@ class QuizSubmission(models.Model):
 
     class Meta:
         ordering = ['-submitted_at']
-        unique_together = ('user', 'quiz')
 
     def __str__(self):
         return f"{self.user.username} - {self.quiz.title} ({self.score}/{self.total_questions})"

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import PersonalFile, ChemicalProduct
+from .models import PersonalFile, ChemicalProduct, PeriodicVisit
 
 # Convertit les informations des fichiers personnels en JSON pour le site
 class PersonalFileSerializer(serializers.ModelSerializer):
@@ -14,6 +14,11 @@ class PersonalFileSerializer(serializers.ModelSerializer):
 class ChemicalProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = ChemicalProduct
-        fields = ['id', 'name', 'manufacturer', 'sds_file', 'pictograms', 'description', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = '__all__'
 
+class PeriodicVisitSerializer(serializers.ModelSerializer):
+    visit_type_display = serializers.CharField(source='get_visit_type_display', read_only=True)
+
+    class Meta:
+        model = PeriodicVisit
+        fields = '__all__'
