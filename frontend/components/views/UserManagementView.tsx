@@ -376,7 +376,7 @@ export default function UserManagementView() {
                                     <label className="block text-xs font-bold text-gray-400 uppercase">Agence (Région)</label>
                                     <select
                                         value={formAgency}
-                                        onChange={(e) => setFormAgency(e.target.value)}
+                                        onChange={(e) => setFormAgency(e.target.value === '' ? '' : Number(e.target.value))}
                                         className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none cursor-pointer"
                                     >
                                         <option value="">-- Choisir une agence --</option>

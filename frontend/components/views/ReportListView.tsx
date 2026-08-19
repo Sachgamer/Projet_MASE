@@ -48,6 +48,7 @@ interface AccidentReport {
     video: string | null;
     published: boolean; // Si vrai, le rapport est considéré comme "Validé" par l'admin
     created_at: string;
+    reporter: number;
     reporter_name: string;
     photos?: AccidentReportPhoto[];
 }
@@ -831,6 +832,7 @@ export default function ReportListView() {
                         </button>
                     </div>
                 </div>
+            )}
             {/* Modal de Modification (Edit Modal) */}
             {editingReport && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

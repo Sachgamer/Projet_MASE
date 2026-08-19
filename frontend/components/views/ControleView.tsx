@@ -21,9 +21,10 @@ interface EquipmentItem {
     type_name: string;
     serial_number: string;
     expiration_date: string;
-    technician_name: string;
-    last_controlled_date: string | null;
-    is_valid: boolean;
+    technician: number;
+    technician_name?: string;
+    last_controlled_date?: string | null;
+    is_valid?: boolean;
 }
 
 // Vue principale pour effectuer un auto-contrôle (multistep form)
