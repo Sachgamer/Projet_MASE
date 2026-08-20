@@ -570,7 +570,7 @@ export default function ReportListView() {
                                                                         alt={`Photo ${idx + 1}`}
                                                                     />
                                                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity pointer-events-none">
-                                                                        <span className="bg-gray-900/80 px-2 py-1 rounded text-[10px] text-white flex items-center gap-1 font-medium">
+                                                                        <span className="bg-gray-900/80 px-2 py-1 rounded text-[10px] text-gray-50 flex items-center gap-1 font-medium">
                                                                             <Eye className="w-3 h-3" />
                                                                             Agrandir
                                                                         </span>
@@ -705,7 +705,7 @@ export default function ReportListView() {
                                                                 alert('Erreur lors de la recatégorisation');
                                                             }
                                                         }}
-                                                        className="bg-gray-900 border border-white/20 rounded px-2 py-0.5 text-[11px] text-white focus:outline-none cursor-pointer"
+                                                        className="bg-gray-800 border border-white/20 rounded px-2 py-0.5 text-[11px] text-white focus:outline-none cursor-pointer"
                                                     >
                                                         <option value="accident">Accident</option>
                                                         <option value="near_miss">Presque accident</option>
