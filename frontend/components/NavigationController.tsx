@@ -23,6 +23,7 @@ import UserManagementView from '@/components/views/UserManagementView';
 import PeriodicVisitsView from '@/components/views/PeriodicVisitsView';
 import PermissionsConfigView from '@/components/views/PermissionsConfigView';
 import AdminArchivesView from '@/components/views/AdminArchivesView';
+import EquipmentConfigView from '@/components/views/EquipmentConfigView';
 import { useAuth } from '@/context/AuthContext';
 
 /**
@@ -88,6 +89,8 @@ export default function NavigationController() {
             return <PermissionsConfigView />;
         case 'archives':
             return <AdminArchivesView />;
+        case 'equipment-config':
+            return <EquipmentConfigView />;
         default:
             return <HomeView />;
     }

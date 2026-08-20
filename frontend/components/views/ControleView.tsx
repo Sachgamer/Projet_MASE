@@ -47,17 +47,6 @@ export default function ControleView() {
     const [success, setSuccess] = useState(false); // État de réussite après envoi
     const [lastInspectionId, setLastInspectionId] = useState<number | null>(null);
 
-    // États spécifiques à l'administration
-    const [usersList, setUsersList] = useState<UserItem[]>([]);
-    const [showAdminPanel, setShowAdminPanel] = useState(false);
-    const [newEquip, setNewEquip] = useState({
-        category: 'EQUIPEMENT',
-        type_name: '',
-        serial_number: '',
-        expiration_date: '',
-        technician: ''
-    });
-
     const isNearExpiration = (dateStr: string | null) => {
         if (!dateStr) return false;
         const limitDate = new Date(dateStr);
@@ -81,11 +70,8 @@ export default function ControleView() {
     useEffect(() => {
         if (user) {
             fetchEquipment();
-            if (canManage) {
-                fetchUsers();
-            }
         }
-    }, [user, canManage]);
+    }, [user]);
 
     useEffect(() => {
         if (viewParams?.itemId && equipment.length > 0) {
@@ -98,15 +84,7 @@ export default function ControleView() {
         }
     }, [viewParams, equipment]);
 
-    // Récupère la liste des utilisateurs pour l'assignation (Admin uniquement)
-    const fetchUsers = async () => {
-        try {
-            const response = await api.get('/api/users/');
-            setUsersList(response.data);
-        } catch (error) {
-            console.error("Error fetching users:", error);
-        }
-    };
+
 
     // Récupère les équipements assignés à l'utilisateur actuel
     const fetchEquipment = async () => {
@@ -264,53 +242,7 @@ export default function ControleView() {
     };
 
 
-    // Crée et assigne un nouvel équipement (Admin/Agence)
-    const handleCreateEquipment = async (e: React.FormEvent) => {
-        e.preventDefault();
-        try {
-            const payload = { ...newEquip };
-            // Pas de date d'expiration pour les véhicules (pas de contrôle semestriel EPI)
-            if (payload.category === 'VEHICULE' || !payload.expiration_date) {
-                // @ts-ignore
-                delete payload.expiration_date;
-            }
-            if (!payload.technician) {
-                // @ts-ignore
-                delete payload.technician;
-            }
-            await api.post('/api/controls/equipment/', payload);
-            alert("Équipement ajouté avec succès !");
-            setNewEquip({ category: 'EQUIPEMENT', type_name: '', serial_number: '', expiration_date: '', technician: '' });
-            fetchEquipment();
-        } catch (error) {
-            console.error("Error creating equipment:", error);
-            alert("Erreur lors de la création de l'équipement.");
-        }
-    };
 
-    const handleUpdateTechnician = async (itemId: number, technicianId: string) => {
-        try {
-            const techVal = technicianId ? parseInt(technicianId) : null;
-            await api.patch(`/api/controls/equipment/${itemId}/`, { technician: techVal });
-            alert("Affectation mise à jour avec succès !");
-            fetchEquipment();
-        } catch (error) {
-            console.error("Error updating technician assignment:", error);
-            alert("Erreur lors de la mise à jour de l'affectation.");
-        }
-    };
-
-    const handleDeleteEquipment = async (itemId: number) => {
-        if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet équipement ?")) return;
-        try {
-            await api.delete(`/api/controls/equipment/${itemId}/`);
-            alert("Équipement supprimé de la liste globale.");
-            fetchEquipment();
-        } catch (error) {
-            console.error("Error deleting equipment:", error);
-            alert("Erreur lors de la suppression de l'équipement.");
-        }
-    };
 
     // Réinitialise le formulaire pour un nouveau contrôle
     const reset = () => {
@@ -334,186 +266,27 @@ export default function ControleView() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-12">
-            <div className="flex flex-col sm:flex-row items-center justify-between mb-8 gap-4">
+            <div className="mb-8">
                 <h1 className="text-4xl font-extrabold text-white text-center">
                     Auto-contrôle Technique & Sécurité
                 </h1>
-                {canManage && (
-                    <Button
-                        onClick={() => setShowAdminPanel(!showAdminPanel)}
-                        variant={showAdminPanel ? "outline" : "default"}
-                        className="flex items-center gap-2"
-                    >
-                        {showAdminPanel ? "Fermer Gestion" : <><Plus className="w-4 h-4" /> Gérer le parc matériel</>}
-                    </Button>
-                )}
             </div>
 
-            {/* Panneau d'administration pour la gestion du parc matériel */}
-            {canManage && showAdminPanel && (
-                <div className="mb-12 bg-white/5 border border-primary/30 rounded-2xl p-8 animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl shadow-primary/10">
-                    <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
-                        <Wrench className="text-primary" /> Enregistrer un nouvel équipement
-                    </h2>
-                    <form onSubmit={handleCreateEquipment} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-400">Catégorie</label>
-                            <select
-                                value={newEquip.category}
-                                onChange={e => setNewEquip({ ...newEquip, category: e.target.value })}
-                                className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
-                                required
-                            >
-                                <option value="EQUIPEMENT">Équipement</option>
-                                <option value="VEHICULE">Véhicule</option>
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-400">
-                                {newEquip.category === 'VEHICULE' ? "Modèle du véhicule" : "Nom / Modèle"}
-                            </label>
-                            <input
-                                type="text"
-                                value={newEquip.type_name}
-                                onChange={e => setNewEquip({ ...newEquip, type_name: e.target.value })}
-                                className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
-                                placeholder={newEquip.category === 'VEHICULE' ? "ex: Renault Kangoo" : "ex: Harnais de sécurité"}
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-400">Assigner à (Optionnel)</label>
-                            <select
-                                value={newEquip.technician}
-                                onChange={e => setNewEquip({ ...newEquip, technician: e.target.value })}
-                                className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
-                            >
-                                <option value="">Enregistré en général (non assigné)</option>
-                                {usersList.map(u => (
-                                    <option key={u.id} value={u.id}>
-                                        {u.first_name} {u.last_name} ({u.username})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-400">
-                                {newEquip.category === 'VEHICULE' ? "Plaque d'immatriculation" : "Numéro de série (Optionnel)"}
-                            </label>
-                            <input
-                                type="text"
-                                value={newEquip.serial_number}
-                                onChange={e => setNewEquip({ ...newEquip, serial_number: e.target.value })}
-                                className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
-                                placeholder={newEquip.category === 'VEHICULE' ? "ex: AB-123-CD" : "S/N..."}
-                                required={newEquip.category === 'VEHICULE'}
-                            />
-                        </div>
-                        {newEquip.category !== 'VEHICULE' && (
-                            <div className="space-y-2">
-                                <label className="text-sm text-gray-400">Date limite de contrôle (Optionnel)</label>
-                                <input
-                                    type="date"
-                                    value={newEquip.expiration_date}
-                                    onChange={e => setNewEquip({ ...newEquip, expiration_date: e.target.value })}
-                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
-                                />
-                            </div>
-                        )}
-                        <div className="md:col-span-2 flex justify-end mt-2">
-                            <Button type="submit" className="flex items-center gap-2">
-                                <Save className="w-4 h-4" /> Enregistrer le matériel
-                            </Button>
-                        </div>
-                    </form>
-
-                    {/* Liste des équipements existants pour modification */}
-                    <div className="mt-12 border-t border-white/10 pt-8">
-                        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                            <Wrench className="text-primary w-5 h-5" /> Liste du matériel et affectations
-                        </h3>
-                        <div className="overflow-x-auto rounded-xl border border-white/10">
-                            <table className="w-full text-left border-collapse bg-secondary/10">
-                                <thead>
-                                    <tr className="border-b border-white/10 bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-wider">
-                                        <th className="p-4">Catégorie</th>
-                                        <th className="p-4">Nom / Modèle</th>
-                                        <th className="p-4">N° de série / Plaque</th>
-                                        <th className="p-4">Échéance</th>
-                                        <th className="p-4">Assigné à</th>
-                                        <th className="p-4 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5 text-sm text-gray-300">
-                                    {equipment.map(item => (
-                                        <tr key={item.id} className="hover:bg-white/5 transition-colors">
-                                            <td className="p-4 font-semibold">
-                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${item.category === 'VEHICULE' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>
-                                                    {item.category === 'VEHICULE' ? 'VÉHICULE' : 'ÉQUIPEMENT'}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 font-bold text-white">{item.type_name}</td>
-                                            <td className="p-4 font-mono text-gray-400">{item.serial_number || 'N/A'}</td>
-                                            <td className={`p-4 font-semibold ${item.expiration_date && new Date(item.expiration_date) < new Date() ? 'text-red-400' : 'text-gray-400'}`}>
-                                                {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString('fr-FR') : 'N/A'}
-                                            </td>
-                                            <td className="p-4">
-                                                <select
-                                                    value={item.technician || ''}
-                                                    onChange={e => handleUpdateTechnician(item.id, e.target.value)}
-                                                    className="bg-secondary/50 border border-white/10 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-primary max-w-[200px]"
-                                                >
-                                                    <option value="">Non assigné (Général)</option>
-                                                    {usersList.map(u => (
-                                                        <option key={u.id} value={u.id}>
-                                                            {u.first_name} {u.last_name} ({u.username})
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </td>
-                                            <td className="p-4 text-right">
-                                                <button
-                                                    onClick={() => handleDeleteEquipment(item.id)}
-                                                    className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg transition-colors cursor-pointer"
-                                                    title="Supprimer l'équipement"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {equipment.length === 0 && (
-                                        <tr>
-                                            <td colSpan={6} className="p-8 text-center text-gray-500 italic">
-                                                Aucun équipement enregistré dans le parc matériel.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Stepper : Indicateur d'étape actuelle */}
-            {!showAdminPanel && (
-                <div className="flex justify-between mb-12 relative px-4">
-                    <div className="absolute top-1/2 left-0 w-full h-0.5 bg-white/10 -translate-y-1/2 z-0"></div>
-                    {[1, 2, 3].map((s) => (
-                        <div
-                            key={s}
-                            className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${step >= s ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/25' : 'bg-secondary text-gray-500'
-                                }`}
-                        >
-                            {s}
-                        </div>
-                    ))}
-                </div>
-            )}
+            <div className="flex justify-between mb-12 relative px-4">
+                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-white/10 -translate-y-1/2 z-0"></div>
+                {[1, 2, 3].map((s) => (
+                    <div
+                        key={s}
+                        className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${step >= s ? 'bg-primary text-white scale-110 shadow-lg shadow-primary/25' : 'bg-secondary text-gray-500'
+                            }`}
+                    >
+                        {s}
+                    </div>
+                ))}
+            </div>
 
-            {!showAdminPanel && (
-                <div className="bg-secondary/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl overflow-hidden">
+            <div className="bg-secondary/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl overflow-hidden">
                     {/* Étape 1 : Choix de la catégorie (Matériel, Véhicule) */}
                     {step === 1 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -757,7 +530,7 @@ export default function ControleView() {
                                         onClick={() => {
                                             const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
                                             const username = user?.username || 'unknown';
-                                            const objName = selectedItem?.type_name.replace(/\s+/g, '-').replace(/[^\w\-_\.]/g, '') || 'objet';
+                                            const objName = selectedItem?.type_name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9_.-]/g, '') || 'objet';
                                             const filename = `${username}_${dateStr}_${objName}.pdf`;
                                             downloadInspectionPdf(lastInspectionId, filename);
                                         }}
@@ -770,7 +543,6 @@ export default function ControleView() {
                         </div>
                     )}
                 </div>
-            )}
-        </div>
-    );
+            </div>
+        );
 }

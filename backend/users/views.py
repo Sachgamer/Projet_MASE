@@ -312,9 +312,9 @@ class ViewPermissionViewSet(viewsets.ModelViewSet):
             ('user-management', 'Gestion Utilisateurs', True, False, False),
             ('auto-control-list', 'Liste des Auto-contrôles', True, False, False),
             ('admin-habilitation', 'Habilitations Admin', True, False, False),
-            ('blocked-mac-list', 'Adresses MAC Bloquées', True, False, False),
             ('permissions-config', 'Configuration des Droits', True, False, False),
             ('archives', 'Archives Admin', True, False, False),
+            ('equipment-config', 'Gestion du Parc Matériel', True, False, False),
         ]
         
         for name, label, admin, tech, agency in default_views:

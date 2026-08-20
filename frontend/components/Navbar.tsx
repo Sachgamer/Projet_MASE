@@ -27,7 +27,8 @@ import {
     FlaskConical,
     Database,
     Archive,
-    Lock
+    Lock,
+    Wrench
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -130,6 +131,7 @@ export default function Navbar() {
         { view: 'blocked-mac-list', label: 'MACs Bloquées', icon: Shield, color: 'text-red-400' },
         { view: 'permissions-config', label: 'Configuration des Droits', icon: Lock, color: 'text-purple-400' },
         { view: 'archives', label: 'Archives de l\'Entreprise', icon: Archive, color: 'text-amber-500' },
+        { view: 'equipment-config', label: 'Gestion du Parc Matériel', icon: Wrench, color: 'text-emerald-400' },
     ];
 
     if (loading || !user) {
