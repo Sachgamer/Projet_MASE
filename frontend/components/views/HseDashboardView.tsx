@@ -469,7 +469,7 @@ export default function HseDashboardView() {
                             <select
                                 value={selectedSlideshow}
                                 onChange={(e) => handleSlideshowChange(Number(e.target.value))}
-                                className="w-full bg-gray-900 border border-white/20 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary"
+                                className="w-full bg-gray-800 border border-white/20 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary"
                             >
                                 <option value="">-- Choisir une causerie --</option>
                                 {slideshows.filter(s => s.has_quiz).map(s => (

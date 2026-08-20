@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import api, { getPeriodicVisits, createPeriodicVisit, deletePeriodicVisit, prolongPeriodicVisit } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { 
-    Calendar, 
-    Plus, 
-    Trash2, 
-    Download, 
-    Search, 
+import {
+    Calendar,
+    Plus,
+    Trash2,
+    Download,
+    Search,
     AlertTriangle,
     Info,
     ShieldAlert,
@@ -38,7 +38,7 @@ export default function PeriodicVisitsView() {
     const [visits, setVisits] = useState<PeriodicVisit[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    
+
     // Create form state
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [formType, setFormType] = useState('electricity');
@@ -222,15 +222,14 @@ export default function PeriodicVisitsView() {
                                             <td className="p-4">
                                                 {v.next_due_date ? (
                                                     <div className="flex flex-col gap-1.5">
-                                                        <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold border w-fit ${
-                                                            nearDead 
-                                                                ? 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse' 
+                                                        <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold border w-fit ${nearDead
+                                                                ? 'bg-red-500/10 text-red-400 border-red-500/20 animate-pulse'
                                                                 : 'bg-green-500/10 text-green-400 border-green-500/20'
-                                                        }`}>
+                                                            }`}>
                                                             {new Date(v.next_due_date).toLocaleDateString('fr-FR')}
                                                         </span>
                                                         {nearDead && (
-                                                            <button 
+                                                            <button
                                                                 onClick={() => handleProlongVisit(v.id)}
                                                                 className="text-[10px] text-primary hover:underline font-bold flex items-center gap-0.5 bg-transparent border-0 cursor-pointer text-left"
                                                             >
@@ -249,9 +248,9 @@ export default function PeriodicVisitsView() {
                                             <td className="p-4 text-right">
                                                 <div className="flex justify-end items-center gap-2">
                                                     {v.document ? (
-                                                        <a 
-                                                            href={v.document} 
-                                                            target="_blank" 
+                                                        <a
+                                                            href={v.document}
+                                                            target="_blank"
                                                             rel="noopener noreferrer"
                                                         >
                                                             <Button variant="outline" className="p-2 border-white/20 text-white hover:bg-white/5" title="Télécharger le rapport PDF">
@@ -262,7 +261,7 @@ export default function PeriodicVisitsView() {
                                                         <span className="text-xs text-gray-500 italic p-2">Sans PDF</span>
                                                     )}
                                                     {isAdmin && (
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleDeleteVisit(v.id)}
                                                             className="p-2 rounded bg-white/5 border border-white/10 hover:bg-red-500/20 transition-colors text-white cursor-pointer"
                                                             title="Supprimer"
@@ -289,23 +288,23 @@ export default function PeriodicVisitsView() {
             {/* Modal Create Visit */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl relative space-y-4">
-                        <button 
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl relative space-y-4">
+                        <button
                             onClick={() => setShowCreateModal(false)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer"
                         >
                             <X className="w-5 h-5" />
                         </button>
-                        
+
                         <h2 className="text-xl font-bold text-white flex items-center gap-2">
                             <PlusCircle className="w-5 h-5 text-primary" />
                             Enregistrer une visite périodique
                         </h2>
-                        
+
                         <form onSubmit={handleCreateVisit} className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                    <label className="block text-xs font-bold text-gray-400 uppercase">Type d'installation</label>
+                                    <label className="block text-xs font-bold text-gray-400 uppercase">Type de contrôle</label>
                                     <select
                                         value={formType}
                                         onChange={(e) => setFormType(e.target.value)}
@@ -320,7 +319,7 @@ export default function PeriodicVisitsView() {
                                 {formType === 'other' && (
                                     <div className="space-y-1 animate-in fade-in duration-200">
                                         <label className="block text-xs font-bold text-gray-400 uppercase">Nom du type personnalisé</label>
-                                        <input 
+                                        <input
                                             type="text"
                                             value={formCustomType}
                                             onChange={(e) => setFormCustomType(e.target.value)}
@@ -335,7 +334,7 @@ export default function PeriodicVisitsView() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="block text-xs font-bold text-gray-400 uppercase">Date de visite</label>
-                                    <input 
+                                    <input
                                         type="date"
                                         value={formDate}
                                         onChange={(e) => setFormDate(e.target.value)}
@@ -345,7 +344,7 @@ export default function PeriodicVisitsView() {
                                 </div>
                                 <div className="space-y-1">
                                     <label className="block text-xs font-bold text-gray-400 uppercase">Prochaine Échéance</label>
-                                    <input 
+                                    <input
                                         type="date"
                                         value={formNextDueDate}
                                         onChange={(e) => setFormNextDueDate(e.target.value)}
@@ -356,7 +355,7 @@ export default function PeriodicVisitsView() {
 
                             <div className="space-y-1">
                                 <label className="block text-xs font-bold text-gray-400 uppercase">Organisme d'inspection / Inspecteur</label>
-                                <input 
+                                <input
                                     type="text"
                                     value={formInspector}
                                     onChange={(e) => setFormInspector(e.target.value)}
@@ -367,7 +366,7 @@ export default function PeriodicVisitsView() {
 
                             <div className="space-y-1">
                                 <label className="block text-xs font-bold text-gray-400 uppercase">Observations / Commentaires</label>
-                                <textarea 
+                                <textarea
                                     value={formComments}
                                     onChange={(e) => setFormComments(e.target.value)}
                                     placeholder="Observations, anomalies relevées, actions correctives associées..."
@@ -378,7 +377,7 @@ export default function PeriodicVisitsView() {
 
                             <div className="space-y-1">
                                 <label className="block text-xs font-bold text-gray-400 uppercase">Rapport de visite (Document PDF)</label>
-                                <input 
+                                <input
                                     type="file"
                                     accept=".pdf"
                                     onChange={(e) => {
@@ -391,9 +390,9 @@ export default function PeriodicVisitsView() {
                             </div>
 
                             <div className="flex gap-3 justify-end pt-4 border-t border-white/10">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
+                                <Button
+                                    type="button"
+                                    variant="outline"
                                     className="border-white/20 text-white hover:bg-white/5"
                                     onClick={() => setShowCreateModal(false)}
                                 >

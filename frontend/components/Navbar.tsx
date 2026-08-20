@@ -137,13 +137,12 @@ export default function Navbar() {
         let initialTheme: 'light' | 'dark' = 'light';
         
         try {
-            // Au chargement, récupérer le thème sauvegardé ou utiliser les préférences système
+            // Au chargement, récupérer le thème sauvegardé (le thème clair est par défaut)
             const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
             if (savedTheme === 'light' || savedTheme === 'dark') {
                 initialTheme = savedTheme;
             } else {
-                const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                initialTheme = systemPrefersDark ? 'dark' : 'light';
+                initialTheme = 'light';
             }
         } catch (e) {
             console.error("Impossible de récupérer les préférences de thème:", e);
