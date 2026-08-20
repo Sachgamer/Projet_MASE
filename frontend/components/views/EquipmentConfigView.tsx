@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Plus, Save, Wrench, Trash2, Shield, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Save, Wrench, Trash2, Shield, AlertCircle, UserPlus, X } from 'lucide-react';
 
 interface UserItem {
     id: number;
@@ -38,7 +38,48 @@ export default function EquipmentConfigView() {
         technician: ''
     });
 
+    const [assigningItem, setAssigningItem] = useState<EquipmentItem | null>(null);
+    const [assignmentForm, setAssignmentForm] = useState({
+        technician: '',
+        serial_number: '',
+        expiration_date: ''
+    });
+
     const canManage = user?.is_staff || user?.is_superuser || user?.role === 'admin' || user?.role === 'agency';
+
+    const handleAssignEquipment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!assigningItem) return;
+        setSubmitting(true);
+        try {
+            const payload = {
+                category: assigningItem.category,
+                type_name: assigningItem.type_name,
+                technician: assignmentForm.technician ? parseInt(assignmentForm.technician) : null,
+                serial_number: assignmentForm.serial_number,
+                expiration_date: assignmentForm.expiration_date || null
+            };
+            if (payload.category === 'VEHICULE' || !payload.expiration_date) {
+                // @ts-ignore
+                delete payload.expiration_date;
+            }
+            if (!payload.technician) {
+                alert("Veuillez sélectionner un technicien pour l'affectation.");
+                setSubmitting(false);
+                return;
+            }
+            await api.post('/api/controls/equipment/', payload);
+            alert(`Une instance de "${assigningItem.type_name}" a été attribuée avec succès !`);
+            setAssigningItem(null);
+            setAssignmentForm({ technician: '', serial_number: '', expiration_date: '' });
+            fetchEquipment();
+        } catch (error) {
+            console.error("Error duplicating/assigning equipment:", error);
+            alert("Erreur lors de l'affectation de l'équipement.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     useEffect(() => {
         if (canManage) {
@@ -268,7 +309,22 @@ export default function EquipmentConfigView() {
                                             ))}
                                         </select>
                                     </td>
-                                    <td className="p-4 text-right">
+                                    <td className="p-4 text-right flex justify-end gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setAssigningItem(item);
+                                                setAssignmentForm({
+                                                    technician: '',
+                                                    serial_number: item.serial_number || '',
+                                                    expiration_date: item.expiration_date || ''
+                                                });
+                                            }}
+                                            className="p-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                                            title="Attribuer à un technicien (créer une copie)"
+                                        >
+                                            <UserPlus className="w-4 h-4" />
+                                            Attribuer
+                                        </button>
                                         <button
                                             onClick={() => handleDeleteEquipment(item.id)}
                                             className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg transition-colors cursor-pointer"
@@ -290,6 +346,93 @@ export default function EquipmentConfigView() {
                     </table>
                 </div>
             </div>
+
+            {/* Modal d'affectation (Duplication/Attribution d'équipement) */}
+            {assigningItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-secondary border border-white/10 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-6 relative animate-in zoom-in duration-300">
+                        <button
+                            onClick={() => setAssigningItem(null)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+
+                        <div>
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <UserPlus className="text-primary w-5 h-5" />
+                                Attribuer ce matériel
+                            </h3>
+                            <p className="text-xs text-gray-400 mt-1">
+                                Créer une copie personnalisée de <strong>{assigningItem.type_name}</strong> pour un technicien.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleAssignEquipment} className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-400">Technicien *</label>
+                                <select
+                                    value={assignmentForm.technician}
+                                    onChange={e => setAssignmentForm({ ...assignmentForm, technician: e.target.value })}
+                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary text-sm"
+                                    required
+                                >
+                                    <option value="">Sélectionnez un technicien</option>
+                                    {usersList.map(u => (
+                                        <option key={u.id} value={u.id}>
+                                            {u.first_name} {u.last_name} ({u.username})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-400">
+                                    {assigningItem.category === 'VEHICULE' ? "Plaque d'immatriculation *" : "Numéro de série spécifique (Optionnel)"}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={assignmentForm.serial_number}
+                                    onChange={e => setAssignmentForm({ ...assignmentForm, serial_number: e.target.value })}
+                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary text-sm"
+                                    placeholder={assigningItem.category === 'VEHICULE' ? "ex: AB-123-CD" : "S/N spécifique..."}
+                                    required={assigningItem.category === 'VEHICULE'}
+                                />
+                            </div>
+
+                            {assigningItem.category !== 'VEHICULE' && (
+                                <div className="space-y-1">
+                                    <label className="text-xs text-gray-400">Date limite de contrôle (Optionnel)</label>
+                                    <input
+                                        type="date"
+                                        value={assignmentForm.expiration_date}
+                                        onChange={e => setAssignmentForm({ ...assignmentForm, expiration_date: e.target.value })}
+                                        className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary text-sm"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setAssigningItem(null)}
+                                    className="border-white/10 text-white hover:bg-white/5 cursor-pointer text-sm"
+                                >
+                                    Annuler
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="bg-primary hover:bg-primary/80 text-white font-bold cursor-pointer text-sm"
+                                >
+                                    Valider et attribuer
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
