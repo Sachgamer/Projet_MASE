@@ -6,14 +6,13 @@ from .models import EquipmentItem, Inspection
 from .serializers import EquipmentItemSerializer, InspectionSerializer
 from .utils import generate_inspection_pdf
 
-# Permission qui autorise la modification uniquement pour les administrateurs
+# Permission qui autorise la modification pour les administrateurs et l'agence
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
-        # La lecture est autorisée pour tout le monde
         if request.method in permissions.SAFE_METHODS:
             return True
-        # La modification nécessite d'être membre du personnel (admin)
-        return request.user and request.user.is_staff
+        user = request.user
+        return user and (user.is_staff or user.is_superuser or user.role == 'admin' or user.role == 'agency')
 
 class IsAdminOrCreateOnly(permissions.BasePermission):
     """
@@ -21,10 +20,8 @@ class IsAdminOrCreateOnly(permissions.BasePermission):
     mais réserve la modification/suppression aux administrateurs.
     """
     def has_permission(self, request, view):
-        # Lecture (GET, HEAD, OPTIONS) ou Création (POST) autorisées pour tout connecté
         if request.method in permissions.SAFE_METHODS or request.method == 'POST':
             return request.user and request.user.is_authenticated
-        # Modification / Suppression réservées aux administrateurs
         return request.user and request.user.is_staff
 
 # Gère la liste des équipements (EPI, Véhicules, etc.)
@@ -35,10 +32,8 @@ class EquipmentItemViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_staff or user.is_superuser:
+        if user.is_staff or user.is_superuser or user.role == 'admin' or user.role == 'agency':
             return self.queryset.all()
-        if user.agency:
-            return self.queryset.filter(technician__agency=user.agency, is_active=True)
         return self.queryset.filter(technician=user, is_active=True)
 
     @action(detail=True, methods=['post'])

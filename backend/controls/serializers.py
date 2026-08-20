@@ -3,13 +3,22 @@ from .models import EquipmentItem, Inspection, InspectionPhoto
 
 # Convertit les objets Equipement en JSON pour l'affichage sur le site
 class EquipmentItemSerializer(serializers.ModelSerializer):
-    # Récupère le nom complet du technicien pour l'affichage
-    technician_name = serializers.ReadOnlyField(source='technician.get_full_name')
-    technician_username = serializers.ReadOnlyField(source='technician.username')
+    technician_name = serializers.SerializerMethodField()
+    technician_username = serializers.SerializerMethodField()
 
     class Meta:
         model = EquipmentItem
         fields = '__all__'
+
+    def get_technician_name(self, obj):
+        if obj.technician:
+            return obj.technician.get_full_name() or obj.technician.username
+        return "Non assigné"
+
+    def get_technician_username(self, obj):
+        if obj.technician:
+            return obj.technician.username
+        return "N/A"
 
 # Sérialiseur pour les multiples photos
 class InspectionPhotoSerializer(serializers.ModelSerializer):

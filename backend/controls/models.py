@@ -13,7 +13,7 @@ class EquipmentItem(models.Model):
     # Nom spécifique (ex: Gants, Camionnette)
     type_name = models.CharField(max_length=100)
     # Technicien à qui l'équipement est affecté
-    technician = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='assigned_equipment')
+    technician = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_equipment')
     # Numéro de série ou matricule
     serial_number = models.CharField(max_length=100, blank=True, null=True)
     # Date de fin de validité
@@ -23,7 +23,8 @@ class EquipmentItem(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.category} - {self.type_name} ({self.technician.username})"
+        username = self.technician.username if self.technician else "Non assigné"
+        return f"{self.category} - {self.type_name} ({username})"
 
 # Représente un rapport d'auto-contrôle effectué sur un équipement
 class Inspection(models.Model):
@@ -75,7 +76,10 @@ class Inspection(models.Model):
         if not recipients:
             return
 
-        technician_name = f"{self.item.technician.first_name} {self.item.technician.last_name}".strip() or self.item.technician.username
+        if self.item.technician:
+            technician_name = f"{self.item.technician.first_name} {self.item.technician.last_name}".strip() or self.item.technician.username
+        else:
+            technician_name = "Non assigné"
         inspection_time = timezone.localtime(self.date).strftime('%d/%m/%Y à %H:%M') if self.date else timezone.localtime().strftime('%d/%m/%Y à %H:%M')
 
         # Formate les détails des défauts

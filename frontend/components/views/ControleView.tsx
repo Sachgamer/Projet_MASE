@@ -5,7 +5,7 @@ import api, { getBaseURL, downloadInspectionPdf, prolongEquipmentItem } from '@/
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useView } from '@/context/ViewContext';
-import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronRight, ChevronLeft, HardHat, Wrench, Truck, Plus, Save, X, Image as ImageIcon, Clock } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronRight, ChevronLeft, HardHat, Wrench, Truck, Plus, Save, X, Image as ImageIcon, Clock, Trash2 } from 'lucide-react';
 
 // Interface pour les utilisateurs (techniciens)
 interface UserItem {
@@ -22,7 +22,7 @@ interface EquipmentItem {
     type_name: string;
     serial_number: string;
     expiration_date: string;
-    technician: number;
+    technician: number | null;
     technician_name?: string;
     last_controlled_date?: string | null;
     is_valid?: boolean;
@@ -33,6 +33,7 @@ export default function ControleView() {
     const { user } = useAuth();
     const { viewParams } = useView();
     const isAdmin = user?.is_staff || user?.is_superuser;
+    const canManage = user?.is_staff || user?.is_superuser || user?.role === 'admin' || user?.role === 'agency';
     const [step, setStep] = useState(1); // Étape du formulaire (1 à 4)
     const [category, setCategory] = useState<'EQUIPEMENT' | 'VEHICULE' | null>(null);
     const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
@@ -80,11 +81,11 @@ export default function ControleView() {
     useEffect(() => {
         if (user) {
             fetchEquipment();
-            if (isAdmin) {
+            if (canManage) {
                 fetchUsers();
             }
         }
-    }, [user, isAdmin]);
+    }, [user, canManage]);
 
     useEffect(() => {
         if (viewParams?.itemId && equipment.length > 0) {
@@ -263,7 +264,7 @@ export default function ControleView() {
     };
 
 
-    // Crée et assigne un nouvel équipement (Admin uniquement)
+    // Crée et assigne un nouvel équipement (Admin/Agence)
     const handleCreateEquipment = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
@@ -273,14 +274,41 @@ export default function ControleView() {
                 // @ts-ignore
                 delete payload.expiration_date;
             }
+            if (!payload.technician) {
+                // @ts-ignore
+                delete payload.technician;
+            }
             await api.post('/api/controls/equipment/', payload);
-            alert("Équipement ajouté et assigné avec succès !");
+            alert("Équipement ajouté avec succès !");
             setNewEquip({ category: 'EQUIPEMENT', type_name: '', serial_number: '', expiration_date: '', technician: '' });
-            setShowAdminPanel(false);
             fetchEquipment();
         } catch (error) {
             console.error("Error creating equipment:", error);
             alert("Erreur lors de la création de l'équipement.");
+        }
+    };
+
+    const handleUpdateTechnician = async (itemId: number, technicianId: string) => {
+        try {
+            const techVal = technicianId ? parseInt(technicianId) : null;
+            await api.patch(`/api/controls/equipment/${itemId}/`, { technician: techVal });
+            alert("Affectation mise à jour avec succès !");
+            fetchEquipment();
+        } catch (error) {
+            console.error("Error updating technician assignment:", error);
+            alert("Erreur lors de la mise à jour de l'affectation.");
+        }
+    };
+
+    const handleDeleteEquipment = async (itemId: number) => {
+        if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet équipement ?")) return;
+        try {
+            await api.delete(`/api/controls/equipment/${itemId}/`);
+            alert("Équipement supprimé de la liste globale.");
+            fetchEquipment();
+        } catch (error) {
+            console.error("Error deleting equipment:", error);
+            alert("Erreur lors de la suppression de l'équipement.");
         }
     };
 
@@ -310,22 +338,22 @@ export default function ControleView() {
                 <h1 className="text-4xl font-extrabold text-white text-center">
                     Auto-contrôle Technique & Sécurité
                 </h1>
-                {isAdmin && (
+                {canManage && (
                     <Button
                         onClick={() => setShowAdminPanel(!showAdminPanel)}
                         variant={showAdminPanel ? "outline" : "default"}
                         className="flex items-center gap-2"
                     >
-                        {showAdminPanel ? "Fermer Gestion" : <><Plus className="w-4 h-4" /> Gérer les équipements</>}
+                        {showAdminPanel ? "Fermer Gestion" : <><Plus className="w-4 h-4" /> Gérer le parc matériel</>}
                     </Button>
                 )}
             </div>
 
             {/* Panneau d'administration pour la gestion du parc matériel */}
-            {isAdmin && showAdminPanel && (
+            {canManage && showAdminPanel && (
                 <div className="mb-12 bg-white/5 border border-primary/30 rounded-2xl p-8 animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl shadow-primary/10">
                     <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
-                        <Wrench className="text-primary" /> Assigner un nouvel équipement
+                        <Wrench className="text-primary" /> Enregistrer un nouvel équipement
                     </h2>
                     <form onSubmit={handleCreateEquipment} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
@@ -354,14 +382,13 @@ export default function ControleView() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-sm text-gray-400">Assigner à</label>
+                            <label className="text-sm text-gray-400">Assigner à (Optionnel)</label>
                             <select
                                 value={newEquip.technician}
                                 onChange={e => setNewEquip({ ...newEquip, technician: e.target.value })}
                                 className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
-                                required
                             >
-                                <option value="">Sélectionner un utilisateur</option>
+                                <option value="">Enregistré en général (non assigné)</option>
                                 {usersList.map(u => (
                                     <option key={u.id} value={u.id}>
                                         {u.first_name} {u.last_name} ({u.username})
@@ -395,10 +422,77 @@ export default function ControleView() {
                         )}
                         <div className="md:col-span-2 flex justify-end mt-2">
                             <Button type="submit" className="flex items-center gap-2">
-                                <Save className="w-4 h-4" /> Assigner et Sauvegarder
+                                <Save className="w-4 h-4" /> Enregistrer le matériel
                             </Button>
                         </div>
                     </form>
+
+                    {/* Liste des équipements existants pour modification */}
+                    <div className="mt-12 border-t border-white/10 pt-8">
+                        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Wrench className="text-primary w-5 h-5" /> Liste du matériel et affectations
+                        </h3>
+                        <div className="overflow-x-auto rounded-xl border border-white/10">
+                            <table className="w-full text-left border-collapse bg-secondary/10">
+                                <thead>
+                                    <tr className="border-b border-white/10 bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-wider">
+                                        <th className="p-4">Catégorie</th>
+                                        <th className="p-4">Nom / Modèle</th>
+                                        <th className="p-4">N° de série / Plaque</th>
+                                        <th className="p-4">Échéance</th>
+                                        <th className="p-4">Assigné à</th>
+                                        <th className="p-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5 text-sm text-gray-300">
+                                    {equipment.map(item => (
+                                        <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                                            <td className="p-4 font-semibold">
+                                                <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${item.category === 'VEHICULE' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                                    {item.category === 'VEHICULE' ? 'VÉHICULE' : 'ÉQUIPEMENT'}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 font-bold text-white">{item.type_name}</td>
+                                            <td className="p-4 font-mono text-gray-400">{item.serial_number || 'N/A'}</td>
+                                            <td className={`p-4 font-semibold ${item.expiration_date && new Date(item.expiration_date) < new Date() ? 'text-red-400' : 'text-gray-400'}`}>
+                                                {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString('fr-FR') : 'N/A'}
+                                            </td>
+                                            <td className="p-4">
+                                                <select
+                                                    value={item.technician || ''}
+                                                    onChange={e => handleUpdateTechnician(item.id, e.target.value)}
+                                                    className="bg-secondary/50 border border-white/10 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-primary max-w-[200px]"
+                                                >
+                                                    <option value="">Non assigné (Général)</option>
+                                                    {usersList.map(u => (
+                                                        <option key={u.id} value={u.id}>
+                                                            {u.first_name} {u.last_name} ({u.username})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <button
+                                                    onClick={() => handleDeleteEquipment(item.id)}
+                                                    className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg transition-colors cursor-pointer"
+                                                    title="Supprimer l'équipement"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {equipment.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="p-8 text-center text-gray-500 italic">
+                                                Aucun équipement enregistré dans le parc matériel.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -459,8 +553,8 @@ export default function ControleView() {
                                 </Button>
                             </div>
                             <div className="grid grid-cols-1 gap-4">
-                                {equipment.filter(e => e.category === category && e.technician === user?.id).length > 0 ? (
-                                    equipment.filter(e => e.category === category && e.technician === user?.id).map(item => (
+                                {equipment.filter(e => e.category === category && (canManage || e.technician === user?.id)).length > 0 ? (
+                                    equipment.filter(e => e.category === category && (canManage || e.technician === user?.id)).map(item => (
                                         <button
                                             key={item.id}
                                             onClick={() => handleItemSelect(item)}
