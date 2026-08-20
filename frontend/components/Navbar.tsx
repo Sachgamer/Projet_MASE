@@ -26,9 +26,7 @@ import {
     ClipboardList,
     Award,
     FlaskConical,
-    Database,
-    Wifi,
-    WifiOff
+    Database
 } from 'lucide-react';
 
 
@@ -368,20 +366,7 @@ export default function Navbar() {
 
                     {/* Section Droite : Auth, Install PWA, Administration */}
                     <div className="hidden md:flex md:items-center space-x-3">
-                        {/* Indicateur de statut réseau (Online/Offline) */}
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold">
-                            {isOnline ? (
-                                <span className="flex items-center gap-1 text-green-500 bg-green-500/10 px-2.5 py-0.5 rounded-full border border-green-500/20">
-                                    <Wifi className="w-3.5 h-3.5" />
-                                    En ligne
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1 text-red-500 bg-red-500/10 px-2.5 py-0.5 rounded-full border border-red-500/20 animate-pulse">
-                                    <WifiOff className="w-3.5 h-3.5" />
-                                    Hors-ligne {pendingCount > 0 && `(${pendingCount} sync)`}
-                                </span>
-                            )}
-                        </div>
+
 
                         {/* Commutateur de thème Jour/Nuit */}
                         <button
@@ -562,21 +547,7 @@ export default function Navbar() {
                             </button>
                         </div>
 
-                        {/* Indicateur de statut réseau (Mobile) */}
-                        <div className="flex items-center justify-between px-4 py-4 rounded-xl bg-white/5 border border-white/10">
-                            <span className="text-lg font-medium text-gray-300 font-bold">État du Réseau</span>
-                            {isOnline ? (
-                                <span className="flex items-center gap-1 text-green-500 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20 text-sm font-semibold">
-                                    <Wifi className="w-4 h-4" />
-                                    En ligne
-                                </span>
-                            ) : (
-                                <span className="flex items-center gap-1 text-red-500 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20 text-sm font-semibold animate-pulse">
-                                    <WifiOff className="w-4 h-4" />
-                                    Hors-ligne {pendingCount > 0 && `(${pendingCount})`}
-                                </span>
-                            )}
-                        </div>
+
 
                         {/* Option d'installation sur Mobile */}
                         {deferredPrompt && (

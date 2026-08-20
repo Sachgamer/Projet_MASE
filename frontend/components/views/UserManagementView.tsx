@@ -312,7 +312,7 @@ export default function UserManagementView() {
             {/* Modal Add/Edit User */}
             {showUserModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl relative space-y-4">
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-lg shadow-2xl relative space-y-4">
                         <button 
                             onClick={() => setShowUserModal(false)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer"
@@ -445,7 +445,7 @@ export default function UserManagementView() {
             {/* Modal Add Agency */}
             {showAgencyModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative space-y-4">
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative space-y-4">
                         <button 
                             onClick={() => setShowAgencyModal(false)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer"
