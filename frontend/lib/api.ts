@@ -5,9 +5,10 @@ export const getBaseURL = () => {
     if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
         const protocol = window.location.protocol;
+        const port = window.location.port;
 
-        // En développement local (localhost), on contacte Django directement sur le port 8000
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // En développement local ou réseau (si le port de l'application est 3000), on contacte Django directement sur le port 8000
+        if (hostname === 'localhost' || hostname === '127.0.0.1' || port === '3000') {
             return `http://${hostname}:8000`;
         }
 
