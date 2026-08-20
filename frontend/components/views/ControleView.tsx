@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import api, { getBaseURL, downloadInspectionPdf, prolongEquipmentItem } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
+import { useView } from '@/context/ViewContext';
 import { Loader2, CheckCircle2, AlertCircle, Camera, ChevronRight, ChevronLeft, HardHat, Wrench, Truck, Plus, Save, X, Image as ImageIcon, Clock } from 'lucide-react';
 
 // Interface pour les utilisateurs (techniciens)
@@ -17,7 +18,7 @@ interface UserItem {
 // Interface pour les équipements/véhicules à contrôler
 interface EquipmentItem {
     id: number;
-    category: 'EPI' | 'EQUIPEMENT' | 'VEHICULE';
+    category: 'EQUIPEMENT' | 'VEHICULE';
     type_name: string;
     serial_number: string;
     expiration_date: string;
@@ -30,9 +31,10 @@ interface EquipmentItem {
 // Vue principale pour effectuer un auto-contrôle (multistep form)
 export default function ControleView() {
     const { user } = useAuth();
+    const { viewParams } = useView();
     const isAdmin = user?.is_staff || user?.is_superuser;
     const [step, setStep] = useState(1); // Étape du formulaire (1 à 4)
-    const [category, setCategory] = useState<'EPI' | 'EQUIPEMENT' | 'VEHICULE' | null>(null);
+    const [category, setCategory] = useState<'EQUIPEMENT' | 'VEHICULE' | null>(null);
     const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
     const [selectedItem, setSelectedItem] = useState<EquipmentItem | null>(null);
     const [defects, setDefects] = useState<Record<string, boolean>>({}); // Défauts cochés pour EPI/Équipement
@@ -48,7 +50,7 @@ export default function ControleView() {
     const [usersList, setUsersList] = useState<UserItem[]>([]);
     const [showAdminPanel, setShowAdminPanel] = useState(false);
     const [newEquip, setNewEquip] = useState({
-        category: 'EPI',
+        category: 'EQUIPEMENT',
         type_name: '',
         serial_number: '',
         expiration_date: '',
@@ -84,6 +86,17 @@ export default function ControleView() {
         }
     }, [user, isAdmin]);
 
+    useEffect(() => {
+        if (viewParams?.itemId && equipment.length > 0) {
+            const item = equipment.find(e => e.id === viewParams.itemId);
+            if (item) {
+                setCategory(item.category);
+                setSelectedItem(item);
+                setStep(3);
+            }
+        }
+    }, [viewParams, equipment]);
+
     // Récupère la liste des utilisateurs pour l'assignation (Admin uniquement)
     const fetchUsers = async () => {
         try {
@@ -108,7 +121,7 @@ export default function ControleView() {
     };
 
     // Sélection de la catégorie et passage à l'étape 2
-    const handleCategorySelect = (cat: 'EPI' | 'EQUIPEMENT' | 'VEHICULE') => {
+    const handleCategorySelect = (cat: 'EQUIPEMENT' | 'VEHICULE') => {
         setCategory(cat);
         setSelectedItem(null);
         setDefects({});
@@ -262,7 +275,7 @@ export default function ControleView() {
             }
             await api.post('/api/controls/equipment/', payload);
             alert("Équipement ajouté et assigné avec succès !");
-            setNewEquip({ category: 'EPI', type_name: '', serial_number: '', expiration_date: '', technician: '' });
+            setNewEquip({ category: 'EQUIPEMENT', type_name: '', serial_number: '', expiration_date: '', technician: '' });
             setShowAdminPanel(false);
             fetchEquipment();
         } catch (error) {
@@ -323,7 +336,6 @@ export default function ControleView() {
                                 className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
                                 required
                             >
-                                <option value="EPI">EPI</option>
                                 <option value="EQUIPEMENT">Équipement</option>
                                 <option value="VEHICULE">Véhicule</option>
                             </select>
@@ -408,21 +420,13 @@ export default function ControleView() {
 
             {!showAdminPanel && (
                 <div className="bg-secondary/30 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl overflow-hidden">
-                    {/* Étape 1 : Choix de la catégorie (EPI, Matériel, Véhicule) */}
+                    {/* Étape 1 : Choix de la catégorie (Matériel, Véhicule) */}
                     {step === 1 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                             <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
                                 <ChevronRight className="text-primary" /> Choisissez une catégorie
                             </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                <button
-                                    onClick={() => handleCategorySelect('EPI')}
-                                    className="group p-8 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-primary/5 transition-all text-center"
-                                >
-                                    <HardHat className="w-12 h-12 mx-auto mb-4 text-primary group-hover:scale-110 transition-transform" />
-                                    <span className="text-xl font-medium text-white">EPI</span>
-                                    <p className="text-sm text-gray-400 mt-2">Équipement de Protection Individuelle</p>
-                                </button>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <button
                                     onClick={() => handleCategorySelect('EQUIPEMENT')}
                                     className="group p-8 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-primary/5 transition-all text-center"
@@ -543,10 +547,10 @@ export default function ControleView() {
                                             ))}
                                         </div>
                                     ) : (
-                                        /* Case à cocher pour les défauts EPI/Équipement */
+                                        /* Case à cocher pour les défauts Équipement */
                                         <div className="space-y-4">
                                             <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Recherche de défauts</p>
-                                            {(category === 'EPI' ? ['Trou', 'Déchirure', 'Cassé', 'Absent'] : ['Dysfonctionnement', 'HS', 'Altéré']).map(defect => (
+                                            {['Dysfonctionnement', 'HS', 'Altéré'].map(defect => (
                                                 <label key={defect} className="flex items-center gap-3 p-4 rounded-lg bg-white/5 cursor-pointer hover:bg-white/10 transition-colors">
                                                     <input
                                                         type="checkbox"

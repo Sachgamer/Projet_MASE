@@ -74,3 +74,17 @@ class SlideshowSerializer(serializers.ModelSerializer):
         model = Slideshow
         fields = ['id', 'title', 'description', 'creator', 'created_at', 'slides', 'quiz', 'is_public', 'invited_users', 'scheduled_date']
         read_only_fields = ['creator', 'created_at']
+
+
+from .models import QuizSubmission
+
+class QuizSubmissionSerializer(serializers.ModelSerializer):
+    user_fullname = serializers.SerializerMethodField()
+    quiz_title = serializers.ReadOnlyField(source='quiz.title')
+
+    class Meta:
+        model = QuizSubmission
+        fields = ['id', 'quiz', 'quiz_title', 'user', 'user_fullname', 'score', 'total_questions', 'is_passed', 'signed_pdf', 'signature', 'submitted_at']
+
+    def get_user_fullname(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username

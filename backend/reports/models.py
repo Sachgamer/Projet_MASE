@@ -58,6 +58,9 @@ class AccidentReport(models.Model):
     published = models.BooleanField(default=False)
     # Indique si le rapport est supprimé (soft delete)
     is_deleted = models.BooleanField(default=False, verbose_name="Supprimé logiquement")
+    is_closed = models.BooleanField(default=False, verbose_name="Clôturé")
+    closed_at = models.DateTimeField(null=True, blank=True, verbose_name="Date de clôture")
+    is_archived = models.BooleanField(default=False, verbose_name="Archivé")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -79,6 +82,7 @@ class Action(models.Model):
     STATUS_CHOICES = [
         ('todo', 'À faire'),
         ('in_progress', 'En cours'),
+        ('pending_validation', 'En attente de validation'),
         ('done', 'Clôturé'),
         ('canceled', 'Annulé'),
     ]
@@ -95,6 +99,10 @@ class Action(models.Model):
     due_date = models.DateField(null=True, blank=True, verbose_name="Date d'échéance")
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_actions', verbose_name="Responsable")
     reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_actions', verbose_name="Créateur")
+    
+    completion_proof_text = models.TextField(blank=True, null=True, verbose_name="Preuve de complétion (texte)")
+    completion_proof_file = models.FileField(upload_to='action_proofs/', blank=True, null=True, verbose_name="Preuve de complétion (visuelle)")
+    is_archived = models.BooleanField(default=False, verbose_name="Archivé")
     
     # Origines de l'action
     accident_report = models.ForeignKey(AccidentReport, on_delete=models.SET_NULL, null=True, blank=True, related_name='actions')

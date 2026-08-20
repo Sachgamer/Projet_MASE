@@ -21,6 +21,8 @@ import AdminHabilitationView from '@/components/views/AdminHabilitationView';
 import ChemicalRegistryView from '@/components/views/ChemicalRegistryView';
 import UserManagementView from '@/components/views/UserManagementView';
 import PeriodicVisitsView from '@/components/views/PeriodicVisitsView';
+import PermissionsConfigView from '@/components/views/PermissionsConfigView';
+import AdminArchivesView from '@/components/views/AdminArchivesView';
 import { useAuth } from '@/context/AuthContext';
 
 /**
@@ -41,7 +43,7 @@ export default function NavigationController() {
     }
 
     // Sélection de la vue à afficher selon l'état global currentView
-    switch (currentView) {
+    switch (currentView as string) {
         case 'home':
             return <HomeView />;
         case 'dashboard':
@@ -82,6 +84,10 @@ export default function NavigationController() {
             return <UserManagementView />;
         case 'periodic-visits':
             return <PeriodicVisitsView />;
+        case 'permissions-config':
+            return <PermissionsConfigView />;
+        case 'archives':
+            return <AdminArchivesView />;
         default:
             return <HomeView />;
     }

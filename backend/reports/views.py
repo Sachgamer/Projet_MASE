@@ -41,11 +41,19 @@ class AccidentReportViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        show_archived = self.request.query_params.get('archived') == 'true'
+        
+        # Archivage automatique 24h après clôture pour les remontées et les actions
+        archive_time = timezone.now() - timedelta(hours=24)
+        AccidentReport.objects.filter(is_closed=True, closed_at__lte=archive_time, is_archived=False).update(is_archived=True)
+        Action.objects.filter(status='done', updated_at__lte=archive_time, is_archived=False).update(is_archived=True)
+        
+        qs = AccidentReport.objects.filter(is_deleted=False, is_archived=show_archived)
         if user.is_staff or user.is_superuser:
-            return AccidentReport.objects.filter(is_deleted=False)
+            return qs
         if user.agency:
-            return AccidentReport.objects.filter(is_deleted=False, reporter__agency=user.agency)
-        return AccidentReport.objects.filter(is_deleted=False, reporter=user)
+            return qs.filter(reporter__agency=user.agency)
+        return qs.filter(reporter=user)
 
     def perform_create(self, serializer):
         # Récupère toutes les photos envoyées dans le champ 'photos'
@@ -84,19 +92,29 @@ class AccidentReportViewSet(viewsets.ModelViewSet):
         
         return FileResponse(buffer, as_attachment=True, filename=filename)
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def close_report(self, request, pk=None):
+        report = self.get_object()
+        report.is_closed = True
+        report.closed_at = timezone.now()
+        report.save()
+        return Response({'detail': "Remontée clôturée avec succès. Elle sera archivée dans 24 heures."})
+
 class ActionViewSet(viewsets.ModelViewSet):
     serializer_class = ActionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
+        show_archived = self.request.query_params.get('archived') == 'true'
+        qs = Action.objects.filter(is_archived=show_archived)
         if user.is_staff or user.is_superuser:
-            return Action.objects.all()
+            return qs
         if user.agency:
-            return Action.objects.filter(
+            return qs.filter(
                 Q(assigned_to__agency=user.agency) | Q(reporter__agency=user.agency) | Q(assigned_to=user) | Q(reporter=user)
             ).distinct()
-        return Action.objects.filter(Q(assigned_to=user) | Q(reporter=user)).distinct()
+        return qs.filter(Q(assigned_to=user) | Q(reporter=user)).distinct()
 
     def perform_create(self, serializer):
         if not (self.request.user.is_staff or self.request.user.is_superuser):
@@ -131,6 +149,43 @@ class ActionViewSet(viewsets.ModelViewSet):
             'detail': 'Date d\'échéance de l\'action prolongée de 30 jours.',
             'new_due_date': action_item.due_date
         }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def submit_proof(self, request, pk=None):
+        action_item = self.get_object()
+        if action_item.assigned_to != request.user and not (request.user.is_staff or request.user.is_superuser):
+            return Response({'detail': "Vous n'êtes pas le responsable de cette action."}, status=status.HTTP_403_FORBIDDEN)
+        
+        proof_text = request.data.get('completion_proof_text')
+        proof_file = request.FILES.get('completion_proof_file')
+        
+        if not proof_text or not proof_file:
+            return Response({'detail': "Une preuve écrite et une preuve visuelle (photo/fichier) sont obligatoires."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        action_item.completion_proof_text = proof_text
+        action_item.completion_proof_file = proof_file
+        action_item.status = 'pending_validation'
+        action_item.save()
+        return Response({'detail': "Preuve soumise avec succès, en attente de validation par l'administrateur."})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def validate_action(self, request, pk=None):
+        action_item = self.get_object()
+        decision = request.data.get('decision')
+        rejection_reason = request.data.get('rejection_reason', '')
+        
+        if decision == 'approve':
+            action_item.status = 'done'
+            action_item.save()
+            return Response({'detail': "Action validée et clôturée avec succès."})
+        elif decision == 'reject':
+            action_item.status = 'in_progress'
+            if rejection_reason:
+                action_item.description += f"\n\n[Rejet Admin - {timezone.now().date().strftime('%d/%m/%Y')}]: {rejection_reason}"
+            action_item.save()
+            return Response({'detail': "Action rejetée et renvoyée en cours."})
+        else:
+            return Response({'detail': "Décision invalide. Choisissez 'approve' ou 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -269,67 +324,65 @@ class UserDashboardView(APIView):
         user = request.user
         now = timezone.now()
         today = now.date()
+        thirty_days_later = today + timedelta(days=30)
 
-        # 1. Prochain autocontrôle
+        # 1. Alertes d'expiration (J-30)
+        from users.models import Habilitation
         from controls.models import EquipmentItem, Inspection
-        active_items = EquipmentItem.objects.filter(technician=user, is_active=True, expiration_date__isnull=False)
-        next_autocontrol = active_items.order_by('expiration_date').first()
-        next_autocontrol_date = next_autocontrol.expiration_date.strftime('%Y-%m-%d') if next_autocontrol else None
-
-        # 2. Future causerie du profil
+        from files.models import PeriodicVisit
         from slideshows.models import Slideshow, QuizSubmission
-        upcoming_causeries_qs = Slideshow.objects.filter(
-            Q(scheduled_date__gt=now) & (Q(is_public=True) | Q(invited_users=user) | Q(creator=user))
-        ).distinct().order_by('scheduled_date')
-        next_causerie = upcoming_causeries_qs.first()
-        next_causerie_info = {
-            'id': next_causerie.id,
-            'title': next_causerie.title,
-            'scheduled_date': next_causerie.scheduled_date.isoformat()
-        } if next_causerie else None
 
-        # 3. Taux de conformité des auto-contrôles
-        user_inspections = Inspection.objects.filter(item__technician=user)
-        total_inspections = user_inspections.count()
-        if total_inspections > 0:
-            valid_inspections = user_inspections.filter(is_valid=True).count()
-            compliance_rate = round((valid_inspections / total_inspections) * 100, 1)
-        else:
-            compliance_rate = None  # Frontend matches N/A
+        expirations = []
 
-        # 4. Réussite Formations (pass rate)
-        user_submissions = QuizSubmission.objects.filter(user=user)
-        total_subs = user_submissions.count()
-        if total_subs > 0:
-            passed_subs = user_submissions.filter(is_passed=True).count()
-            quiz_pass_rate = round((passed_subs / total_subs) * 100, 1)
-        else:
-            quiz_pass_rate = 100.0
-
-        # 5. Dernière causerie
-        all_visible_causeries = Slideshow.objects.filter(
-            Q(is_public=True) | Q(invited_users=user) | Q(creator=user)
-        ).distinct().order_by('-created_at')
-        latest_causerie = all_visible_causeries.first()
-        latest_causerie_info = {
-            'id': latest_causerie.id,
-            'title': latest_causerie.title,
-            'description': latest_causerie.description,
-            'creator': latest_causerie.creator.username,
-            'created_at': latest_causerie.created_at.isoformat()
-        } if latest_causerie else None
-
-        # 6. Causeries à venir (upcoming list)
-        upcoming_list = []
-        for c in upcoming_causeries_qs[:5]:
-            upcoming_list.append({
-                'id': c.id,
-                'title': c.title,
-                'scheduled_date': c.scheduled_date.isoformat()
+        # Habilitations
+        exp_habs = Habilitation.objects.filter(user=user, expiration_date__gte=today, expiration_date__lte=thirty_days_later)
+        for h in exp_habs:
+            expirations.append({
+                'type': 'habilitation',
+                'label': f"Votre habilitation {h.get_type_name_display()} ({h.custom_title or ''}) expire bientôt",
+                'expiration_date': h.expiration_date.strftime('%Y-%m-%d'),
+                'days_remaining': (h.expiration_date - today).days
             })
 
-        # 7. Actions faites et à faire
-        user_actions = Action.objects.filter(assigned_to=user)
+        # Autocontrôles
+        exp_items = EquipmentItem.objects.filter(technician=user, is_active=True, expiration_date__gte=today, expiration_date__lte=thirty_days_later)
+        for item in exp_items:
+            expirations.append({
+                'type': 'control',
+                'label': f"Contrôle requis pour {item.type_name} ({item.get_category_display()})",
+                'expiration_date': item.expiration_date.strftime('%Y-%m-%d'),
+                'days_remaining': (item.expiration_date - today).days,
+                'item_id': item.id
+            })
+
+        # Visites Périodiques
+        exp_visits = PeriodicVisit.objects.filter(next_due_date__gte=today, next_due_date__lte=thirty_days_later)
+        for v in exp_visits:
+            expirations.append({
+                'type': 'periodic_visit',
+                'label': f"Visite périodique {v.get_visit_type_display() if v.visit_type != 'other' else (v.custom_type or 'Autre')} requise",
+                'expiration_date': v.next_due_date.strftime('%Y-%m-%d'),
+                'days_remaining': (v.next_due_date - today).days
+            })
+
+        # 2. Objectifs Annuels (Taux de conformité -> Nombre de causeries restantes à faire)
+        done_slideshows = QuizSubmission.objects.filter(user=user, submitted_at__year=now.year, is_passed=True).values('quiz__slideshow').distinct().count()
+        remaining_slideshows = max(0, user.min_slideshows_per_year - done_slideshows)
+
+        done_reports = AccidentReport.objects.filter(reporter=user, created_at__year=now.year, is_deleted=False).count()
+        remaining_reports = max(0, user.min_reports_per_year - done_reports)
+
+        annual_goals = {
+            'min_slideshows': user.min_slideshows_per_year,
+            'done_slideshows': done_slideshows,
+            'remaining_slideshows': remaining_slideshows,
+            'min_reports': user.min_reports_per_year,
+            'done_reports': done_reports,
+            'remaining_reports': remaining_reports,
+        }
+
+        # 3. Actions de sécurité (Bloc 1)
+        user_actions = Action.objects.filter(assigned_to=user, is_archived=False)
         todo_actions = user_actions.filter(status__in=['todo', 'in_progress']).order_by('due_date')
         done_actions = user_actions.filter(status='done').order_by('-updated_at')
 
@@ -344,17 +397,69 @@ class UserDashboardView(APIView):
                 'created_at': act.created_at.isoformat()
             }
 
+        actions_data = {
+            'todo': [serialize_action(a) for a in todo_actions],
+            'done': [serialize_action(a) for a in done_actions]
+        }
+
+        # 4. Causeries programmées (Bloc 2)
+        all_active_causeries = Slideshow.objects.filter(
+            is_archived=False, is_finished=False
+        ).filter(
+            Q(is_public=True) | Q(invited_users=user) | Q(creator=user)
+        ).distinct()
+
+        passed_quiz_ids = QuizSubmission.objects.filter(user=user, is_passed=True).values_list('quiz__slideshow_id', flat=True)
+        remaining_causeries_qs = all_active_causeries.exclude(id__in=passed_quiz_ids).order_by('scheduled_date', 'created_at')
+
+        scheduled_causeries = []
+        for c in remaining_causeries_qs[:5]:
+            scheduled_causeries.append({
+                'id': c.id,
+                'title': c.title,
+                'scheduled_date': c.scheduled_date.isoformat() if c.scheduled_date else None,
+                'creator': f"{c.creator.first_name} {c.creator.last_name}".strip() or c.creator.username,
+                'created_at': c.created_at.isoformat()
+            })
+
+        all_causeries_done = remaining_causeries_qs.count() == 0
+
+        # 5. Futurs Autocontrôles (Bloc 3)
+        upcoming_controls_qs = EquipmentItem.objects.filter(technician=user, is_active=True).order_by('expiration_date')[:5]
+        upcoming_controls = []
+        for item in upcoming_controls_qs:
+            upcoming_controls.append({
+                'id': item.id,
+                'type_name': item.type_name,
+                'category': item.category,
+                'category_display': item.get_category_display(),
+                'serial_number': item.serial_number,
+                'expiration_date': item.expiration_date.strftime('%Y-%m-%d') if item.expiration_date else None
+            })
+
+        # 6. Bandeau Remontées (Dernières remontées)
+        latest_reports_qs = AccidentReport.objects.filter(is_deleted=False, is_archived=False).order_by('-created_at')[:8]
+        latest_reports = []
+        for r in latest_reports_qs:
+            latest_reports.append({
+                'id': r.id,
+                'incident_type': r.incident_type,
+                'incident_type_display': r.get_incident_type_display(),
+                'severity': r.severity,
+                'severity_display': r.get_severity_display(),
+                'location': r.location,
+                'created_at': r.created_at.isoformat(),
+                'reporter_name': f"{r.reporter.first_name} {r.reporter.last_name}".strip() or r.reporter.username
+            })
+
         return Response({
-            'next_autocontrol': next_autocontrol_date,
-            'next_causerie': next_causerie_info,
-            'compliance_rate': compliance_rate,
-            'quiz_pass_rate': quiz_pass_rate,
-            'latest_causerie': latest_causerie_info,
-            'upcoming_causeries': upcoming_list,
-            'actions': {
-                'todo': [serialize_action(a) for a in todo_actions],
-                'done': [serialize_action(a) for a in done_actions]
-            }
+            'expirations': expirations,
+            'annual_goals': annual_goals,
+            'actions': actions_data,
+            'scheduled_causeries': scheduled_causeries,
+            'all_causeries_done': all_causeries_done,
+            'upcoming_controls': upcoming_controls,
+            'latest_reports': latest_reports
         })
 
 

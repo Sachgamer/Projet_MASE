@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from django.http import FileResponse
 from django.utils import timezone
-from .models import Slideshow, Quiz, Slide, Question, Choice
-from .serializers import SlideshowSerializer, QuizSerializer, SlideSerializer, QuestionSerializer, ChoiceSerializer
+from .models import Slideshow, Quiz, Slide, Question, Choice, QuizSubmission
+from .serializers import SlideshowSerializer, QuizSerializer, SlideSerializer, QuestionSerializer, ChoiceSerializer, QuizSubmissionSerializer
 from .utils import generate_quiz_pdf, send_invitation_email
 
 # Permission qui permet la modification seulement au créateur de l'élément (ou à un admin)
@@ -44,10 +44,18 @@ class SlideshowViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user or user.is_anonymous:
             return Slideshow.objects.none()
+            
+        show_archived = self.request.query_params.get('archived') == 'true'
+        
+        # Archivage automatique à la volée des causeries de plus de 30 jours
+        archive_limit = timezone.now() - timezone.timedelta(days=30)
+        Slideshow.objects.filter(scheduled_date__lte=archive_limit, is_archived=False).update(is_archived=True)
+        Slideshow.objects.filter(scheduled_date__isnull=True, created_at__lte=archive_limit, is_archived=False).update(is_archived=True)
+
         if user.is_staff or user.is_superuser:
-            return self.queryset.all().order_by('-created_at')
+            return Slideshow.objects.filter(is_archived=show_archived).order_by('-created_at')
         from django.db.models import Q
-        return self.queryset.filter(
+        return Slideshow.objects.filter(is_archived=show_archived).filter(
             Q(is_public=True) | Q(invited_users=user) | Q(creator=user)
         ).distinct().order_by('-created_at')
 
@@ -190,13 +198,12 @@ class QuizViewSet(viewsets.ModelViewSet):
         signature = request.data.get('signature', '')
         
         # Enregistrer la soumission dans la base de données
-        from .models import QuizSubmission
         attempts_count = QuizSubmission.objects.filter(user=request.user, quiz=quiz).count()
         if attempts_count >= 2:
             from rest_framework.exceptions import ValidationError
             raise ValidationError("Vous avez déjà effectué les 2 tentatives autorisées pour ce quiz.")
 
-        QuizSubmission.objects.create(
+        submission = QuizSubmission.objects.create(
             user=request.user,
             quiz=quiz,
             score=score,
@@ -222,14 +229,26 @@ class QuizViewSet(viewsets.ModelViewSet):
             presenter_name=presenter_name
         )
 
-        
         import re
         username = request.user.username if request.user else 'unknown'
-        date_str = timezone.localtime().strftime('%Y%m%d')
+        date_str_file = timezone.localtime().strftime('%Y%m%d')
         quiz_name = re.sub(r'[^\w\-_\.]', '', quiz.slideshow.title.replace(' ', '-'))
-        filename = f"{username}_{date_str}_{quiz_name}.pdf"
+        filename = f"{username}_{date_str_file}_{quiz_name}.pdf"
         
-        return FileResponse(buffer, as_attachment=True, filename=filename)
+        # Enregistrer le PDF signé dans le champ FileField de la soumission
+        from django.core.files.base import ContentFile
+        buffer.seek(0)
+        submission.signed_pdf.save(filename, ContentFile(buffer.read()), save=True)
+        
+        from rest_framework.response import Response
+        from rest_framework import status
+        return Response({
+            'detail': "Quiz soumis avec succès et signé sur le serveur.",
+            'score': score,
+            'total_questions': total_questions,
+            'is_passed': is_passed,
+            'submission_id': submission.id
+        }, status=status.HTTP_201_CREATED)
 
 # Gère les questions d'un quiz
 class QuestionViewSet(viewsets.ModelViewSet):
@@ -242,6 +261,19 @@ class QuestionViewSet(viewsets.ModelViewSet):
         if quiz.slideshow.creator != self.request.user and not (self.request.user.is_staff or self.request.user.is_superuser):
             raise PermissionDenied("Vous n'êtes pas le propriétaire de ce quiz.")
         serializer.save()
+
+
+class QuizSubmissionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = QuizSubmission.objects.all().order_by('-submitted_at')
+    serializer_class = QuizSubmissionSerializer
+    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser]
+
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        submission = self.get_object()
+        if not submission.signed_pdf:
+            return Response({'detail': "Aucun fichier PDF n'est enregistré pour cette participation."}, status=status.HTTP_404_NOT_FOUND)
+        return FileResponse(submission.signed_pdf, as_attachment=True, filename=submission.signed_pdf.name.split('/')[-1])
 
 # Gère les choix de réponse possibles pour une question
 class ChoiceViewSet(viewsets.ModelViewSet):

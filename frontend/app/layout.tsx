@@ -22,10 +22,12 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <AuthProvider>
           <ViewProvider>
-            <Navbar />
-            <main className="min-h-screen bg-background">
-              {children}
-            </main>
+            <div className="flex flex-col md:flex-row min-h-screen bg-background">
+              <Navbar />
+              <main className="flex-1 min-h-screen bg-background overflow-x-hidden">
+                {children}
+              </main>
+            </div>
           </ViewProvider>
         </AuthProvider>
       </body>

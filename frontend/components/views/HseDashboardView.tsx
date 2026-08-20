@@ -20,7 +20,10 @@ import {
     PlayCircle,
     CheckSquare,
     ClipboardList,
-    AlertCircle
+    AlertCircle,
+    Award,
+    History,
+    LayoutDashboard
 } from 'lucide-react';
 
 interface CauserieInfo {
@@ -42,6 +45,48 @@ interface ActionItem {
     created_at: string;
 }
 
+interface ExpirationAlert {
+    type: 'control' | 'habilitation' | 'visit';
+    label: string;
+    expiration_date: string;
+    days_remaining: number;
+    item_id?: number;
+}
+
+interface AnnualGoals {
+    min_slideshows: number;
+    done_slideshows: number;
+    remaining_slideshows: number;
+    min_reports: number;
+    done_reports: number;
+    remaining_reports: number;
+}
+
+interface LatestReport {
+    id: number;
+    location: string;
+    incident_type_display: string;
+    severity: string;
+    severity_display: string;
+    reporter_name: string;
+    created_at: string;
+}
+
+interface ScheduledCauserie {
+    id: number;
+    title: string;
+    scheduled_date: string | null;
+    creator: string;
+}
+
+interface UpcomingControl {
+    id: number;
+    type_name: string;
+    category_display: string;
+    serial_number: string;
+    expiration_date: string | null;
+}
+
 interface DashboardData {
     next_autocontrol: string | null;
     next_causerie: CauserieInfo | null;
@@ -53,6 +98,12 @@ interface DashboardData {
         todo: ActionItem[];
         done: ActionItem[];
     };
+    expirations: ExpirationAlert[];
+    annual_goals: AnnualGoals;
+    latest_reports: LatestReport[];
+    all_causeries_done: boolean;
+    scheduled_causeries: ScheduledCauserie[];
+    upcoming_controls: UpcomingControl[];
 }
 
 interface Slideshow {
@@ -218,167 +269,128 @@ export default function HseDashboardView() {
 
             {activeTab === 'dashboard' && (
                 <>
-                    {/* Indicators Banner */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {/* 1. Prochain autocontrôle */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:scale-[1.02] transition-all duration-200 backdrop-blur-md flex flex-col justify-between">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Prochain autocontrôle</p>
-                                    <h3 className="text-xl font-extrabold mt-2 text-white">
-                                        {data.next_autocontrol ? new Date(data.next_autocontrol).toLocaleDateString('fr-FR') : 'Aucun'}
-                                    </h3>
-                                </div>
-                                <div className="p-2.5 rounded-lg bg-orange-500/10 text-orange-400">
-                                    <HardHat className="w-5 h-5" />
-                                </div>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-white/5 text-[11px] text-gray-400 flex items-center justify-between">
-                                <span>Échéance matériel</span>
-                                <button onClick={() => setView('controle')} className="text-primary font-bold hover:underline flex items-center">
-                                    Contrôler <ChevronRight className="w-3 h-3" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 2. Future causerie du profil */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:scale-[1.02] transition-all duration-200 backdrop-blur-md flex flex-col justify-between">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Future causerie du profil</p>
-                                    <h3 className="text-lg font-extrabold mt-2 text-white truncate max-w-[180px]">
-                                        {data.next_causerie ? data.next_causerie.title : 'Aucune programmée'}
-                                    </h3>
-                                </div>
-                                <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-400">
-                                    <Calendar className="w-5 h-5" />
-                                </div>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-white/5 text-[11px] text-gray-400 flex items-center justify-between">
-                                <span className="truncate">
-                                    {data.next_causerie ? new Date(data.next_causerie.scheduled_date).toLocaleDateString('fr-FR') : 'Planifiée'}
-                                </span>
-                                <button onClick={() => setView('dashboard')} className="text-primary font-bold hover:underline flex items-center">
-                                    Voir <ChevronRight className="w-3 h-3" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 3. Taux de conformité */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:scale-[1.02] transition-all duration-200 backdrop-blur-md flex flex-col justify-between">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Taux de conformité</p>
-                                    <h3 className="text-3xl font-extrabold mt-2 text-white">
-                                        {data.compliance_rate !== null ? `${data.compliance_rate}%` : 'N/A'}
-                                    </h3>
-                                </div>
-                                <div className="p-2.5 rounded-lg bg-green-500/10 text-green-400">
-                                    <CheckCircle className="w-5 h-5" />
-                                </div>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-white/5 text-[11px] text-gray-400">
-                                <span>Basé sur vos auto-contrôles</span>
-                            </div>
-                        </div>
-
-                        {/* 4. Réussite Formations */}
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:scale-[1.02] transition-all duration-200 backdrop-blur-md flex flex-col justify-between">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Réussite Formations</p>
-                                    <h3 className="text-3xl font-extrabold mt-2 text-white">
-                                        {data.quiz_pass_rate}%
-                                    </h3>
-                                </div>
-                                <div className="p-2.5 rounded-lg bg-purple-500/10 text-purple-400">
-                                    <GraduationCap className="w-5 h-5" />
-                                </div>
-                            </div>
-                            <div className="mt-4 pt-3 border-t border-white/5 text-[11px] text-gray-400">
-                                <span>Moyenne de réussite aux quiz</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Central Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left/Middle Column (Causeries) */}
-                        <div className="lg:col-span-2 space-y-8">
-                            {/* Dernière causerie */}
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md space-y-4">
-                                <h2 className="text-xl font-bold flex items-center gap-2">
-                                    <Clock className="w-5 h-5 text-primary" />
-                                    Dernière Causerie Disponible
-                                </h2>
-                                {data.latest_causerie ? (
-                                    <div className="p-5 bg-white/5 border border-white/10 rounded-xl space-y-4">
-                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                            <h3 className="text-lg font-bold text-white">{data.latest_causerie.title}</h3>
-                                            <span className="text-xs text-gray-400 font-bold bg-white/10 px-2.5 py-1 rounded">
-                                                Publiée le {new Date(data.latest_causerie.created_at || '').toLocaleDateString('fr-FR')}
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-gray-300 leading-relaxed line-clamp-3">
-                                            {data.latest_causerie.description || "Aucune description fournie pour cette causerie."}
-                                        </p>
-                                        <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                                            <span className="text-xs text-gray-400 font-semibold">Par : {data.latest_causerie.creator}</span>
-                                            <Button 
-                                                onClick={() => setView('dashboard')}
-                                                className="flex items-center gap-2 text-xs"
-                                            >
-                                                <PlayCircle className="w-4 h-4" />
-                                                Lancer la causerie
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-center p-6 bg-white/5 border border-white/10 rounded-xl text-gray-500 italic text-sm">
-                                        Aucune causerie publiée pour le moment.
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Causeries à venir */}
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md space-y-4">
-                                <h2 className="text-xl font-bold flex items-center gap-2">
-                                    <Calendar className="w-5 h-5 text-blue-400" />
-                                    Causeries Programmées
-                                </h2>
-                                <div className="space-y-3">
-                                    {data.upcoming_causeries.map((c) => (
-                                        <div key={c.id} className="flex justify-between items-center p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors">
+                    {/* Expirations Alerts Banner (J-30) */}
+                    {data.expirations && data.expirations.length > 0 && (
+                        <div className="space-y-3">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-red-500 flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4" />
+                                Alertes d'expiration (J-30)
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {data.expirations.map((exp, idx) => (
+                                    <div key={idx} className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-center justify-between text-xs font-semibold">
+                                        <div className="flex items-center gap-3">
+                                            <AlertTriangle className="w-5 h-5 shrink-0" />
                                             <div>
-                                                <h4 className="font-bold text-sm text-white">{c.title}</h4>
-                                                <p className="text-xs text-gray-400 mt-0.5">Invitation / Session planifiée</p>
+                                                <p>{exp.label}</p>
+                                                <p className="text-[10px] text-red-500/70 mt-0.5">Date limite : {new Date(exp.expiration_date).toLocaleDateString('fr-FR')} ({exp.days_remaining} jours restants)</p>
                                             </div>
-                                            <span className="text-xs font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded">
-                                                {new Date(c.scheduled_date).toLocaleDateString('fr-FR')}
-                                            </span>
                                         </div>
-                                    ))}
-                                    {data.upcoming_causeries.length === 0 && (
-                                        <div className="text-center p-6 bg-white/5 border border-white/10 rounded-xl text-gray-500 italic text-sm">
-                                            Aucune future causerie planifiée pour votre profil.
-                                        </div>
-                                    )}
+                                        {exp.type === 'control' && (
+                                            <button 
+                                                onClick={() => setView('controle', { itemId: exp.item_id })}
+                                                className="px-3 py-1.5 rounded-lg bg-red-500 text-white font-bold text-[10px] hover:bg-red-600 transition-colors border-0 cursor-pointer shrink-0 ml-2"
+                                            >
+                                                Contrôler
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Objectifs Annuels */}
+                    {data.annual_goals && (
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
+                            <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+                                <Award className="w-5 h-5 text-yellow-500" />
+                                Objectifs Annuels
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Causeries Goal */}
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Objectif causeries dans l'année</p>
+                                        <h3 className="text-xl font-black mt-1 text-white">
+                                            {data.annual_goals.done_slideshows} / {data.annual_goals.min_slideshows} causeries faites
+                                        </h3>
+                                        <p className="text-[11px] text-gray-400 mt-0.5">
+                                            Restantes à faire : <span className="text-yellow-500 font-bold">{data.annual_goals.remaining_slideshows}</span>
+                                        </p>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-yellow-500/10 text-yellow-400 shrink-0">
+                                        <LayoutDashboard className="w-6 h-6" />
+                                    </div>
+                                </div>
+
+                                {/* Remontées Goal */}
+                                <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Objectif remontées de sécurité</p>
+                                        <h3 className="text-xl font-black mt-1 text-white">
+                                            {data.annual_goals.done_reports} / {data.annual_goals.min_reports} remontées faites
+                                        </h3>
+                                        <p className="text-[11px] text-gray-400 mt-0.5">
+                                            Restantes à faire : <span className="text-primary font-bold">{data.annual_goals.remaining_reports}</span>
+                                        </p>
+                                    </div>
+                                    <div className="p-3 rounded-xl bg-primary/10 text-primary shrink-0">
+                                        <AlertTriangle className="w-6 h-6" />
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    )}
 
-                        {/* Right Column (My Actions) */}
+                    {/* Latest Reports Horizontal Banner */}
+                    {data.latest_reports && data.latest_reports.length > 0 && (
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md space-y-4">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <History className="w-5 h-5 text-blue-400" />
+                                Dernières Remontées de Sécurité
+                            </h2>
+                            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10">
+                                {data.latest_reports.map((report) => {
+                                    const severityColors: Record<string, string> = {
+                                        low: 'bg-green-500/10 text-green-400 border-green-500/20',
+                                        medium: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+                                        high: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+                                        critical: 'bg-red-500/10 text-red-400 border-red-500/20'
+                                    };
+                                    return (
+                                        <div key={report.id} className="min-w-[280px] max-w-[320px] bg-white/5 border border-white/10 rounded-xl p-4 space-y-3 flex-shrink-0">
+                                            <div className="flex justify-between items-start">
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase truncate max-w-[150px]">{report.incident_type_display}</span>
+                                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded border shrink-0 ${severityColors[report.severity] || 'bg-white/10 text-white border-white/20'}`}>
+                                                    {report.severity_display}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-white line-clamp-2 font-semibold">Lieu : {report.location}</p>
+                                                <p className="text-[10px] text-gray-400 mt-1">Par {report.reporter_name} le {new Date(report.created_at).toLocaleDateString('fr-FR')}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Three Vertical Blocks */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        
+                        {/* Bloc 1 : Actions de sécurité */}
                         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between space-y-6">
                             <div>
                                 <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
                                     <ClipboardList className="w-5 h-5 text-orange-400" />
-                                    Mes Actions de Sécurité
+                                    Actions de Sécurité
                                 </h2>
-                                <p className="text-xs text-gray-400">Suivi personnel des actions de prévention affectées.</p>
+                                <p className="text-xs text-gray-400">Actions de prévention affectées.</p>
                             </div>
 
-                            {/* Actions List Container */}
-                            <div className="flex-1 space-y-6 overflow-y-auto max-h-[420px] pr-1">
+                            <div className="flex-1 space-y-6 overflow-y-auto max-h-[350px] pr-1">
                                 {/* À faire */}
                                 <div className="space-y-3">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-orange-400 flex items-center gap-2">
@@ -386,20 +398,9 @@ export default function HseDashboardView() {
                                         À réaliser ({data.actions.todo.length})
                                     </h3>
                                     {data.actions.todo.map((act) => (
-                                        <div key={act.id} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3 relative group">
-                                            <div className="flex justify-between items-start gap-4">
-                                                <div>
-                                                    <h4 className="text-sm font-bold text-white leading-tight">{act.title}</h4>
-                                                    <p className="text-[11px] text-gray-400 mt-1 line-clamp-2">{act.description}</p>
-                                                </div>
-                                                <button 
-                                                    onClick={() => handleActionStatusToggle(act.id, act.status)}
-                                                    className="p-1 rounded bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500 hover:text-white transition-colors cursor-pointer"
-                                                    title="Marquer comme fait"
-                                                >
-                                                    <CheckSquare className="w-4 h-4" />
-                                                </button>
-                                            </div>
+                                        <div key={act.id} className="p-4 bg-white/5 border border-white/10 rounded-xl space-y-3">
+                                            <h4 className="text-sm font-bold text-white leading-tight">{act.title}</h4>
+                                            <p className="text-[11px] text-gray-400 line-clamp-2">{act.description}</p>
                                             <div className="flex justify-between items-center text-[10px] text-gray-500 pt-2 border-t border-white/5">
                                                 <span className={`font-bold ${act.priority === 'high' || act.priority === 'critical' ? 'text-red-400' : 'text-gray-400'}`}>
                                                     Priorité : {act.priority.toUpperCase()}
@@ -422,18 +423,11 @@ export default function HseDashboardView() {
                                         Clôturées ({data.actions.done.length})
                                     </h3>
                                     {data.actions.done.slice(0, 3).map((act) => (
-                                        <div key={act.id} className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center gap-4 opacity-70 hover:opacity-100 transition-opacity">
+                                        <div key={act.id} className="p-3 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center gap-4 opacity-70">
                                             <div className="truncate">
                                                 <h4 className="text-xs font-bold text-white line-through truncate">{act.title}</h4>
                                                 <p className="text-[10px] text-gray-400 truncate mt-0.5">Clôturée</p>
                                             </div>
-                                            <button 
-                                                onClick={() => handleActionStatusToggle(act.id, act.status)}
-                                                className="p-1 rounded bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-red-500/10 hover:text-red-400 transition-colors cursor-pointer"
-                                                title="Réouvrir"
-                                            >
-                                                <XCircle className="w-4 h-4" />
-                                            </button>
                                         </div>
                                     ))}
                                     {data.actions.done.length === 0 && (
@@ -444,13 +438,121 @@ export default function HseDashboardView() {
 
                             <Button 
                                 variant="outline" 
-                                className="w-full text-white border-white/20 hover:bg-white/5 py-5 text-xs flex items-center justify-center gap-1.5"
+                                className="w-full text-white border-white/20 hover:bg-white/5 py-5 text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                                 onClick={() => setView('action-plan')}
                             >
-                                Gérer toutes mes actions
+                                Gérer mes actions
                                 <ChevronRight className="w-4 h-4" />
                             </Button>
                         </div>
+
+                        {/* Bloc 2 : Causeries programmées */}
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between space-y-6">
+                            <div>
+                                <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
+                                    <Calendar className="w-5 h-5 text-blue-400" />
+                                    Causeries Programmées
+                                </h2>
+                                <p className="text-xs text-gray-400">Sessions de sensibilisation à réaliser.</p>
+                            </div>
+
+                            <div className="flex-1 space-y-3 overflow-y-auto max-h-[350px] pr-1">
+                                {data.all_causeries_done ? (
+                                    <div className="text-center p-8 bg-green-500/5 border border-green-500/10 rounded-xl text-green-400 flex flex-col items-center justify-center space-y-2 h-48">
+                                        <CheckCircle2 className="w-8 h-8 text-green-500" />
+                                        <p className="font-bold text-sm">Pas de prochaine causerie</p>
+                                        <p className="text-[11px] text-gray-400">Toutes les causeries disponibles ont été réalisées.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {data.scheduled_causeries.map((c) => (
+                                            <div key={c.id} className="p-4 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center hover:bg-white/10 transition-colors">
+                                                <div className="min-w-0 flex-1 mr-2">
+                                                    <h4 className="font-bold text-xs text-white truncate">{c.title}</h4>
+                                                    <p className="text-[10px] text-gray-400 mt-0.5 truncate">Par {c.creator}</p>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                                    {c.scheduled_date && (
+                                                        <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded">
+                                                            {new Date(c.scheduled_date).toLocaleDateString('fr-FR')}
+                                                        </span>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => setView('dashboard')}
+                                                        className="text-primary font-bold hover:underline text-[10px] flex items-center border-0 bg-transparent cursor-pointer"
+                                                    >
+                                                        Lancer
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                            </div>
+
+                            <Button 
+                                variant="outline" 
+                                className="w-full text-white border-white/20 hover:bg-white/5 py-5 text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                                onClick={() => setView('dashboard')}
+                            >
+                                Voir les causeries
+                                <ChevronRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+
+                        {/* Bloc 3 : Futurs autocontrôles */}
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md flex flex-col justify-between space-y-6">
+                            <div>
+                                <h2 className="text-xl font-bold flex items-center gap-2 mb-2">
+                                    <HardHat className="w-5 h-5 text-teal-400" />
+                                    Futurs Autocontrôles
+                                </h2>
+                                <p className="text-xs text-gray-400">Prochains contrôles d'équipements / véhicules.</p>
+                            </div>
+
+                            <div className="flex-1 space-y-3 overflow-y-auto max-h-[350px] pr-1">
+                                {data.upcoming_controls && data.upcoming_controls.length > 0 ? (
+                                    <>
+                                        {data.upcoming_controls.map((item) => (
+                                            <div key={item.id} className="p-4 bg-white/5 border border-white/10 rounded-xl flex justify-between items-center hover:bg-white/10 transition-colors">
+                                                <div className="min-w-0 flex-1 mr-2">
+                                                    <h4 className="font-bold text-xs text-white truncate">{item.type_name}</h4>
+                                                    <p className="text-[10px] text-gray-400 mt-0.5 truncate">{item.category_display} - Sn: {item.serial_number}</p>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                                    {item.expiration_date && (
+                                                        <span className="text-[9px] font-bold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded">
+                                                            {new Date(item.expiration_date).toLocaleDateString('fr-FR')}
+                                                        </span>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => setView('controle', { itemId: item.id })}
+                                                        className="text-primary font-bold hover:underline text-[10px] flex items-center border-0 bg-transparent cursor-pointer"
+                                                    >
+                                                        Contrôler
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                ) : (
+                                    <div className="text-center p-8 bg-white/5 border border-white/10 rounded-xl text-gray-500 italic text-xs flex flex-col items-center justify-center h-48">
+                                        <CheckCircle className="w-8 h-8 text-teal-500 mb-2 opacity-50" />
+                                        Aucun équipement ou véhicule à contrôler
+                                    </div>
+                                )}
+                            </div>
+
+                            <Button 
+                                variant="outline" 
+                                className="w-full text-white border-white/20 hover:bg-white/5 py-5 text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                                onClick={() => setView('controle')}
+                            >
+                                Faire un autocontrôle
+                                <ChevronRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+
                     </div>
                 </>
             )}

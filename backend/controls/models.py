@@ -4,7 +4,6 @@ from django.conf import settings
 # Représente un objet d'équipement (EPI, Véhicule, etc.)
 class EquipmentItem(models.Model):
     CATEGORY_CHOICES = [
-        ('EPI', 'EPI'),
         ('EQUIPEMENT', 'Équipement'),
         ('VEHICULE', 'Véhicule'),
     ]

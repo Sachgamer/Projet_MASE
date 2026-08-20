@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import api, { getActions, createAction, updateAction, deleteAction, prolongAction } from '@/lib/api';
+import api, { getBaseURL, getActions, createAction, updateAction, deleteAction, prolongAction } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -22,7 +22,7 @@ interface Action {
     id: number;
     title: string;
     description: string;
-    status: 'todo' | 'in_progress' | 'done' | 'canceled';
+    status: 'todo' | 'in_progress' | 'pending_validation' | 'done' | 'canceled';
     priority: 'low' | 'medium' | 'high';
     due_date: string | null;
     assigned_to: number | null;
@@ -30,6 +30,8 @@ interface Action {
     assigned_to_fullname: string | null;
     reporter: number;
     reporter_name: string;
+    completion_proof_text: string | null;
+    completion_proof_file: string | null;
     created_at: string;
 }
 
@@ -46,7 +48,13 @@ export default function ActionPlanView() {
     const [users, setUsers] = useState<UserOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [layoutMode, setLayoutMode] = useState<'kanban' | 'list'>('list');
-    const isAdmin = user && (user.is_staff || user.is_superuser);
+    const [activeTab, setActiveTab] = useState<'all' | 'validation'>('all');
+    const isAdmin = user && (user.is_staff || user.is_superuser || user.role === 'admin');
+
+    const [proofActionId, setProofActionId] = useState<number | null>(null);
+    const [proofText, setProofText] = useState('');
+    const [proofFile, setProofFile] = useState<File | null>(null);
+    const [submittingProof, setSubmittingProof] = useState(false);
 
     const isNearExpiration = (dateStr: string | null) => {
         if (!dateStr) return false;
@@ -155,8 +163,63 @@ export default function ActionPlanView() {
         }
     };
 
-    // Filter logic
+    const handleActionCompleteTrigger = (actionId: number) => {
+        if (isAdmin) {
+            handleUpdateStatus(actionId, 'done');
+        } else {
+            setProofActionId(actionId);
+        }
+    };
+
+    const handleSubmitProof = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!proofActionId || !proofText.trim() || !proofFile) {
+            alert("Veuillez fournir une preuve écrite et sélectionner un fichier.");
+            return;
+        }
+        setSubmittingProof(true);
+        try {
+            const formData = new FormData();
+            formData.append('completion_proof_text', proofText);
+            formData.append('completion_proof_file', proofFile);
+            await api.post(`/api/actions/${proofActionId}/submit_proof/`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            alert("Preuve de complétion soumise avec succès ! L'action est en attente de validation.");
+            setProofActionId(null);
+            setProofText('');
+            setProofFile(null);
+            fetchActions();
+        } catch (err: any) {
+            console.error("Error submitting proof:", err);
+            alert(err.response?.data?.detail || "Erreur lors de la soumission de la preuve.");
+        } finally {
+            setSubmittingProof(false);
+        }
+    };
+
+    const handleValidateAction = async (id: number, decision: 'approve' | 'reject', reason?: string) => {
+        try {
+            await api.post(`/api/actions/${id}/validate_action/`, {
+                decision,
+                rejection_reason: reason || ''
+            });
+            alert(decision === 'approve' ? "Action validée !" : "Action renvoyée en cours.");
+            fetchActions();
+        } catch (err) {
+            console.error("Error validating action:", err);
+            alert("Erreur lors de la validation de l'action.");
+        }
+    };
+
     const filteredActions = actions.filter(act => {
+        if (activeTab === 'validation') {
+            return act.status === 'pending_validation';
+        }
+        if (act.status === 'pending_validation') return false;
+        
         const matchesStatus = filterStatus === 'all' || act.status === filterStatus;
         const matchesPriority = filterPriority === 'all' || act.priority === filterPriority;
         return matchesStatus && matchesPriority;
@@ -239,8 +302,26 @@ export default function ActionPlanView() {
                     </select>
                 </div>
 
-                {/* Layout Mode Switcher */}
+                {/* Validation Tabs for Admins */}
                 {isAdmin && (
+                    <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1">
+                        <button
+                            onClick={() => { setActiveTab('all'); }}
+                            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all border-0 cursor-pointer ${activeTab === 'all' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white bg-transparent'}`}
+                        >
+                            Toutes les Actions
+                        </button>
+                        <button
+                            onClick={() => { setActiveTab('validation'); }}
+                            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all border-0 cursor-pointer ${activeTab === 'validation' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white bg-transparent'}`}
+                        >
+                            Validation ({actions.filter(a => a.status === 'pending_validation').length})
+                        </button>
+                    </div>
+                )}
+
+                {/* Layout Mode Switcher */}
+                {isAdmin && activeTab === 'all' && (
                     <div className="flex bg-white/5 border border-white/10 rounded-lg p-1 gap-1">
                         <button
                             onClick={() => setLayoutMode('kanban')}
@@ -264,6 +345,81 @@ export default function ActionPlanView() {
                 <div className="flex justify-center items-center h-48">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
+            ) : activeTab === 'validation' && isAdmin ? (
+                /* Admin Validation view */
+                <div className="space-y-4">
+                    {filteredActions.length === 0 ? (
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center text-gray-400">
+                            Aucune action en attente de validation.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-6">
+                            {filteredActions.map((act) => (
+                                <div key={act.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md space-y-4 text-white">
+                                    <div className="flex justify-between items-start flex-wrap gap-4 border-b border-white/5 pb-4">
+                                        <div>
+                                            <h3 className="text-lg font-bold">{act.title}</h3>
+                                            <p className="text-xs text-gray-400 mt-1">Responsable : {act.assigned_to_fullname || act.assigned_to_name} | Échéance : {act.due_date ? new Date(act.due_date).toLocaleDateString('fr-FR') : 'Non spécifiée'}</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button 
+                                                size="sm" 
+                                                className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                                                onClick={() => handleValidateAction(act.id, 'approve')}
+                                            >
+                                                Valider / Clôturer
+                                            </Button>
+                                            <Button 
+                                                size="sm" 
+                                                variant="destructive"
+                                                onClick={() => {
+                                                    const reason = prompt("Raison du rejet (facultatif) :");
+                                                    if (reason !== null) {
+                                                        handleValidateAction(act.id, 'reject', reason);
+                                                    }
+                                                }}
+                                            >
+                                                Rejeter
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Description de l'action</span>
+                                            <p className="text-sm text-gray-300 bg-white/5 p-3 rounded-xl border border-white/5 min-h-[80px] whitespace-pre-wrap">{act.description}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Preuve écrite du technicien</span>
+                                            <p className="text-sm text-gray-300 bg-white/5 p-3 rounded-xl border border-white/5 min-h-[80px] whitespace-pre-wrap">{act.completion_proof_text || "Aucune explication écrite fournie."}</p>
+                                        </div>
+                                    </div>
+                                    {act.completion_proof_file && (
+                                        <div className="space-y-2 pt-2">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Preuve visuelle</span>
+                                            <div className="flex flex-col sm:flex-row items-start gap-4">
+                                                <a 
+                                                    href={`${getBaseURL()}${act.completion_proof_file}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-xs text-primary font-bold hover:underline flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-4 py-2.5 rounded-xl"
+                                                >
+                                                    Ouvrir le justificatif
+                                                </a>
+                                                {act.completion_proof_file.match(/\.(jpeg|jpg|gif|png)$/i) && (
+                                                    <img 
+                                                        src={`${getBaseURL()}${act.completion_proof_file}`}
+                                                        alt="Justificatif de réalisation"
+                                                        className="max-w-xs max-h-48 rounded-xl border border-white/10 object-cover shadow-lg"
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             ) : layoutMode === 'list' ? (
                 /* List View */
                 <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-md">
@@ -282,6 +438,8 @@ export default function ActionPlanView() {
                             <tbody className="divide-y divide-white/10">
                                 {filteredActions.map((act) => {
                                     const isOwner = user && (user.id === act.reporter || user.is_staff || user.is_superuser);
+                                    const matchesStatus = filterStatus === 'all' || act.status === filterStatus;
+                                    const isAssigned = act.assigned_to === user?.id;
                                     return (
                                         <tr key={act.id} className="hover:bg-white/5 transition-colors text-sm">
                                             <td className="px-6 py-4">
@@ -294,6 +452,7 @@ export default function ActionPlanView() {
                                                     <span className="capitalize">{
                                                         act.status === 'todo' ? 'À faire' : 
                                                         act.status === 'in_progress' ? 'En cours' : 
+                                                        act.status === 'pending_validation' ? 'Validation en attente' :
                                                         act.status === 'done' ? 'Clôturé' : 'Annulé'
                                                     }</span>
                                                 </div>
@@ -326,30 +485,30 @@ export default function ActionPlanView() {
                                                     <span>{act.assigned_to_fullname || act.assigned_to_name || 'Non assigné'}</span>
                                                 </div>
                                             </td>
-                                            {isAdmin && (
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex justify-end gap-1.5">
-                                                        {act.status !== 'done' && (
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="outline" 
-                                                                className="text-green-400 border-green-500/20 bg-green-500/10 hover:bg-green-500 hover:text-white"
-                                                                onClick={() => handleUpdateStatus(act.id, 'done')}
-                                                            >
-                                                                Clôturer
-                                                            </Button>
-                                                        )}
-                                                        {act.status === 'todo' && (
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="outline" 
-                                                                className="text-orange-400 border-orange-500/20 bg-orange-500/10 hover:bg-orange-500 hover:text-white"
-                                                                onClick={() => handleUpdateStatus(act.id, 'in_progress')}
-                                                            >
-                                                                Démarrer
-                                                            </Button>
-                                                        )}
-                                                        {isOwner && (
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex justify-end gap-1.5">
+                                                    {isAdmin ? (
+                                                        <>
+                                                            {act.status !== 'done' && (
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline" 
+                                                                    className="text-green-400 border-green-500/20 bg-green-500/10 hover:bg-green-500 hover:text-white"
+                                                                    onClick={() => handleUpdateStatus(act.id, 'done')}
+                                                                >
+                                                                    Clôturer
+                                                                </Button>
+                                                            )}
+                                                            {act.status === 'todo' && (
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline" 
+                                                                    className="text-orange-400 border-orange-500/20 bg-orange-500/10 hover:bg-orange-500 hover:text-white"
+                                                                    onClick={() => handleUpdateStatus(act.id, 'in_progress')}
+                                                                >
+                                                                    Démarrer
+                                                                </Button>
+                                                            )}
                                                             <button 
                                                                 onClick={() => handleDeleteAction(act.id)}
                                                                 className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-lg bg-transparent border-0 cursor-pointer"
@@ -357,10 +516,37 @@ export default function ActionPlanView() {
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
                                                             </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            )}
+                                                        </>
+                                                    ) : isAssigned ? (
+                                                        <>
+                                                            {act.status === 'todo' && (
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    variant="outline" 
+                                                                    className="text-orange-400 border-orange-500/20 bg-orange-500/10 hover:bg-orange-500 hover:text-white"
+                                                                    onClick={() => handleUpdateStatus(act.id, 'in_progress')}
+                                                                >
+                                                                    Démarrer
+                                                                </Button>
+                                                            )}
+                                                            {act.status === 'in_progress' && (
+                                                                <Button 
+                                                                    size="sm" 
+                                                                    className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                                                                    onClick={() => handleActionCompleteTrigger(act.id)}
+                                                                >
+                                                                    Clôturer
+                                                                </Button>
+                                                            )}
+                                                            {act.status === 'pending_validation' && (
+                                                                <span className="text-[10px] font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded">
+                                                                    Validation en attente
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    ) : null}
+                                                </div>
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -395,6 +581,7 @@ export default function ActionPlanView() {
                                     key={act.id} 
                                     action={act} 
                                     onUpdate={handleUpdateStatus} 
+                                    onCompleteTrigger={handleActionCompleteTrigger}
                                     onDelete={handleDeleteAction} 
                                     user={user}
                                     getPriorityBadge={getPriorityBadge}
@@ -421,6 +608,7 @@ export default function ActionPlanView() {
                                     key={act.id} 
                                     action={act} 
                                     onUpdate={handleUpdateStatus} 
+                                    onCompleteTrigger={handleActionCompleteTrigger}
                                     onDelete={handleDeleteAction} 
                                     user={user}
                                     getPriorityBadge={getPriorityBadge}
@@ -447,6 +635,7 @@ export default function ActionPlanView() {
                                     key={act.id} 
                                     action={act} 
                                     onUpdate={handleUpdateStatus} 
+                                    onCompleteTrigger={handleActionCompleteTrigger}
                                     onDelete={handleDeleteAction} 
                                     user={user}
                                     getPriorityBadge={getPriorityBadge}
@@ -542,6 +731,47 @@ export default function ActionPlanView() {
                     </div>
                 </div>
             )}
+
+            {/* Proof Submission Modal */}
+            {proofActionId && (
+                <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex justify-center items-center p-4">
+                    <div className="bg-secondary/95 border border-white/10 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-in zoom-in duration-200 text-white">
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                            <h3 className="text-xl font-bold">Soumettre une preuve de réalisation</h3>
+                            <button onClick={() => setProofActionId(null)} className="text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer text-xl">×</button>
+                        </div>
+                        <form onSubmit={handleSubmitProof} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Preuve écrite (Explication) *</label>
+                                <textarea
+                                    required
+                                    value={proofText}
+                                    onChange={(e) => setProofText(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-primary min-h-[100px] resize-none"
+                                    placeholder="Expliquez précisément ce qui a été fait..."
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Preuve visuelle (Photo / Justificatif) *</label>
+                                <input
+                                    required
+                                    type="file"
+                                    onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                                    className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary-hover file:cursor-pointer"
+                                />
+                            </div>
+                            <div className="pt-4 border-t border-white/10 flex justify-end gap-2">
+                                <Button type="button" variant="outline" className="text-white border-white/20" onClick={() => setProofActionId(null)}>
+                                    Annuler
+                                </Button>
+                                <Button type="submit" className="bg-primary hover:bg-primary-hover text-white" disabled={submittingProof}>
+                                    {submittingProof ? "Envoi..." : "Soumettre"}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -550,6 +780,7 @@ export default function ActionPlanView() {
 function KanbanCard({ 
     action, 
     onUpdate, 
+    onCompleteTrigger,
     onDelete, 
     user,
     getPriorityBadge,
@@ -557,17 +788,19 @@ function KanbanCard({
 }: { 
     action: Action; 
     onUpdate: (id: number, s: Action['status']) => void; 
+    onCompleteTrigger: (id: number) => void;
     onDelete: (id: number) => void;
     user: any;
     getPriorityBadge: (prio: string) => React.ReactNode;
     onProlong: (id: number) => void;
 }) {
-    const isOwner = user && (user.id === action.reporter || user.is_staff || user.is_superuser);
+    const isAdmin = user && (user.role === 'admin' || user.is_staff || user.is_superuser);
+    const isAssigned = action.assigned_to === user?.id;
     
     return (
         <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3 hover:shadow-md transition-shadow group relative">
             {/* Delete button on hover */}
-            {isOwner && (
+            {isAdmin && (
                 <button
                     onClick={() => onDelete(action.id)}
                     className="absolute top-2 right-2 p-1 text-gray-500 hover:text-red-500 bg-transparent border-0 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
@@ -633,44 +866,84 @@ function KanbanCard({
 
             {/* Quick transition buttons */}
             <div className="flex gap-1 border-t border-white/5 pt-3">
-                {action.status === 'todo' && (
-                    <Button 
-                        size="sm" 
-                        className="w-full text-[10px] h-7 bg-orange-600/20 text-orange-400 border border-orange-500/20 hover:bg-orange-600 hover:text-white"
-                        onClick={() => onUpdate(action.id, 'in_progress')}
-                    >
-                        Démarrer
-                    </Button>
-                )}
-                {action.status === 'in_progress' && (
+                {isAdmin ? (
                     <>
-                        <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="flex-1 text-[10px] h-7 text-gray-400 border-white/10 bg-transparent"
-                            onClick={() => onUpdate(action.id, 'todo')}
-                        >
-                            Mettre en attente
-                        </Button>
-                        <Button 
-                            size="sm" 
-                            className="flex-1 text-[10px] h-7 bg-green-600/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white"
-                            onClick={() => onUpdate(action.id, 'done')}
-                        >
-                            Clôturer
-                        </Button>
+                        {action.status === 'todo' && (
+                            <Button 
+                                size="sm" 
+                                className="w-full text-[10px] h-7 bg-orange-600/20 text-orange-400 border border-orange-500/20 hover:bg-orange-600 hover:text-white"
+                                onClick={() => onUpdate(action.id, 'in_progress')}
+                            >
+                                Démarrer
+                            </Button>
+                        )}
+                        {action.status === 'in_progress' && (
+                            <>
+                                <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="flex-1 text-[10px] h-7 text-gray-400 border-white/10 bg-transparent"
+                                    onClick={() => onUpdate(action.id, 'todo')}
+                                >
+                                    Mettre en attente
+                                </Button>
+                                <Button 
+                                    size="sm" 
+                                    className="flex-1 text-[10px] h-7 bg-green-600/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white"
+                                    onClick={() => onUpdate(action.id, 'done')}
+                                >
+                                    Clôturer
+                                </Button>
+                            </>
+                        )}
+                        {action.status === 'done' && (
+                            <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="w-full text-[10px] h-7 text-gray-400 border-white/10 bg-transparent hover:bg-white/5"
+                                onClick={() => onUpdate(action.id, 'in_progress')}
+                            >
+                                Réouvrir l'action
+                            </Button>
+                        )}
                     </>
-                )}
-                {action.status === 'done' && (
-                    <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="w-full text-[10px] h-7 text-gray-400 border-white/10 bg-transparent hover:bg-white/5"
-                        onClick={() => onUpdate(action.id, 'in_progress')}
-                    >
-                        Réouvrir l'action
-                    </Button>
-                )}
+                ) : isAssigned ? (
+                    <>
+                        {action.status === 'todo' && (
+                            <Button 
+                                size="sm" 
+                                className="w-full text-[10px] h-7 bg-orange-600/20 text-orange-400 border border-orange-500/20 hover:bg-orange-600 hover:text-white"
+                                onClick={() => onUpdate(action.id, 'in_progress')}
+                            >
+                                Démarrer
+                            </Button>
+                        )}
+                        {action.status === 'in_progress' && (
+                            <>
+                                <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="flex-1 text-[10px] h-7 text-gray-400 border-white/10 bg-transparent"
+                                    onClick={() => onUpdate(action.id, 'todo')}
+                                >
+                                    Attente
+                                </Button>
+                                <Button 
+                                    size="sm" 
+                                    className="flex-1 text-[10px] h-7 bg-green-600/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white"
+                                    onClick={() => onCompleteTrigger(action.id)}
+                                >
+                                    Clôturer
+                                </Button>
+                            </>
+                        )}
+                        {action.status === 'pending_validation' && (
+                            <span className="w-full text-center text-[10px] font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 py-1 rounded">
+                                Validation en attente
+                            </span>
+                        )}
+                    </>
+                ) : null}
             </div>
         </div>
     );

@@ -8,8 +8,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from dj_rest_auth.views import LoginView
-from .models import User, BlockedMacAddress, Habilitation, Agency
-from .serializers import UserSerializer, Verify2FASerializer, BlockedMacAddressSerializer, HabilitationSerializer, AgencySerializer
+from .models import User, BlockedMacAddress, Habilitation, Agency, ViewPermission
+from .serializers import UserSerializer, Verify2FASerializer, BlockedMacAddressSerializer, HabilitationSerializer, AgencySerializer, ViewPermissionSerializer
 
 
 # Gère la connexion personnalisée avec envoi de code 2FA par email
@@ -281,4 +281,81 @@ class HabilitationViewSet(viewsets.ModelViewSet):
             'detail': 'Date butoir prolongée de 30 jours.',
             'new_expiration_date': habilitation.expiration_date
         }, status=status.HTTP_200_OK)
+
+
+class ViewPermissionViewSet(viewsets.ModelViewSet):
+    queryset = ViewPermission.objects.all()
+    serializer_class = ViewPermissionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'my_permissions']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), permissions.IsAdminUser()]
+
+    @action(detail=False, methods=['get'], url_path='my-permissions')
+    def my_permissions(self, request):
+        user = request.user
+        role = getattr(user, 'role', 'technician')
+        
+        default_views = [
+            ('hse-dashboard', 'Dashboard HSE', True, True, True),
+            ('dashboard', 'Causeries', True, True, True),
+            ('action-plan', 'Plan d\'Actions', True, True, True),
+            ('controle', 'Auto-contrôles', True, True, True),
+            ('files', 'Mes Fichiers', True, True, True),
+            ('report-create', 'Faire une Remontée', True, True, True),
+            ('report-list', 'Historique des Remontées', True, True, True),
+            ('chemical-registry', 'Risques Chimiques / FDS', True, True, True),
+            ('habilitation-list', 'Habilitations & Visites', True, True, True),
+            ('periodic-visits', 'Visites Périodiques', True, True, True),
+            ('user-management', 'Gestion Utilisateurs', True, False, False),
+            ('auto-control-list', 'Liste des Auto-contrôles', True, False, False),
+            ('admin-habilitation', 'Habilitations Admin', True, False, False),
+            ('blocked-mac-list', 'Adresses MAC Bloquées', True, False, False),
+            ('permissions-config', 'Configuration des Droits', True, False, False),
+            ('archives', 'Archives Admin', True, False, False),
+        ]
+        
+        for name, label, admin, tech, agency in default_views:
+            ViewPermission.objects.get_or_create(
+                view_name=name,
+                defaults={
+                    'label': label,
+                    'allow_admin': admin,
+                    'allow_technician': tech,
+                    'allow_agency': agency
+                }
+            )
+
+        perms = ViewPermission.objects.all()
+        allowed_views = []
+        for p in perms:
+            if role == 'admin' and p.allow_admin:
+                allowed_views.append(p.view_name)
+            elif role == 'technician' and p.allow_technician:
+                allowed_views.append(p.view_name)
+            elif role == 'agency' and p.allow_agency:
+                allowed_views.append(p.view_name)
+
+        # Enlever les doublons potentiels
+        allowed_views = list(set(allowed_views))
+        return Response({'allowed_views': allowed_views})
+
+    @action(detail=False, methods=['post'], url_path='bulk-update', permission_classes=[permissions.IsAdminUser])
+    def bulk_update(self, request):
+        permissions_data = request.data.get('permissions', [])
+        for perm in permissions_data:
+            view_name = perm.get('view_name')
+            allow_admin = perm.get('allow_admin')
+            allow_technician = perm.get('allow_technician')
+            allow_agency = perm.get('allow_agency')
+            
+            ViewPermission.objects.filter(view_name=view_name).update(
+                allow_admin=allow_admin,
+                allow_technician=allow_technician,
+                allow_agency=allow_agency
+            )
+        return Response({'detail': 'Permissions mises à jour avec succès.'})
+
 

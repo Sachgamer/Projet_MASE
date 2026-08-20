@@ -460,14 +460,6 @@ export default function ReportListView() {
                         );
                     })}
                 </div>
-                
-                <Button 
-                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 shadow-lg text-white font-medium gap-2 px-5 py-2.5 rounded-xl transition-all border-0 cursor-pointer"
-                    onClick={() => setView('report-create')}
-                >
-                    <AlertTriangle className="w-4 h-4" />
-                    Faire une Remontée
-                </Button>
             </div>
 
             {/* Section 4 : Liste des Rapports (Courants / Pagines) */}

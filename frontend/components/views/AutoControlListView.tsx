@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import api, { getBaseURL, downloadInspectionPdf } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, ClipboardCheck, AlertTriangle, CheckCircle2, Search, Filter, Calendar, User, HardHat } from 'lucide-react';
+import { Loader2, ClipboardCheck, AlertTriangle, CheckCircle2, Search, Filter, Calendar, User, HardHat, Truck, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Interface pour les rapports d'auto-contrôle (EPI, Véhicules)
@@ -35,6 +35,7 @@ export default function AutoControlListView() {
     const [filter, setFilter] = useState<'ALL' | 'VALID' | 'INVALID' | 'UNREAD'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [groupBy, setGroupBy] = useState<'NONE' | 'VEHICULE' | 'EQUIPEMENT'>('NONE');
 
     useEffect(() => {
         fetchInspections();
@@ -97,6 +98,131 @@ export default function AutoControlListView() {
         return matchesFilter && matchesSearch;
     });
 
+    const groupedInspections = React.useMemo(() => {
+        if (groupBy === 'NONE') return null;
+        
+        const groups: Record<string, Inspection[]> = {};
+        filteredInspections.forEach(insp => {
+            if (insp.item_details?.category === groupBy) {
+                const key = `${insp.item_details.type_name} (N°: ${insp.item_details.serial_number || 'N/A'})`;
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(insp);
+            }
+        });
+        return groups;
+    }, [filteredInspections, groupBy]);
+
+    const renderInspectionCard = (insp: Inspection) => (
+        <div 
+            key={insp.id} 
+            className={`group bg-secondary/30 backdrop-blur-md border rounded-2xl overflow-hidden transition-all hover:scale-[1.02] duration-300 flex flex-col ${
+                insp.is_valid ? 'border-white/10' : 'border-red-500/30 shadow-lg shadow-red-500/5'
+            }`}
+        >
+            {/* Header */}
+            <div className="p-6 border-b border-white/5">
+                <div className="flex justify-between items-start mb-4">
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+                        insp.is_valid ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                    }`}>
+                        {insp.is_valid ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                        {insp.is_valid ? 'CONFORME' : 'DÉFAUT DÉTECTÉ'}
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                        {!insp.is_read && (
+                            <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded-full animate-pulse">
+                                NOUVEAU
+                            </span>
+                        )}
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(insp.date).toLocaleDateString('fr-FR')}
+                        </span>
+                    </div>
+                </div>
+                
+                <h3 className="text-xl font-bold truncate group-hover:text-primary transition-colors">
+                    {insp.item_details?.type_name || `Équipement #${insp.item}`}
+                </h3>
+                <p className="text-sm text-gray-400 flex items-center gap-1.5 mt-1">
+                    <HardHat className="w-4 h-4 text-primary" />
+                    {insp.item_details?.category} • {insp.item_details?.category === 'VEHICULE' ? "Plaque: " : 'S/N: '} {insp.item_details?.serial_number || 'N/A'}
+                </p>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4 flex-grow">
+                <div className="flex items-center gap-2 text-sm">
+                    <User className="w-4 h-4 text-primary" />
+                    <span className="font-medium">{insp.item_details?.technician_name}</span>
+                    <span className="text-gray-500">({insp.item_details?.technician_username})</span>
+                </div>
+
+                {insp.comments && (
+                    <div className="bg-white/5 p-3 rounded-lg text-sm italic text-gray-300 border-l-2 border-primary">
+                        "{insp.comments}"
+                    </div>
+                )}
+
+                {/* Défauts listés */}
+                {!insp.is_valid && Object.keys(insp.defects).length > 0 && (
+                    <div className="space-y-1.5">
+                        <p className="text-xs font-bold text-red-400 uppercase tracking-wider">Défauts listés :</p>
+                        <div className="flex flex-wrap gap-2">
+                            {Object.entries(insp.defects).filter(([k, v]) => v).map(([k]) => (
+                                <span key={k} className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[10px] rounded border border-red-500/20">
+                                    {k}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 pb-6 pt-0 space-y-2">
+                {insp.photo && (
+                    <button 
+                        onClick={() => setSelectedImage(insp.photo?.startsWith('http') ? insp.photo : `${getBaseURL()}${insp.photo}`)}
+                        className="block w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary text-center text-xs font-bold rounded-lg transition-colors border border-primary/20 cursor-pointer"
+                    >
+                        VOIR PHOTO DE PREUVE
+                    </button>
+                )}
+                 <button 
+                    onClick={() => {
+                        const dateStr = new Date(insp.date).toISOString().split('T')[0].replace(/-/g, '');
+                        const username = insp.item_details?.technician_username || 'unknown';
+                        const objName = insp.item_details?.type_name.replace(/\s+/g, '-').replace(/[^\w\-_\.]/g, '') || 'objet';
+                        const filename = `${username}_${dateStr}_${objName}.pdf`;
+                        downloadInspectionPdf(insp.id, filename);
+                    }}
+                    className="block w-full py-2 bg-white/5 hover:bg-white/10 text-white text-center text-xs font-bold rounded-lg transition-colors border border-white/10 cursor-pointer"
+                >
+                    TÉLÉCHARGER RAPPORT PDF
+                </button>
+                <button 
+                    onClick={() => toggleReadStatus(insp.id, insp.is_read)}
+                    className={`block w-full py-2 text-center text-xs font-bold rounded-lg transition-colors border cursor-pointer ${
+                        insp.is_read 
+                        ? 'bg-gray-500/10 text-gray-400 border-gray-500/20 hover:bg-gray-500/20' 
+                        : 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20'
+                    }`}
+                >
+                    {insp.is_read ? 'MARQUER COMME NON LU' : 'MARQUER COMME LU'}
+                </button>
+                {insp.is_read && (
+                    <button 
+                        onClick={() => handleDelete(insp.id)}
+                        className="block w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-center text-xs font-bold rounded-lg transition-colors border border-red-500/20 cursor-pointer"
+                    >
+                        SUPPRIMER LE RAPPORT
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -147,129 +273,71 @@ export default function AutoControlListView() {
                 </div>
             </div>
 
-            <div className="mb-8 relative max-w-2xl">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input 
-                    type="text"
-                    placeholder="Rechercher par équipement, technicien, plaque ou S/N..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-primary transition-all placeholder:text-gray-500"
-                />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredInspections.map((insp) => (
-                    <div 
-                        key={insp.id} 
-                        className={`group bg-secondary/30 backdrop-blur-md border rounded-2xl overflow-hidden transition-all hover:scale-[1.02] duration-300 flex flex-col ${
-                            insp.is_valid ? 'border-white/10' : 'border-red-500/30 shadow-lg shadow-red-500/5'
-                        }`}
-                    >
-                        {/* Header */}
-                        <div className="p-6 border-b border-white/5">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
-                                    insp.is_valid ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                                }`}>
-                                    {insp.is_valid ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                                    {insp.is_valid ? 'CONFORME' : 'DÉFAUT DÉTECTÉ'}
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                    {!insp.is_read && (
-                                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded-full animate-pulse">
-                                            NOUVEAU
-                                        </span>
-                                    )}
-                                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" />
-                                        {new Date(insp.date).toLocaleDateString()}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <h3 className="text-xl font-bold truncate group-hover:text-primary transition-colors">
-                                {insp.item_details?.type_name || `Équipement #${insp.item}`}
-                            </h3>
-                            <p className="text-sm text-gray-400 flex items-center gap-1.5 mt-1">
-                                <HardHat className="w-4 h-4 text-primary" />
-                                {insp.item_details?.category} • {insp.item_details?.category === 'VEHICULE' ? "Plaque d'immatriculation: " : 'S/N: '} {insp.item_details?.serial_number || 'N/A'}
-                            </p>
-                        </div>
-
-                        {/* Content */}
-                        <div className="p-6 space-y-4 flex-grow">
-                            <div className="flex items-center gap-2 text-sm">
-                                <User className="w-4 h-4 text-primary" />
-                                <span className="font-medium">{insp.item_details?.technician_name}</span>
-                                <span className="text-gray-500">({insp.item_details?.technician_username})</span>
-                            </div>
-
-                            {insp.comments && (
-                                <div className="bg-white/5 p-3 rounded-lg text-sm italic text-gray-300 border-l-2 border-primary">
-                                    "{insp.comments}"
-                                </div>
-                            )}
-
-                            {/* Défauts listés */}
-                            {!insp.is_valid && Object.keys(insp.defects).length > 0 && (
-                                <div className="space-y-1.5">
-                                    <p className="text-xs font-bold text-red-400 uppercase tracking-wider">Défauts listés :</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {Object.entries(insp.defects).filter(([k, v]) => v).map(([k]) => (
-                                            <span key={k} className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[10px] rounded border border-red-500/20">
-                                                {k}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="px-6 pb-6 pt-0 space-y-2">
-                            {insp.photo && (
-                                <button 
-                                    onClick={() => setSelectedImage(insp.photo?.startsWith('http') ? insp.photo : `${getBaseURL()}${insp.photo}`)}
-                                    className="block w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary text-center text-xs font-bold rounded-lg transition-colors border border-primary/20 cursor-pointer"
-                                >
-                                    VOIR PHOTO DE PREUVE
-                                </button>
-                            )}
-                             <button 
-                                onClick={() => {
-                                    const dateStr = new Date(insp.date).toISOString().split('T')[0].replace(/-/g, '');
-                                    const username = insp.item_details?.technician_username || 'unknown';
-                                    const objName = insp.item_details?.type_name.replace(/\s+/g, '-').replace(/[^\w\-_\.]/g, '') || 'objet';
-                                    const filename = `${username}_${dateStr}_${objName}.pdf`;
-                                    downloadInspectionPdf(insp.id, filename);
-                                }}
-                                className="block w-full py-2 bg-white/5 hover:bg-white/10 text-white text-center text-xs font-bold rounded-lg transition-colors border border-white/10"
-                            >
-                                TÉLÉCHARGER RAPPORT PDF
-                            </button>
-                            <button 
-                                onClick={() => toggleReadStatus(insp.id, insp.is_read)}
-                                className={`block w-full py-2 text-center text-xs font-bold rounded-lg transition-colors border ${
-                                    insp.is_read 
-                                    ? 'bg-gray-500/10 text-gray-400 border-gray-500/20 hover:bg-gray-500/20' 
-                                    : 'bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20'
-                                }`}
-                            >
-                                {insp.is_read ? 'MARQUER COMME NON LU' : 'MARQUER COMME LU'}
-                            </button>
-                            {insp.is_read && (
-                                <button 
-                                    onClick={() => handleDelete(insp.id)}
-                                    className="block w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-center text-xs font-bold rounded-lg transition-colors border border-red-500/20"
-                                >
-                                    SUPPRIMER LE RAPPORT
-                                </button>
-                            )}
-                        </div>
+            <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-between items-start sm:items-center">
+                <div className="relative flex-1 max-w-xl w-full">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input 
+                        type="text"
+                        placeholder="Rechercher par équipement, technicien, plaque ou S/N..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3.5 pl-12 pr-4 focus:outline-none focus:border-primary transition-all placeholder:text-gray-500 text-sm"
+                    />
+                </div>
+                
+                {/* Group By selector */}
+                <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Grouper par :</span>
+                    <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1">
+                        <button
+                            onClick={() => setGroupBy('NONE')}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border-0 cursor-pointer ${groupBy === 'NONE' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white bg-transparent'}`}
+                        >
+                            Aucun
+                        </button>
+                        <button
+                            onClick={() => setGroupBy('VEHICULE')}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border-0 cursor-pointer ${groupBy === 'VEHICULE' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white bg-transparent'}`}
+                        >
+                            Véhicule
+                        </button>
+                        <button
+                            onClick={() => setGroupBy('EQUIPEMENT')}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all border-0 cursor-pointer ${groupBy === 'EQUIPEMENT' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white bg-transparent'}`}
+                        >
+                            Équipement
+                        </button>
                     </div>
-                ))}
+                </div>
             </div>
+
+            {groupBy !== 'NONE' ? (
+                <div className="space-y-10">
+                    {Object.entries(groupedInspections || {}).map(([groupName, groupList]) => (
+                        <div key={groupName} className="space-y-4">
+                            <h2 className="text-xl font-bold border-b border-white/10 pb-2 text-primary flex items-center gap-2">
+                                {groupBy === 'VEHICULE' ? <Truck className="w-5 h-5 text-primary" /> : <Wrench className="w-5 h-5 text-primary" />}
+                                {groupName}
+                                <span className="text-xs bg-white/10 text-gray-400 px-2 py-0.5 rounded-full font-normal ml-1">
+                                    {groupList.length} contrôle{groupList.length > 1 ? 's' : ''}
+                                </span>
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {groupList.map(insp => renderInspectionCard(insp))}
+                            </div>
+                        </div>
+                    ))}
+                    {Object.keys(groupedInspections || {}).length === 0 && (
+                        <div className="text-center py-16 bg-white/5 rounded-2xl text-gray-500 italic text-sm">
+                            Aucun rapport trouvé pour cette catégorie avec les filtres actuels.
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredInspections.map((insp) => renderInspectionCard(insp))}
+                </div>
+            )}
 
             {filteredInspections.length === 0 && (
                 <div className="text-center py-24 bg-white/5 rounded-3xl border border-dashed border-white/10 mt-8">

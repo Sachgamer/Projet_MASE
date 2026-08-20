@@ -21,7 +21,7 @@ class AccidentReportSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AccidentReport
-        fields = ['id', 'severity', 'incident_type', 'location', 'worksite', 'worksite_details', 'description', 'incident_date', 'image', 'video', 'published', 'created_at', 'reporter', 'reporter_name', 'photos', 'days_lost']
+        fields = ['id', 'severity', 'incident_type', 'location', 'worksite', 'worksite_details', 'description', 'incident_date', 'image', 'video', 'published', 'is_closed', 'closed_at', 'is_archived', 'created_at', 'reporter', 'reporter_name', 'photos', 'days_lost']
         # L'utilisateur ne peut pas changer l'auteur lui-même
         read_only_fields = ['id', 'created_at', 'reporter']
 
@@ -36,6 +36,7 @@ class ActionSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'status', 'priority', 'due_date',
             'assigned_to', 'assigned_to_name', 'assigned_to_fullname',
             'reporter', 'reporter_name', 'accident_report', 'inspection',
+            'completion_proof_text', 'completion_proof_file', 'is_archived',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'reporter']

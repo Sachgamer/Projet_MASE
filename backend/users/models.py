@@ -26,6 +26,14 @@ class User(AbstractUser):
     
     agency = models.ForeignKey(Agency, on_delete=models.SET_NULL, null=True, blank=True, related_name='users', verbose_name="Agence")
     min_slideshows_per_year = models.IntegerField(default=10, verbose_name="Nombre minimum de causeries par an")
+    min_reports_per_year = models.IntegerField(default=5, verbose_name="Nombre minimum de remontées par an")
+    
+    ROLE_CHOICES = [
+        ('admin', 'Administrateur'),
+        ('technician', 'Technicien'),
+        ('agency', 'Agence'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='technician', verbose_name="Rôle")
 
 
 
@@ -163,4 +171,20 @@ class Habilitation(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.get_type_name_display()} ({self.custom_title or ''})"
+
+
+class ViewPermission(models.Model):
+    view_name = models.CharField(max_length=50, unique=True, verbose_name="Nom de la vue")
+    label = models.CharField(max_length=100, verbose_name="Libellé")
+    allow_admin = models.BooleanField(default=True, verbose_name="Autoriser Admin")
+    allow_technician = models.BooleanField(default=True, verbose_name="Autoriser Technicien")
+    allow_agency = models.BooleanField(default=True, verbose_name="Autoriser Agence")
+
+    class Meta:
+        verbose_name = "Permission de Vue"
+        verbose_name_plural = "Permissions de Vues"
+
+    def __str__(self):
+        return self.label
+
 

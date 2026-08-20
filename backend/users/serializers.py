@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from dj_rest_auth.serializers import UserDetailsSerializer
-from .models import User, BlockedMacAddress, Habilitation, Agency
+from .models import User, BlockedMacAddress, Habilitation, Agency, ViewPermission
 
 class AgencySerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,7 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'is_active', 'agency', 'agency_name', 'agency_region', 'min_slideshows_per_year', 'password')
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'is_superuser', 'is_active', 'agency', 'agency_name', 'agency_region', 'min_slideshows_per_year', 'min_reports_per_year', 'role', 'password')
         # Ces champs ne peuvent pas être modifiés par l'utilisateur
         read_only_fields = ('is_staff', 'is_superuser')
 
@@ -75,6 +75,13 @@ class HabilitationSerializer(serializers.ModelSerializer):
             fullname = f"{obj.user.first_name} {obj.user.last_name}".strip()
             return fullname or obj.user.username
         return ""
+
+
+class ViewPermissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ViewPermission
+        fields = '__all__'
+
 
 
 

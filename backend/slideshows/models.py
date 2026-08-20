@@ -14,6 +14,8 @@ class Slideshow(models.Model):
     invited_users = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='invited_slideshows', blank=True)
     # Date et heure de présence obligatoire pour la causerie
     scheduled_date = models.DateTimeField(blank=True, null=True)
+    is_finished = models.BooleanField(default=False, verbose_name="Terminée")
+    is_archived = models.BooleanField(default=False, verbose_name="Archivée")
 
     def __str__(self):
         return self.title
@@ -74,6 +76,7 @@ class QuizSubmission(models.Model):
     total_questions = models.PositiveIntegerField()
     is_passed = models.BooleanField(default=False)
     signature = models.TextField(blank=True, null=True, help_text="Signature manuscrite Base64")
+    signed_pdf = models.FileField(upload_to='signed_quizzes/', null=True, blank=True, verbose_name="PDF Signé")
     submitted_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

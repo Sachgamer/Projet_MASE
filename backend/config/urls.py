@@ -22,10 +22,10 @@ from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-from slideshows.views import SlideshowViewSet, QuizViewSet, SlideViewSet, QuestionViewSet, ChoiceViewSet
+from slideshows.views import SlideshowViewSet, QuizViewSet, SlideViewSet, QuestionViewSet, ChoiceViewSet, QuizSubmissionViewSet
 from files.views import PersonalFileViewSet, ChemicalProductViewSet, PeriodicVisitViewSet
 from reports.views import AccidentReportViewSet, WorkSiteViewSet, ActionViewSet, HseStatsView, UserDashboardView
-from users.views import UserViewSet, BlockedMacAddressViewSet, CustomLoginView, Verify2FAView, CustomLogoutView, HabilitationViewSet, AgencyViewSet
+from users.views import UserViewSet, BlockedMacAddressViewSet, CustomLoginView, Verify2FAView, CustomLogoutView, HabilitationViewSet, AgencyViewSet, ViewPermissionViewSet
 
 router = DefaultRouter()
 router.register(r'slideshows', SlideshowViewSet)
@@ -33,6 +33,7 @@ router.register(r'slides', SlideViewSet)
 router.register(r'quizzes', QuizViewSet)
 router.register(r'questions', QuestionViewSet)
 router.register(r'choices', ChoiceViewSet)
+router.register(r'quiz-submissions', QuizSubmissionViewSet, basename='quiz-submission')
 router.register(r'files', PersonalFileViewSet, basename='personal-file')
 router.register(r'chemical-products', ChemicalProductViewSet, basename='chemical-product')
 router.register(r'periodic-visits', PeriodicVisitViewSet, basename='periodic-visit')
@@ -43,6 +44,7 @@ router.register(r'users', UserViewSet, basename='user')
 router.register(r'agencies', AgencyViewSet, basename='agency')
 router.register(r'blocked-macs', BlockedMacAddressViewSet, basename='blocked-mac')
 router.register(r'habilitations', HabilitationViewSet, basename='habilitation')
+router.register(r'permissions', ViewPermissionViewSet, basename='permission')
 
 urlpatterns = [
     path('', RedirectView.as_view(url='/api/', permanent=False)),
