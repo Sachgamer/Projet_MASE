@@ -164,9 +164,16 @@ class ActionViewSet(viewsets.ModelViewSet):
             
         action_item.completion_proof_text = proof_text
         action_item.completion_proof_file = proof_file
-        action_item.status = 'pending_validation'
+        
+        if request.user.is_staff or request.user.is_superuser:
+            action_item.status = 'done'
+            message = "Preuve soumise avec succès, l'action est clôturée."
+        else:
+            action_item.status = 'pending_validation'
+            message = "Preuve soumise avec succès, en attente de validation par l'administrateur."
+            
         action_item.save()
-        return Response({'detail': "Preuve soumise avec succès, en attente de validation par l'administrateur."})
+        return Response({'detail': message})
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def validate_action(self, request, pk=None):
@@ -175,6 +182,8 @@ class ActionViewSet(viewsets.ModelViewSet):
         rejection_reason = request.data.get('rejection_reason', '')
         
         if decision == 'approve':
+            if not action_item.completion_proof_text or not action_item.completion_proof_file:
+                return Response({'detail': "Cette action ne contient pas de preuve de complétion et ne peut pas être clôturée."}, status=status.HTTP_400_BAD_REQUEST)
             action_item.status = 'done'
             action_item.save()
             return Response({'detail': "Action validée et clôturée avec succès."})

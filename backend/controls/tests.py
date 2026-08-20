@@ -3,6 +3,7 @@ from django.core import mail
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import EquipmentItem, Inspection
+from .serializers import EquipmentItemSerializer
 
 User = get_user_model()
 
@@ -89,3 +90,56 @@ class InspectionEmailAlertTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 2)
         email = mail.outbox[1]
         self.assertIn("Cassé : Présent", email.body)
+
+class EquipmentStatusSerializerTestCase(TestCase):
+    def setUp(self):
+        self.technician = User.objects.create_user(
+            username='tech_user',
+            email='tech@example.com',
+            password='password123'
+        )
+        self.equipment = EquipmentItem.objects.create(
+            category='EQUIPEMENT',
+            type_name='Harnais',
+            technician=self.technician,
+            serial_number='SN-098765'
+        )
+
+    def test_status_defaults_to_functional_when_no_inspection(self):
+        serializer = EquipmentItemSerializer(self.equipment)
+        self.assertEqual(serializer.data['status'], 'fonctionnel')
+
+    def test_status_is_defective_when_last_inspection_is_invalid(self):
+        # First check it defaults to functional
+        serializer = EquipmentItemSerializer(self.equipment)
+        self.assertEqual(serializer.data['status'], 'fonctionnel')
+
+        # Add invalid inspection
+        Inspection.objects.create(
+            item=self.equipment,
+            is_valid=False,
+            comments="Trouvé un défaut"
+        )
+        
+        serializer = EquipmentItemSerializer(self.equipment)
+        self.assertEqual(serializer.data['status'], 'defectueux')
+
+    def test_status_becomes_functional_again_after_valid_inspection(self):
+        # Invalid inspection
+        Inspection.objects.create(
+            item=self.equipment,
+            is_valid=False,
+            comments="Défaut"
+        )
+        serializer = EquipmentItemSerializer(self.equipment)
+        self.assertEqual(serializer.data['status'], 'defectueux')
+
+        # New valid inspection (repair)
+        Inspection.objects.create(
+            item=self.equipment,
+            is_valid=True,
+            comments="Réparé"
+        )
+        serializer = EquipmentItemSerializer(self.equipment)
+        self.assertEqual(serializer.data['status'], 'fonctionnel')
+

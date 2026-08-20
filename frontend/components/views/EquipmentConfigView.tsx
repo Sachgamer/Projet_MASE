@@ -22,6 +22,7 @@ interface EquipmentItem {
     technician: number | null;
     technician_name?: string;
     technician_username?: string;
+    status?: 'fonctionnel' | 'defectueux';
 }
 
 export default function EquipmentConfigView() {
@@ -44,8 +45,48 @@ export default function EquipmentConfigView() {
         serial_number: '',
         expiration_date: ''
     });
+    const [activeSubTab, setActiveSubTab] = useState<'assigned' | 'available'>('assigned');
 
     const canManage = user?.is_staff || user?.is_superuser || user?.role === 'admin' || user?.role === 'agency';
+
+    interface TechnicianSummary {
+        technicianId: number;
+        technicianName: string;
+        totalAssigned: number;
+        functionalCount: number;
+        defectiveCount: number;
+    }
+
+    const getTechnicianSummaries = (): TechnicianSummary[] => {
+        const summariesMap: { [key: number]: TechnicianSummary } = {};
+
+        equipment.forEach(item => {
+            if (item.technician !== null) {
+                const techId = item.technician;
+                const techName = item.technician_name || `Technicien #${techId}`;
+                const isDefective = item.status === 'defectueux';
+
+                if (!summariesMap[techId]) {
+                    summariesMap[techId] = {
+                        technicianId: techId,
+                        technicianName: techName,
+                        totalAssigned: 0,
+                        functionalCount: 0,
+                        defectiveCount: 0
+                    };
+                }
+
+                summariesMap[techId].totalAssigned += 1;
+                if (isDefective) {
+                    summariesMap[techId].defectiveCount += 1;
+                } else {
+                    summariesMap[techId].functionalCount += 1;
+                }
+            }
+        });
+
+        return Object.values(summariesMap);
+    };
 
     const handleAssignEquipment = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -53,13 +94,11 @@ export default function EquipmentConfigView() {
         setSubmitting(true);
         try {
             const payload = {
-                category: assigningItem.category,
-                type_name: assigningItem.type_name,
                 technician: assignmentForm.technician ? parseInt(assignmentForm.technician) : null,
                 serial_number: assignmentForm.serial_number,
                 expiration_date: assignmentForm.expiration_date || null
             };
-            if (payload.category === 'VEHICULE' || !payload.expiration_date) {
+            if (assigningItem.category === 'VEHICULE' || !payload.expiration_date) {
                 // @ts-ignore
                 delete payload.expiration_date;
             }
@@ -68,13 +107,13 @@ export default function EquipmentConfigView() {
                 setSubmitting(false);
                 return;
             }
-            await api.post('/api/controls/equipment/', payload);
-            alert(`Une instance de "${assigningItem.type_name}" a été attribuée avec succès !`);
+            await api.patch(`/api/controls/equipment/${assigningItem.id}/`, payload);
+            alert(`L'équipement "${assigningItem.type_name}" a été attribué avec succès !`);
             setAssigningItem(null);
             setAssignmentForm({ technician: '', serial_number: '', expiration_date: '' });
             fetchEquipment();
         } catch (error) {
-            console.error("Error duplicating/assigning equipment:", error);
+            console.error("Error assigning equipment:", error);
             alert("Erreur lors de l'affectation de l'équipement.");
         } finally {
             setSubmitting(false);
@@ -265,11 +304,81 @@ export default function EquipmentConfigView() {
                 </form>
             </div>
 
+            {/* Tableau de synthèse par technicien */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-8 shadow-xl backdrop-blur-md">
+                <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
+                    <Shield className="text-primary w-6 h-6" /> Synthèse des équipements par collaborateur
+                </h2>
+                <div className="overflow-x-auto rounded-xl border border-white/10">
+                    <table className="w-full text-left border-collapse bg-secondary/10">
+                        <thead>
+                            <tr className="border-b border-white/10 bg-white/5 text-gray-400 text-xs font-bold uppercase tracking-wider">
+                                <th className="p-4">Collaborateur</th>
+                                <th className="p-4 text-center">Équipements attribués</th>
+                                <th className="p-4 text-center">Fonctionnels</th>
+                                <th className="p-4 text-center">Défectueux</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5 text-sm text-gray-300">
+                            {getTechnicianSummaries().map(summary => (
+                                <tr key={summary.technicianId} className="hover:bg-white/5 transition-colors">
+                                    <td className="p-4 font-bold text-white flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary">
+                                            {summary.technicianName.charAt(0).toUpperCase()}
+                                        </div>
+                                        {summary.technicianName}
+                                    </td>
+                                    <td className="p-4 text-center font-semibold text-white">
+                                        {summary.totalAssigned}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400">
+                                            {summary.functionalCount}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-center">
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${summary.defectiveCount > 0 ? 'bg-red-500/20 text-red-400 font-extrabold animate-pulse' : 'bg-white/5 text-gray-400'}`}>
+                                            {summary.defectiveCount}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                            {getTechnicianSummaries().length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="p-8 text-center text-gray-500 italic">
+                                        Aucun équipement n'est actuellement attribué à un collaborateur.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             {/* Liste du matériel */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-8 shadow-xl backdrop-blur-md">
                 <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
                     <Wrench className="text-primary w-6 h-6" /> Liste du matériel et affectations
                 </h2>
+
+                {/* Commutateur d'onglets */}
+                <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1 w-fit mb-6">
+                    <button
+                        onClick={() => setActiveSubTab('assigned')}
+                        type="button"
+                        className={`px-4 py-2 text-xs font-bold rounded-lg transition-all border-0 cursor-pointer ${activeSubTab === 'assigned' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white bg-transparent'}`}
+                    >
+                        Équipements affectés ({equipment.filter(e => e.technician !== null).length})
+                    </button>
+                    <button
+                        onClick={() => setActiveSubTab('available')}
+                        type="button"
+                        className={`px-4 py-2 text-xs font-bold rounded-lg transition-all border-0 cursor-pointer ${activeSubTab === 'available' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white bg-transparent'}`}
+                    >
+                        Équipements disponibles ({equipment.filter(e => e.technician === null).length})
+                    </button>
+                </div>
+
                 <div className="overflow-x-auto rounded-xl border border-white/10">
                     <table className="w-full text-left border-collapse bg-secondary/10">
                         <thead>
@@ -283,62 +392,66 @@ export default function EquipmentConfigView() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5 text-sm text-gray-300">
-                            {equipment.map(item => (
-                                <tr key={item.id} className="hover:bg-white/5 transition-colors">
-                                    <td className="p-4 font-semibold">
-                                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${item.category === 'VEHICULE' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>
-                                            {item.category === 'VEHICULE' ? 'VÉHICULE' : 'ÉQUIPEMENT'}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 font-bold text-white">{item.type_name}</td>
-                                    <td className="p-4 font-mono text-gray-400">{item.serial_number || 'N/A'}</td>
-                                    <td className={`p-4 font-semibold ${item.expiration_date && new Date(item.expiration_date) < new Date() ? 'text-red-400' : 'text-gray-400'}`}>
-                                        {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString('fr-FR') : 'N/A'}
-                                    </td>
-                                    <td className="p-4">
-                                        <select
-                                            value={item.technician || ''}
-                                            onChange={e => handleUpdateTechnician(item.id, e.target.value)}
-                                            className="bg-secondary/50 border border-white/10 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-primary max-w-[200px]"
-                                        >
-                                            <option value="">Non assigné (Général)</option>
-                                            {usersList.map(u => (
-                                                <option key={u.id} value={u.id}>
-                                                    {u.first_name} {u.last_name} ({u.username})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </td>
-                                    <td className="p-4 text-right flex justify-end gap-2">
-                                        <button
-                                            onClick={() => {
-                                                setAssigningItem(item);
-                                                setAssignmentForm({
-                                                    technician: '',
-                                                    serial_number: item.serial_number || '',
-                                                    expiration_date: item.expiration_date || ''
-                                                });
-                                            }}
-                                            className="p-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
-                                            title="Attribuer à un technicien (créer une copie)"
-                                        >
-                                            <UserPlus className="w-4 h-4" />
-                                            Attribuer
-                                        </button>
-                                        <button
-                                            onClick={() => handleDeleteEquipment(item.id)}
-                                            className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg transition-colors cursor-pointer"
-                                            title="Supprimer l'équipement"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {equipment.length === 0 && (
+                            {equipment
+                                .filter(item => activeSubTab === 'assigned' ? item.technician !== null : item.technician === null)
+                                .map(item => (
+                                    <tr key={item.id} className="hover:bg-white/5 transition-colors">
+                                        <td className="p-4 font-semibold">
+                                            <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${item.category === 'VEHICULE' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                                {item.category === 'VEHICULE' ? 'VÉHICULE' : 'ÉQUIPEMENT'}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 font-bold text-white">{item.type_name}</td>
+                                        <td className="p-4 font-mono text-gray-400">{item.serial_number || 'N/A'}</td>
+                                        <td className={`p-4 font-semibold ${item.expiration_date && new Date(item.expiration_date) < new Date() ? 'text-red-400' : 'text-gray-400'}`}>
+                                            {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString('fr-FR') : 'N/A'}
+                                        </td>
+                                        <td className="p-4">
+                                            <select
+                                                value={item.technician || ''}
+                                                onChange={e => handleUpdateTechnician(item.id, e.target.value)}
+                                                className="bg-secondary/50 border border-white/10 rounded-lg p-2 text-white text-xs focus:outline-none focus:border-primary max-w-[200px]"
+                                            >
+                                                <option value="">Non assigné (Général)</option>
+                                                {usersList.map(u => (
+                                                    <option key={u.id} value={u.id}>
+                                                        {u.first_name} {u.last_name} ({u.username})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </td>
+                                        <td className="p-4 text-right flex justify-end gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    setAssigningItem(item);
+                                                    setAssignmentForm({
+                                                        technician: '',
+                                                        serial_number: item.serial_number || '',
+                                                        expiration_date: item.expiration_date || ''
+                                                    });
+                                                }}
+                                                className="p-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                                                title="Attribuer ce matériel à un collaborateur"
+                                            >
+                                                <UserPlus className="w-4 h-4" />
+                                                Attribuer
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteEquipment(item.id)}
+                                                className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg transition-colors cursor-pointer"
+                                                title="Supprimer l'équipement"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            {equipment.filter(item => activeSubTab === 'assigned' ? item.technician !== null : item.technician === null).length === 0 && (
                                 <tr>
                                     <td colSpan={6} className="p-8 text-center text-gray-500 italic">
-                                        Aucun équipement enregistré dans le parc matériel.
+                                        {activeSubTab === 'assigned' 
+                                            ? "Aucun équipement n'est actuellement attribué."
+                                            : "Aucun équipement disponible dans le stock."}
                                     </td>
                                 </tr>
                             )}
@@ -364,7 +477,7 @@ export default function EquipmentConfigView() {
                                 Attribuer ce matériel
                             </h3>
                             <p className="text-xs text-gray-400 mt-1">
-                                Créer une copie personnalisée de <strong>{assigningItem.type_name}</strong> pour un technicien.
+                                Affectez <strong>{assigningItem.type_name}</strong> à un collaborateur et renseignez le numéro de série et la date limite de contrôle.
                             </p>
                         </div>
 

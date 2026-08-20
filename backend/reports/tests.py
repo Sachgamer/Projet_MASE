@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APITestCase
-from .models import AccidentReport, WorkSite
+from .models import AccidentReport, WorkSite, Action
 
 User = get_user_model()
 
@@ -79,3 +80,62 @@ class WorkSiteAPITestCase(APITestCase):
         response = self.client.delete(f'/api/worksites/{self.worksite.id}/')
         self.assertEqual(response.status_code, 204)
         self.assertEqual(WorkSite.objects.count(), 0)
+
+class ActionAPITestCase(APITestCase):
+    def setUp(self):
+        self.reporter = User.objects.create_user(
+            username='reporter_user',
+            email='reporter@example.com',
+            password='password123',
+            is_staff=True
+        )
+        self.user = User.objects.create_user(
+            username='assigned_user',
+            email='assigned@example.com',
+            password='password123'
+        )
+        self.action = Action.objects.create(
+            title="Action test",
+            description="Description test",
+            reporter=self.reporter,
+            assigned_to=self.user,
+            status='todo'
+        )
+
+    def test_direct_close_without_proof_fails(self):
+        self.client.force_authenticate(user=self.reporter)
+        url = f"/api/actions/{self.action.id}/"
+        response = self.client.patch(url, {'status': 'done'})
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Une preuve écrite et une preuve visuelle (photo/fichier) sont obligatoires", str(response.data))
+
+    def test_submit_proof_regular_user(self):
+        self.client.force_authenticate(user=self.user)
+        url = f"/api/actions/{self.action.id}/submit_proof/"
+        
+        proof_file = SimpleUploadedFile("proof.jpg", b"file_content", content_type="image/jpeg")
+        data = {
+            'completion_proof_text': "J'ai bien corrigé le problème.",
+            'completion_proof_file': proof_file
+        }
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, 200)
+        self.action.refresh_from_db()
+        self.assertEqual(self.action.status, 'pending_validation')
+        self.assertEqual(self.action.completion_proof_text, "J'ai bien corrigé le problème.")
+
+    def test_submit_proof_admin_closes_directly(self):
+        self.client.force_authenticate(user=self.reporter)
+        url = f"/api/actions/{self.action.id}/submit_proof/"
+        
+        proof_file = SimpleUploadedFile("proof.jpg", b"file_content", content_type="image/jpeg")
+        data = {
+            'completion_proof_text': "Action clôturée par l'admin.",
+            'completion_proof_file': proof_file
+        }
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, 200)
+        self.action.refresh_from_db()
+        self.assertEqual(self.action.status, 'done')
+        self.assertEqual(self.action.completion_proof_text, "Action clôturée par l'admin.")
+

@@ -5,6 +5,7 @@ from .models import EquipmentItem, Inspection, InspectionPhoto
 class EquipmentItemSerializer(serializers.ModelSerializer):
     technician_name = serializers.SerializerMethodField()
     technician_username = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
 
     class Meta:
         model = EquipmentItem
@@ -19,6 +20,12 @@ class EquipmentItemSerializer(serializers.ModelSerializer):
         if obj.technician:
             return obj.technician.username
         return "N/A"
+
+    def get_status(self, obj):
+        last_inspection = obj.inspections.order_by('-date').first()
+        if last_inspection:
+            return "defectueux" if not last_inspection.is_valid else "fonctionnel"
+        return "fonctionnel"
 
 # Sérialiseur pour les multiples photos
 class InspectionPhotoSerializer(serializers.ModelSerializer):

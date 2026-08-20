@@ -164,11 +164,7 @@ export default function ActionPlanView() {
     };
 
     const handleActionCompleteTrigger = (actionId: number) => {
-        if (isAdmin) {
-            handleUpdateStatus(actionId, 'done');
-        } else {
-            setProofActionId(actionId);
-        }
+        setProofActionId(actionId);
     };
 
     const handleSubmitProof = async (e: React.FormEvent) => {
@@ -187,7 +183,11 @@ export default function ActionPlanView() {
                     'Content-Type': 'multipart/form-data'
                 }
             });
-            alert("Preuve de complétion soumise avec succès ! L'action est en attente de validation.");
+            if (isAdmin) {
+                alert("Preuve de complétion soumise avec succès ! L'action est clôturée.");
+            } else {
+                alert("Preuve de complétion soumise avec succès ! L'action est en attente de validation.");
+            }
             setProofActionId(null);
             setProofText('');
             setProofFile(null);
@@ -494,7 +494,7 @@ export default function ActionPlanView() {
                                                                     size="sm" 
                                                                     variant="outline" 
                                                                     className="text-green-400 border-green-500/20 bg-green-500/10 hover:bg-green-500 hover:text-white"
-                                                                    onClick={() => handleUpdateStatus(act.id, 'done')}
+                                                                    onClick={() => handleActionCompleteTrigger(act.id)}
                                                                 >
                                                                     Clôturer
                                                                 </Button>
@@ -890,7 +890,7 @@ function KanbanCard({
                                 <Button 
                                     size="sm" 
                                     className="flex-1 text-[10px] h-7 bg-green-600/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white"
-                                    onClick={() => onUpdate(action.id, 'done')}
+                                    onClick={() => onCompleteTrigger(action.id)}
                                 >
                                     Clôturer
                                 </Button>

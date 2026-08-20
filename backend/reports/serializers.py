@@ -47,3 +47,15 @@ class ActionSerializer(serializers.ModelSerializer):
             return fullname or obj.assigned_to.username
         return None
 
+    def validate(self, attrs):
+        status = attrs.get('status', self.instance.status if self.instance else 'todo')
+        if status in ['done', 'pending_validation']:
+            proof_text = attrs.get('completion_proof_text', self.instance.completion_proof_text if self.instance else None)
+            proof_file = attrs.get('completion_proof_file', self.instance.completion_proof_file if self.instance else None)
+            if not proof_text or not proof_file:
+                raise serializers.ValidationError(
+                    "Une preuve écrite et une preuve visuelle (photo/fichier) sont obligatoires pour clôturer ou valider une action."
+                )
+        return attrs
+
+
