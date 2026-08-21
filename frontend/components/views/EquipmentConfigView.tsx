@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Plus, Save, Wrench, Trash2, Shield, AlertCircle, UserPlus, X } from 'lucide-react';
+import { Loader2, Plus, Save, Wrench, Trash2, Shield, AlertCircle, UserPlus, UserMinus, X } from 'lucide-react';
 
 interface UserItem {
     id: number;
@@ -23,6 +23,8 @@ interface EquipmentItem {
     technician_name?: string;
     technician_username?: string;
     status?: 'fonctionnel' | 'defectueux';
+    last_inspection_date?: string | null;
+    last_inspection_is_valid?: boolean | null;
 }
 
 export default function EquipmentConfigView() {
@@ -50,6 +52,7 @@ export default function EquipmentConfigView() {
         expiration_date: ''
     });
     const [activeSubTab, setActiveSubTab] = useState<'assigned' | 'available'>('assigned');
+    const [selectedTechSummary, setSelectedTechSummary] = useState<TechnicianSummary | null>(null);
 
     const canManage = user?.is_staff || user?.is_superuser || user?.role === 'admin' || user?.role === 'agency';
 
@@ -98,13 +101,11 @@ export default function EquipmentConfigView() {
         setSubmitting(true);
         try {
             const payload = {
-                category: assigningItem.category,
-                type_name: assigningItem.type_name,
                 technician: assignmentForm.technician ? parseInt(assignmentForm.technician) : null,
                 serial_number: assignmentForm.serial_number,
                 expiration_date: assignmentForm.expiration_date || null
             };
-            if (payload.category === 'VEHICULE' || !payload.expiration_date) {
+            if (assigningItem.category === 'VEHICULE' || !payload.expiration_date) {
                 // @ts-ignore
                 delete payload.expiration_date;
             }
@@ -113,7 +114,7 @@ export default function EquipmentConfigView() {
                 setSubmitting(false);
                 return;
             }
-            await api.post('/api/controls/equipment/', payload);
+            await api.patch(`/api/controls/equipment/${assigningItem.id}/`, payload);
             alert(`L'équipement "${assigningItem.type_name}" a été attribué avec succès !`);
             setAssigningItem(null);
             setAssignmentForm({ technician: '', serial_number: '', expiration_date: '' });
@@ -187,18 +188,16 @@ export default function EquipmentConfigView() {
             if (!selectedItem) return;
 
             const payload = {
-                category: selectedItem.category,
-                type_name: selectedItem.type_name,
                 technician: techId,
                 serial_number: assignForm.serial_number,
                 expiration_date: assignForm.expiration_date || null
             };
-            if (payload.category === 'VEHICULE' || !payload.expiration_date) {
+            if (selectedItem.category === 'VEHICULE' || !payload.expiration_date) {
                 // @ts-ignore
                 delete payload.expiration_date;
             }
 
-            await api.post('/api/controls/equipment/', payload);
+            await api.patch(`/api/controls/equipment/${selectedItem.id}/`, payload);
             alert(`L'équipement "${selectedItem.type_name}" a été attribué avec succès !`);
             setAssignForm({ equipmentId: '', technician: '', serial_number: '', expiration_date: '' });
             fetchEquipment();
@@ -252,6 +251,18 @@ export default function EquipmentConfigView() {
         } catch (error) {
             console.error("Error deleting equipment:", error);
             alert("Erreur lors de la suppression de l'équipement.");
+        }
+    };
+
+    const handleRemoveEquipmentFromTech = async (itemId: number) => {
+        if (!window.confirm("Êtes-vous sûr de vouloir retirer cet équipement de ce collaborateur ?")) return;
+        try {
+            await api.patch(`/api/controls/equipment/${itemId}/`, { technician: null });
+            alert("L'équipement a été retiré avec succès.");
+            fetchEquipment();
+        } catch (error) {
+            console.error("Error removing technician assignment:", error);
+            alert("Erreur lors du retrait de l'équipement.");
         }
     };
 
@@ -378,7 +389,12 @@ export default function EquipmentConfigView() {
                         </thead>
                         <tbody className="divide-y divide-white/5 text-sm text-gray-300">
                             {getTechnicianSummaries().map(summary => (
-                                <tr key={summary.technicianId} className="hover:bg-white/5 transition-colors">
+                                <tr 
+                                    key={summary.technicianId} 
+                                    className="hover:bg-white/10 transition-colors cursor-pointer"
+                                    onClick={() => setSelectedTechSummary(summary)}
+                                    title="Cliquez pour voir les détails des équipements"
+                                >
                                     <td className="p-4 font-bold text-white flex items-center gap-2">
                                         <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary">
                                             {summary.technicianName.charAt(0).toUpperCase()}
@@ -389,12 +405,12 @@ export default function EquipmentConfigView() {
                                         {summary.totalAssigned}
                                     </td>
                                     <td className="p-4 text-center">
-                                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400">
+                                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30">
                                             {summary.functionalCount}
                                         </span>
                                     </td>
                                     <td className="p-4 text-center">
-                                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${summary.defectiveCount > 0 ? 'bg-red-500/20 text-red-400 font-extrabold animate-pulse' : 'bg-white/5 text-gray-400'}`}>
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${summary.defectiveCount > 0 ? 'bg-red-500/20 text-red-400 border-red-500/30 font-extrabold animate-pulse' : 'bg-white/5 text-gray-400 border-white/5'}`}>
                                             {summary.defectiveCount}
                                         </span>
                                     </td>
@@ -486,21 +502,32 @@ export default function EquipmentConfigView() {
                                             </select>
                                         </td>
                                         <td className="p-4 text-right flex justify-end gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    setAssigningItem(item);
-                                                    setAssignmentForm({
-                                                        technician: '',
-                                                        serial_number: item.serial_number || '',
-                                                        expiration_date: item.expiration_date || ''
-                                                    });
-                                                }}
-                                                className="p-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
-                                                title="Attribuer ce matériel à un collaborateur"
-                                            >
-                                                <UserPlus className="w-4 h-4" />
-                                                Attribuer
-                                            </button>
+                                            {activeSubTab === 'available' ? (
+                                                <button
+                                                    onClick={() => {
+                                                        setAssigningItem(item);
+                                                        setAssignmentForm({
+                                                            technician: '',
+                                                            serial_number: item.serial_number || '',
+                                                            expiration_date: item.expiration_date || ''
+                                                        });
+                                                    }}
+                                                    className="p-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold"
+                                                    title="Attribuer ce matériel à un collaborateur"
+                                                >
+                                                    <UserPlus className="w-4 h-4" />
+                                                    Attribuer
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleRemoveEquipmentFromTech(item.id)}
+                                                    className={`p-2 rounded-lg transition-colors cursor-pointer flex items-center gap-1 text-xs font-semibold ${item.status === 'defectueux' ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse' : 'bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400'}`}
+                                                    title="Retirer ce matériel de ce collaborateur"
+                                                >
+                                                    <UserMinus className="w-4 h-4" />
+                                                    Retirer
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => handleDeleteEquipment(item.id)}
                                                 className="p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg transition-colors cursor-pointer"
@@ -678,6 +705,114 @@ export default function EquipmentConfigView() {
                                 </Button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de détails des équipements par collaborateur */}
+            {selectedTechSummary && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-secondary border border-white/10 w-full max-w-2xl rounded-2xl p-6 shadow-2xl space-y-6 relative animate-in zoom-in duration-300 text-white">
+                        <button
+                            onClick={() => setSelectedTechSummary(null)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+
+                        <div>
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Shield className="text-primary w-5 h-5" />
+                                Équipements de {selectedTechSummary.technicianName}
+                            </h3>
+                            <p className="text-xs text-gray-400 mt-1">
+                                Retrouvez ci-dessous la liste des matériels affectés à ce collaborateur, l'état de leur autocontrôle et gérez leurs attributions.
+                            </p>
+                        </div>
+
+                        <div className="max-h-[60vh] overflow-y-auto pr-1 space-y-4">
+                            {equipment.filter(e => e.technician === selectedTechSummary.technicianId).length === 0 ? (
+                                <p className="text-sm text-gray-500 italic text-center py-4">
+                                    Aucun équipement n'est actuellement attribué à ce collaborateur.
+                                </p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {equipment
+                                        .filter(e => e.technician === selectedTechSummary.technicianId)
+                                        .map(item => {
+                                            const hasInspection = !!item.last_inspection_date;
+                                            const isValid = item.last_inspection_is_valid;
+                                            
+                                            return (
+                                                <div key={item.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-white/5 border border-white/10 rounded-xl gap-4">
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${item.category === 'VEHICULE' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'}`}>
+                                                                {item.category === 'VEHICULE' ? 'VÉHICULE' : 'ÉQUIPEMENT'}
+                                                            </span>
+                                                            <span className="font-bold text-white text-sm">{item.type_name}</span>
+                                                        </div>
+                                                        <div className="text-xs text-gray-400 space-y-0.5">
+                                                            <p><span className="font-semibold text-gray-500">N° Série / Plaque:</span> <span className="font-mono">{item.serial_number || 'N/A'}</span></p>
+                                                            <p><span className="font-semibold text-gray-500">Date limite:</span> {item.expiration_date ? new Date(item.expiration_date).toLocaleDateString('fr-FR') : 'N/A'}</p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                                        {/* Statut Autocontrôle */}
+                                                        <div className="text-right">
+                                                            {!hasInspection ? (
+                                                                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                                                    Non effectué
+                                                                </span>
+                                                            ) : isValid ? (
+                                                                <div className="flex flex-col items-end">
+                                                                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30">
+                                                                        Conforme
+                                                                    </span>
+                                                                    <span className="text-[10px] text-gray-500 mt-1">
+                                                                        Fait le {new Date(item.last_inspection_date!).toLocaleDateString('fr-FR')}
+                                                                    </span>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex flex-col items-end">
+                                                                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30 font-bold">
+                                                                        Non conforme
+                                                                    </span>
+                                                                    <span className="text-[10px] text-gray-500 mt-1">
+                                                                        Fait le {new Date(item.last_inspection_date!).toLocaleDateString('fr-FR')}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Action Retrait */}
+                                                        <Button
+                                                            onClick={() => handleRemoveEquipmentFromTech(item.id)}
+                                                            variant="destructive"
+                                                            size="sm"
+                                                            className={`text-xs font-bold flex items-center gap-1 cursor-pointer ${!isValid && hasInspection ? 'bg-red-600 hover:bg-red-700 animate-pulse text-white border-0' : 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:text-red-300'}`}
+                                                        >
+                                                            <UserMinus className="w-3.5 h-3.5" />
+                                                            Retirer
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end pt-4 border-t border-white/5">
+                            <Button
+                                type="button"
+                                onClick={() => setSelectedTechSummary(null)}
+                                className="border border-white/10 text-white hover:bg-white/5 bg-transparent cursor-pointer text-sm"
+                            >
+                                Fermer
+                            </Button>
+                        </div>
                     </div>
                 </div>
             )}

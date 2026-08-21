@@ -91,6 +91,23 @@ class InspectionEmailAlertTestCase(TestCase):
         email = mail.outbox[1]
         self.assertIn("Cassé : Présent", email.body)
 
+    def test_inspection_updates_equipment_expiration_date(self):
+        self.equipment.expiration_date = None
+        self.equipment.save()
+
+        # Création d'une inspection conforme
+        Inspection.objects.create(
+            item=self.equipment,
+            is_valid=True,
+            comments="Tout est ok"
+        )
+
+        self.equipment.refresh_from_db()
+        self.assertIsNotNone(self.equipment.expiration_date)
+        
+        expected_date = timezone.now().date() + timezone.timedelta(days=30)
+        self.assertEqual(self.equipment.expiration_date, expected_date)
+
 class EquipmentStatusSerializerTestCase(TestCase):
     def setUp(self):
         self.technician = User.objects.create_user(

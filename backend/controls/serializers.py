@@ -6,6 +6,8 @@ class EquipmentItemSerializer(serializers.ModelSerializer):
     technician_name = serializers.SerializerMethodField()
     technician_username = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    last_inspection_date = serializers.SerializerMethodField()
+    last_inspection_is_valid = serializers.SerializerMethodField()
 
     class Meta:
         model = EquipmentItem
@@ -26,6 +28,18 @@ class EquipmentItemSerializer(serializers.ModelSerializer):
         if last_inspection:
             return "defectueux" if not last_inspection.is_valid else "fonctionnel"
         return "fonctionnel"
+
+    def get_last_inspection_date(self, obj):
+        last_inspection = obj.inspections.order_by('-date').first()
+        if last_inspection:
+            return last_inspection.date
+        return None
+
+    def get_last_inspection_is_valid(self, obj):
+        last_inspection = obj.inspections.order_by('-date').first()
+        if last_inspection:
+            return last_inspection.is_valid
+        return None
 
 # Sérialiseur pour les multiples photos
 class InspectionPhotoSerializer(serializers.ModelSerializer):

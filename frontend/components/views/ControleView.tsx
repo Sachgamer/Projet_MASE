@@ -21,11 +21,11 @@ interface EquipmentItem {
     category: 'EQUIPEMENT' | 'VEHICULE';
     type_name: string;
     serial_number: string;
-    expiration_date: string;
+    expiration_date: string | null;
     technician: number | null;
     technician_name?: string;
-    last_controlled_date?: string | null;
-    is_valid?: boolean;
+    last_inspection_date?: string | null;
+    last_inspection_is_valid?: boolean | null;
 }
 
 // Vue principale pour effectuer un auto-contrôle (multistep form)
@@ -65,6 +65,29 @@ export default function ControleView() {
             console.error("Erreur de prolongation:", error);
             alert("Impossible de prolonger l'échéance de cet équipement.");
         }
+    };
+
+    const isItemDue = (item: EquipmentItem) => {
+        // If the last inspection was non-conforme, they must be able to re-inspect it to make it conforme
+        if (item.last_inspection_is_valid === false) return true;
+        
+        // If it has never been inspected, it is due
+        if (!item.last_inspection_date) return true;
+        
+        // If there is no expiration date, it is due
+        if (!item.expiration_date) return true;
+        
+        // Calculate days until expiration
+        const expiration = new Date(item.expiration_date);
+        const today = new Date();
+        // Clear time part for accurate day calculation
+        expiration.setHours(0, 0, 0, 0);
+        today.setHours(0, 0, 0, 0);
+        const diffTime = expiration.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Visible if expired (diffDays <= 0) or close to expiring (e.g. <= 5 days)
+        return diffDays <= 5;
     };
 
     useEffect(() => {
@@ -116,7 +139,23 @@ export default function ControleView() {
 
     // Gère le changement d'état d'un défaut (coché/décoché)
     const handleDefectChange = (defect: string) => {
-        setDefects(prev => ({ ...prev, [defect]: !prev[defect] }));
+        setDefects(prev => {
+            const next = { ...prev, [defect]: !prev[defect] };
+            if (defect === 'Rien à signaler') {
+                if (next['Rien à signaler']) {
+                    // Uncheck all actual defects
+                    next['Dysfonctionnement'] = false;
+                    next['HS'] = false;
+                    next['Altéré'] = false;
+                }
+            } else {
+                if (next[defect]) {
+                    // Uncheck "Rien à signaler" if a defect is checked
+                    next['Rien à signaler'] = false;
+                }
+            }
+            return next;
+        });
     };
 
     // Gère la réponse (Oui/Non) d'un point de contrôle véhicule
@@ -129,8 +168,20 @@ export default function ControleView() {
         e.preventDefault();
         if (!selectedItem) return;
 
+        // Si c'est un équipement, ils doivent choisir soit "Rien à signaler", soit un défaut
+        if (category === 'EQUIPEMENT') {
+            const hasSelection = defects['Rien à signaler'] || defects['Dysfonctionnement'] || defects['HS'] || defects['Altéré'];
+            if (!hasSelection) {
+                alert("Veuillez cocher 'Rien à signaler' ou signaler au moins un défaut.");
+                setSubmitting(false);
+                return;
+            }
+        }
+
+        const hasActualDefects = defects['Dysfonctionnement'] || defects['HS'] || defects['Altéré'];
+
         // Photo obligatoire si c'est un véhicule ou si des défauts sont détectés
-        const isPhotoRequired = category === 'VEHICULE' || Object.values(defects).some(v => v);
+        const isPhotoRequired = category === 'VEHICULE' || hasActualDefects;
         if (isPhotoRequired && photos.length === 0) {
             alert("Veuillez fournir au moins une preuve visuelle (photo) obligatoire pour l'auto-contrôle.");
             return;
@@ -166,7 +217,7 @@ export default function ControleView() {
             ? vehicleCheckpoints.every(check => vehicleChecks[check] === true)
             : true;
 
-        const isValid = Object.values(defects).every(v => !v) && allVehicleChecksPassed;
+        const isValid = !hasActualDefects && allVehicleChecksPassed;
 
         const fileToBase64 = (file: File): Promise<string> => {
             return new Promise((resolve, reject) => {
@@ -326,8 +377,8 @@ export default function ControleView() {
                                 </Button>
                             </div>
                             <div className="grid grid-cols-1 gap-4">
-                                {equipment.filter(e => e.category === category && (canManage || e.technician === user?.id)).length > 0 ? (
-                                    equipment.filter(e => e.category === category && (canManage || e.technician === user?.id)).map(item => (
+                                {equipment.filter(e => e.category === category && (canManage || e.technician === user?.id) && isItemDue(e)).length > 0 ? (
+                                    equipment.filter(e => e.category === category && (canManage || e.technician === user?.id) && isItemDue(e)).map(item => (
                                         <button
                                             key={item.id}
                                             onClick={() => handleItemSelect(item)}
@@ -416,18 +467,37 @@ export default function ControleView() {
                                     ) : (
                                         /* Case à cocher pour les défauts Équipement */
                                         <div className="space-y-4">
-                                            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Recherche de défauts</p>
-                                            {['Dysfonctionnement', 'HS', 'Altéré'].map(defect => (
-                                                <label key={defect} className="flex items-center gap-3 p-4 rounded-lg bg-white/5 cursor-pointer hover:bg-white/10 transition-colors">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={defects[defect] || false}
-                                                        onChange={() => handleDefectChange(defect)}
-                                                        className="w-5 h-5 rounded border-white/20 bg-transparent text-primary focus:ring-primary"
-                                                    />
-                                                    <span className="text-white">{defect}</span>
-                                                </label>
-                                            ))}
+                                            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Recherche de défauts / Conformité</p>
+                                            {['Rien à signaler', 'Dysfonctionnement', 'HS', 'Altéré'].map(defect => {
+                                                const isRas = defect === 'Rien à signaler';
+                                                const isChecked = defects[defect] || false;
+                                                return (
+                                                    <label 
+                                                        key={defect} 
+                                                        className={`flex items-center gap-3 p-4 rounded-lg cursor-pointer transition-all border ${
+                                                            isChecked 
+                                                                ? isRas 
+                                                                    ? 'bg-green-500/10 border-green-500/30 hover:bg-green-500/15' 
+                                                                    : 'bg-red-500/10 border-red-500/30 hover:bg-red-500/15'
+                                                                : 'bg-white/5 border-transparent hover:bg-white/10'
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isChecked}
+                                                            onChange={() => handleDefectChange(defect)}
+                                                            className={`w-5 h-5 rounded bg-transparent focus:ring-offset-0 ${
+                                                                isRas 
+                                                                    ? 'border-green-500/50 text-green-500 focus:ring-green-500' 
+                                                                    : 'border-white/20 text-primary focus:ring-primary'
+                                                            }`}
+                                                        />
+                                                        <span className={isChecked ? isRas ? 'text-green-400 font-bold' : 'text-red-400 font-bold' : 'text-white'}>
+                                                            {defect}
+                                                        </span>
+                                                    </label>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

@@ -145,6 +145,12 @@ class Inspection(models.Model):
         if is_new or (old_valid is True and self.is_valid is False):
             self.send_conformity_email()
 
+        if is_new and self.is_valid:
+            from django.utils import timezone
+            from datetime import timedelta
+            self.item.expiration_date = timezone.now().date() + timedelta(days=30)
+            self.item.save()
+
 # Modèle pour stocker plusieurs photos pour une seule inspection
 class InspectionPhoto(models.Model):
     inspection = models.ForeignKey(Inspection, on_delete=models.CASCADE, related_name='photos')

@@ -45,6 +45,14 @@ class SlideshowViewSet(viewsets.ModelViewSet):
         if not user or user.is_anonymous:
             return Slideshow.objects.none()
             
+        if self.action != 'list':
+            if user.is_staff or user.is_superuser:
+                return Slideshow.objects.all()
+            from django.db.models import Q
+            return Slideshow.objects.filter(
+                Q(is_public=True) | Q(invited_users=user) | Q(creator=user)
+            ).distinct()
+            
         show_archived = self.request.query_params.get('archived') == 'true'
         
         # Archivage automatique à la volée des causeries de plus de 30 jours

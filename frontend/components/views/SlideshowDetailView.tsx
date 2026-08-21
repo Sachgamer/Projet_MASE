@@ -5,7 +5,7 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useView } from '@/context/ViewContext';
-import { FileUp, File, X, Trash2, ChevronLeft, ChevronRight, Play, Settings, Plus } from 'lucide-react';
+import { FileUp, File, X, Trash2, ChevronLeft, ChevronRight, Play, Settings, Plus, GraduationCap } from 'lucide-react';
 
 // Interface représentant un slide (une diapositive de la formation)
 interface Slide {
@@ -13,6 +13,12 @@ interface Slide {
     file: string; // URL du fichier (image ou PDF)
     content: string; // Texte de description du slide
     order: number; // Ordre d'affichage
+}
+
+interface QuizSummary {
+    id: number;
+    title: string;
+    passing_score: number;
 }
 
 // Interface représentant une causerie (formation) complète
@@ -25,6 +31,7 @@ interface Slideshow {
     is_public: boolean;
     invited_users: number[];
     scheduled_date: string | null;
+    quiz: QuizSummary | null;
 }
 
 // Vue détaillée d'une causerie (visionneuse de slides + gestion admin)
@@ -477,9 +484,20 @@ export default function SlideshowDetailView() {
                             )}
                         </div>
 
-                        <div className="mt-4 text-center">
-                            <p className="text-lg font-medium">Diapositive {currentSlideIndex + 1} sur {slideshow.slides.length}</p>
-                            <p className="text-gray-400 mt-2">{slideshow.slides[currentSlideIndex]?.content || 'Aucune description.'}</p>
+                        <div className="mt-4 text-center flex flex-col items-center gap-4">
+                            <div>
+                                <p className="text-lg font-medium">Diapositive {currentSlideIndex + 1} sur {slideshow.slides.length}</p>
+                                <p className="text-gray-400 mt-2">{slideshow.slides[currentSlideIndex]?.content || 'Aucune description.'}</p>
+                            </div>
+                            {slideshow.quiz && (
+                                <Button 
+                                    onClick={() => setView('quiz', { id: slideshow.id })}
+                                    className="bg-primary hover:bg-primary-hover text-white font-bold cursor-pointer flex items-center gap-2"
+                                >
+                                    <GraduationCap className="w-4 h-4" />
+                                    Faire le quiz
+                                </Button>
+                            )}
                         </div>
                     </div>
                 )}

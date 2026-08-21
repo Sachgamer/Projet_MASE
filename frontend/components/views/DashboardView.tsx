@@ -178,7 +178,7 @@ export default function DashboardView() {
                             <Eye className="w-3.5 h-3.5 mr-1" />
                             Voir
                         </Button>
-                        {!finished && slideshow.quiz && (
+                        {slideshow.quiz && (
                             <Button
                                 size="sm"
                                 className="flex-1 min-w-[70px] text-[11px] h-8 cursor-pointer"
@@ -234,34 +234,36 @@ export default function DashboardView() {
                         </button>
                     </div>
 
-                    {isAdmin && activeTab === 'active' && (
+                    {activeTab === 'active' && (
                         <>
-                            {selectionMode ? (
-                                <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        className="text-white border-white/20 hover:bg-white/5"
-                                        onClick={() => {
-                                            setSelectionMode(false);
-                                            setSelectedIds([]);
-                                        }}
-                                    >
-                                        Annuler
+                            {isAdmin && (
+                                selectionMode ? (
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            className="text-white border-white/20 hover:bg-white/5"
+                                            onClick={() => {
+                                                setSelectionMode(false);
+                                                setSelectedIds([]);
+                                            }}
+                                        >
+                                            Annuler
+                                        </Button>
+                                        <Button
+                                            variant="destructive"
+                                            disabled={selectedIds.length === 0}
+                                            onClick={handleBulkDelete}
+                                        >
+                                            Supprimer ({selectedIds.length})
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <Button variant="outline" className="text-white border-white/20 hover:bg-white/5" onClick={() => setSelectionMode(true)}>
+                                        Sélectionner
                                     </Button>
-                                    <Button
-                                        variant="destructive"
-                                        disabled={selectedIds.length === 0}
-                                        onClick={handleBulkDelete}
-                                    >
-                                        Supprimer ({selectedIds.length})
-                                    </Button>
-                                </div>
-                            ) : (
-                                <Button variant="outline" className="text-white border-white/20 hover:bg-white/5" onClick={() => setSelectionMode(true)}>
-                                    Sélectionner
-                                </Button>
+                                )
                             )}
-                            <Button className="bg-primary hover:bg-primary-hover text-white" onClick={() => setView('slideshow-create')}>
+                            <Button className="bg-primary hover:bg-primary-hover text-white cursor-pointer" onClick={() => setView('slideshow-create')}>
                                 Nouvelle Causerie
                             </Button>
                         </>
