@@ -31,12 +31,18 @@ export default function EquipmentConfigView() {
     const [usersList, setUsersList] = useState<UserItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [newEquip, setNewEquip] = useState({
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [createForm, setCreateForm] = useState({
         category: 'EQUIPEMENT',
         type_name: '',
         serial_number: '',
-        expiration_date: '',
-        technician: ''
+        expiration_date: ''
+    });
+    const [assignForm, setAssignForm] = useState({
+        equipmentId: '',
+        technician: '',
+        serial_number: '',
+        expiration_date: ''
     });
 
     const [assigningItem, setAssigningItem] = useState<EquipmentItem | null>(null);
@@ -121,6 +127,25 @@ export default function EquipmentConfigView() {
     };
 
     useEffect(() => {
+        if (assignForm.equipmentId) {
+            const selectedItem = equipment.find(e => e.id === parseInt(assignForm.equipmentId));
+            if (selectedItem) {
+                setAssignForm(prev => ({
+                    ...prev,
+                    serial_number: selectedItem.serial_number || '',
+                    expiration_date: selectedItem.expiration_date || ''
+                }));
+            }
+        } else {
+            setAssignForm(prev => ({
+                ...prev,
+                serial_number: '',
+                expiration_date: ''
+            }));
+        }
+    }, [assignForm.equipmentId, equipment]);
+
+    useEffect(() => {
         if (canManage) {
             fetchEquipment();
             fetchUsers();
@@ -148,25 +173,62 @@ export default function EquipmentConfigView() {
         }
     };
 
-    const handleCreateEquipment = async (e: React.FormEvent) => {
+    const handleTopAssignEquipment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const eqId = parseInt(assignForm.equipmentId);
+        const techId = assignForm.technician ? parseInt(assignForm.technician) : null;
+        if (!eqId || !techId) {
+            alert("Veuillez sélectionner un matériel et un collaborateur.");
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const selectedItem = equipment.find(e => e.id === eqId);
+            if (!selectedItem) return;
+
+            const payload = {
+                technician: techId,
+                serial_number: assignForm.serial_number,
+                expiration_date: assignForm.expiration_date || null
+            };
+            if (selectedItem.category === 'VEHICULE' || !payload.expiration_date) {
+                // @ts-ignore
+                delete payload.expiration_date;
+            }
+
+            await api.patch(`/api/controls/equipment/${eqId}/`, payload);
+            alert(`L'équipement "${selectedItem.type_name}" a été attribué avec succès !`);
+            setAssignForm({ equipmentId: '', technician: '', serial_number: '', expiration_date: '' });
+            fetchEquipment();
+        } catch (error) {
+            console.error("Error assigning equipment from top form:", error);
+            alert("Erreur lors de l'affectation de l'équipement.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleModalCreateEquipment = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
         try {
-            const payload = { ...newEquip };
+            const payload = { 
+                category: createForm.category,
+                type_name: createForm.type_name,
+                serial_number: createForm.serial_number,
+                expiration_date: createForm.expiration_date || null
+            };
             if (payload.category === 'VEHICULE' || !payload.expiration_date) {
                 // @ts-ignore
                 delete payload.expiration_date;
             }
-            if (!payload.technician) {
-                // @ts-ignore
-                delete payload.technician;
-            }
             await api.post('/api/controls/equipment/', payload);
-            alert("Équipement enregistré avec succès !");
-            setNewEquip({ category: 'EQUIPEMENT', type_name: '', serial_number: '', expiration_date: '', technician: '' });
+            alert("Équipement enregistré avec succès dans le stock !");
+            setCreateForm({ category: 'EQUIPEMENT', type_name: '', serial_number: '', expiration_date: '' });
+            setShowCreateModal(false);
             fetchEquipment();
         } catch (error) {
-            console.error("Error creating equipment:", error);
+            console.error("Error creating equipment from modal:", error);
             alert("Erreur lors de la création de l'équipement.");
         } finally {
             setSubmitting(false);
@@ -226,45 +288,43 @@ export default function EquipmentConfigView() {
                 <p className="text-sm text-gray-400 mt-1">Enregistrez de nouveaux équipements ou véhicules et gérez leurs affectations aux techniciens.</p>
             </div>
 
-            {/* Formulaire d'enregistrement */}
+            {/* Formulaire d'affectation */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-8 shadow-xl backdrop-blur-md">
                 <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
-                    <Plus className="text-primary w-6 h-6" /> Ajouter un matériel
+                    <UserPlus className="text-primary w-6 h-6" /> Assigner un matériel à un collaborateur
                 </h2>
-                <form onSubmit={handleCreateEquipment} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <form onSubmit={handleTopAssignEquipment} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <label className="text-sm text-gray-400">Catégorie</label>
+                        <label className="text-sm text-gray-400">Sélectionner le matériel disponible *</label>
                         <select
-                            value={newEquip.category}
-                            onChange={e => setNewEquip({ ...newEquip, category: e.target.value as any })}
+                            value={assignForm.equipmentId}
+                            onChange={e => setAssignForm({ ...assignForm, equipmentId: e.target.value })}
                             className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
                             required
                         >
-                            <option value="EQUIPEMENT">Équipement</option>
-                            <option value="VEHICULE">Véhicule</option>
+                            <option value="">-- Choisir un matériel disponible --</option>
+                            {equipment
+                                .filter(e => e.technician === null)
+                                .map(e => (
+                                    <option key={e.id} value={e.id}>
+                                        [{e.category === 'VEHICULE' ? 'VÉHICULE' : 'ÉQUIPEMENT'}] {e.type_name} {e.serial_number ? `(S/N: ${e.serial_number})` : ''}
+                                    </option>
+                                ))
+                            }
                         </select>
+                        {equipment.filter(e => e.technician === null).length === 0 && (
+                            <p className="text-xs text-yellow-500 mt-1">Aucun matériel disponible en stock. Ajoutez-en d'abord dans la liste ci-dessous.</p>
+                        )}
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm text-gray-400">
-                            {newEquip.category === 'VEHICULE' ? "Modèle du véhicule" : "Nom / Modèle"}
-                        </label>
-                        <input
-                            type="text"
-                            value={newEquip.type_name}
-                            onChange={e => setNewEquip({ ...newEquip, type_name: e.target.value })}
-                            className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
-                            placeholder={newEquip.category === 'VEHICULE' ? "ex: Renault Kangoo" : "ex: Harnais de sécurité"}
-                            required
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-sm text-gray-400">Assigner à (Optionnel)</label>
+                        <label className="text-sm text-gray-400">Attribuer au collaborateur *</label>
                         <select
-                            value={newEquip.technician}
-                            onChange={e => setNewEquip({ ...newEquip, technician: e.target.value })}
+                            value={assignForm.technician}
+                            onChange={e => setAssignForm({ ...assignForm, technician: e.target.value })}
                             className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
+                            required
                         >
-                            <option value="">Enregistré en général (non assigné)</option>
+                            <option value="">-- Choisir un collaborateur --</option>
                             {usersList.map(u => (
                                 <option key={u.id} value={u.id}>
                                     {u.first_name} {u.last_name} ({u.username})
@@ -273,32 +333,33 @@ export default function EquipmentConfigView() {
                         </select>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm text-gray-400">
-                            {newEquip.category === 'VEHICULE' ? "Plaque d'immatriculation" : "Numéro de série (Optionnel)"}
-                        </label>
+                        <label className="text-sm text-gray-400">Numéro de série / Plaque d'immatriculation</label>
                         <input
                             type="text"
-                            value={newEquip.serial_number}
-                            onChange={e => setNewEquip({ ...newEquip, serial_number: e.target.value })}
+                            value={assignForm.serial_number}
+                            onChange={e => setAssignForm({ ...assignForm, serial_number: e.target.value })}
                             className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
-                            placeholder={newEquip.category === 'VEHICULE' ? "ex: AB-123-CD" : "S/N..."}
-                            required={newEquip.category === 'VEHICULE'}
+                            placeholder="S/N ou plaque..."
                         />
                     </div>
-                    {newEquip.category !== 'VEHICULE' && (
+                    {/* Expiration date is optional and only shown if selected equipment is not a VEHICULE */}
+                    {(!assignForm.equipmentId || (() => {
+                        const selectedItem = equipment.find(e => e.id === parseInt(assignForm.equipmentId));
+                        return selectedItem ? selectedItem.category !== 'VEHICULE' : true;
+                    })()) && (
                         <div className="space-y-2">
                             <label className="text-sm text-gray-400">Date limite de contrôle (Optionnel)</label>
                             <input
                                 type="date"
-                                value={newEquip.expiration_date}
-                                onChange={e => setNewEquip({ ...newEquip, expiration_date: e.target.value })}
+                                value={assignForm.expiration_date}
+                                onChange={e => setAssignForm({ ...assignForm, expiration_date: e.target.value })}
                                 className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary"
                             />
                         </div>
                     )}
                     <div className="md:col-span-2 flex justify-end mt-2">
-                        <Button type="submit" disabled={submitting} className="flex items-center gap-2 px-6 py-3 cursor-pointer bg-primary hover:bg-primary/80">
-                            <Save className="w-4 h-4" /> {submitting ? "Enregistrement..." : "Enregistrer le matériel"}
+                        <Button type="submit" disabled={submitting || !assignForm.equipmentId} className="flex items-center gap-2 px-6 py-3 cursor-pointer bg-primary hover:bg-primary/80">
+                            <Save className="w-4 h-4" /> {submitting ? "Affectation..." : "Valider l'affectation"}
                         </Button>
                     </div>
                 </form>
@@ -357,9 +418,17 @@ export default function EquipmentConfigView() {
 
             {/* Liste du matériel */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-8 shadow-xl backdrop-blur-md">
-                <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
-                    <Wrench className="text-primary w-6 h-6" /> Liste du matériel et affectations
-                </h2>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+                        <Wrench className="text-primary w-6 h-6" /> Liste du matériel et affectations
+                    </h2>
+                    <Button 
+                        onClick={() => setShowCreateModal(true)} 
+                        className="flex items-center gap-2 px-4 py-2 cursor-pointer bg-primary hover:bg-primary/80"
+                    >
+                        <Plus className="w-4 h-4" /> Nouveau matériel
+                    </Button>
+                </div>
 
                 {/* Commutateur d'onglets */}
                 <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1 w-fit mb-6">
@@ -540,6 +609,102 @@ export default function EquipmentConfigView() {
                                     className="bg-primary hover:bg-primary/80 text-white font-bold cursor-pointer text-sm"
                                 >
                                     Valider et attribuer
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* Modal d'ajout de matériel (Nouveau matériel en stock) */}
+            {showCreateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-secondary border border-white/10 w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-6 relative animate-in zoom-in duration-300">
+                        <button
+                            onClick={() => setShowCreateModal(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+
+                        <div>
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Plus className="text-primary w-5 h-5" />
+                                Ajouter un matériel au stock
+                            </h3>
+                            <p className="text-xs text-gray-400 mt-1">
+                                Enregistrez un nouvel équipement ou véhicule disponible dans le parc.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleModalCreateEquipment} className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-400">Catégorie</label>
+                                <select
+                                    value={createForm.category}
+                                    onChange={e => setCreateForm({ ...createForm, category: e.target.value as any })}
+                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary text-sm"
+                                    required
+                                >
+                                    <option value="EQUIPEMENT">Équipement</option>
+                                    <option value="VEHICULE">Véhicule</option>
+                                </select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-400">
+                                    {createForm.category === 'VEHICULE' ? "Modèle du véhicule" : "Nom / Modèle"}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={createForm.type_name}
+                                    onChange={e => setCreateForm({ ...createForm, type_name: e.target.value })}
+                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary text-sm"
+                                    placeholder={createForm.category === 'VEHICULE' ? "ex: Renault Kangoo" : "ex: Harnais de sécurité"}
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-gray-400">
+                                    {createForm.category === 'VEHICULE' ? "Plaque d'immatriculation *" : "Numéro de série (Optionnel)"}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={createForm.serial_number}
+                                    onChange={e => setCreateForm({ ...createForm, serial_number: e.target.value })}
+                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary text-sm"
+                                    placeholder={createForm.category === 'VEHICULE' ? "ex: AB-123-CD" : "S/N..."}
+                                    required={createForm.category === 'VEHICULE'}
+                                />
+                            </div>
+
+                            {createForm.category !== 'VEHICULE' && (
+                                <div className="space-y-1">
+                                    <label className="text-xs text-gray-400">Date limite de contrôle (Optionnel)</label>
+                                    <input
+                                        type="date"
+                                        value={createForm.expiration_date}
+                                        onChange={e => setCreateForm({ ...createForm, expiration_date: e.target.value })}
+                                        className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary text-sm"
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="border-white/10 text-white hover:bg-white/5 cursor-pointer text-sm"
+                                >
+                                    Annuler
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="bg-primary hover:bg-primary/80 text-white font-bold cursor-pointer text-sm"
+                                >
+                                    Enregistrer
                                 </Button>
                             </div>
                         </form>
