@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getReports, deleteReport, updateReport, getBaseURL, downloadAccidentPdf } from '@/lib/api';
+import api, { getReports, deleteReport, updateReport, getBaseURL, downloadAccidentPdf } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useView } from '@/context/ViewContext';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,7 @@ interface AccidentReport {
 export default function ReportListView() {
     const { user, loading: authLoading } = useAuth();
     const { setView } = useView();
+    const isAdmin = !!(user && (user.is_staff || user.is_superuser || user.role === 'admin'));
     const [reports, setReports] = useState<AccidentReport[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -101,17 +102,68 @@ export default function ReportListView() {
         e.preventDefault();
         if (!editingReport) return;
         try {
-            await updateReport(editingReport.id, {
+            const payload = isAdmin ? {
                 location: editLocation,
                 description: editDescription,
                 incident_date: new Date(editIncidentDate).toISOString(),
                 severity: editSeverity,
                 incident_type: editIncidentType
-            });
+            } : {
+                location: editLocation,
+                description: editDescription,
+                incident_date: new Date(editIncidentDate).toISOString()
+            };
+            await updateReport(editingReport.id, payload);
             setEditingReport(null);
             loadReports();
         } catch (err) {
             alert("Erreur lors de la modification du rapport");
+        }
+    };
+
+    const handleDeletePhoto = async (reportId: number, photoId: number) => {
+        if (!window.confirm("Voulez-vous vraiment supprimer cette photo ?")) return;
+        try {
+            await api.post(`/api/reports/${reportId}/delete_photo/${photoId}/`);
+            setEditingReport(prev => {
+                if (!prev) return null;
+                const updatedPhotos = (prev.photos || []).filter(p => p.id !== photoId);
+                return { ...prev, photos: updatedPhotos };
+            });
+            setReports(prev => prev.map(r => {
+                if (r.id === reportId) {
+                    const updatedPhotos = (r.photos || []).filter(p => p.id !== photoId);
+                    return { ...r, photos: updatedPhotos };
+                }
+                return r;
+            }));
+        } catch (err) {
+            alert("Erreur lors de la suppression de la photo");
+        }
+    };
+
+    const handleAddPhoto = async (reportId: number, file: File) => {
+        const formData = new FormData();
+        formData.append('photo', file);
+        try {
+            const response = await api.post(`/api/reports/${reportId}/add_photo/`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            const newPhoto = response.data.photo;
+            setEditingReport(prev => {
+                if (!prev) return null;
+                const updatedPhotos = [...(prev.photos || []), newPhoto];
+                return { ...prev, photos: updatedPhotos };
+            });
+            setReports(prev => prev.map(r => {
+                if (r.id === reportId) {
+                    const updatedPhotos = [...(r.photos || []), newPhoto];
+                    return { ...r, photos: updatedPhotos };
+                }
+                return r;
+            }));
+        } catch (err) {
+            alert("Erreur lors de l'ajout de la photo");
         }
     };
 
@@ -843,35 +895,39 @@ export default function ReportListView() {
                         </h2>
                         
                         <form onSubmit={handleSaveEdit} className="space-y-4">
-                            {/* Type */}
-                            <div className="space-y-1">
-                                <label className="block text-xs font-bold text-gray-400 uppercase">Type de remontée</label>
-                                <select 
-                                    value={editIncidentType}
-                                    onChange={(e) => setEditIncidentType(e.target.value)}
-                                    className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none"
-                                >
-                                    <option value="dangerous_situation">Situation dangereuse</option>
-                                    <option value="near_miss">Presque accident</option>
-                                    <option value="accident">Accident</option>
-                                    <option value="terrain_other">Terrain (Autres)</option>
-                                </select>
-                            </div>
+                            {/* Type (Admin only) */}
+                            {isAdmin && (
+                                <div className="space-y-1">
+                                    <label className="block text-xs font-bold text-gray-400 uppercase">Type de remontée</label>
+                                    <select 
+                                        value={editIncidentType}
+                                        onChange={(e) => setEditIncidentType(e.target.value)}
+                                        className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none cursor-pointer"
+                                    >
+                                        <option value="dangerous_situation">Situation dangereuse</option>
+                                        <option value="near_miss">Presque accident</option>
+                                        <option value="accident">Accident</option>
+                                        <option value="terrain_other">Terrain (Autres)</option>
+                                    </select>
+                                </div>
+                            )}
                             
-                            {/* Gravité */}
-                            <div className="space-y-1">
-                                <label className="block text-xs font-bold text-gray-400 uppercase">Niveau de gravité</label>
-                                <select 
-                                    value={editSeverity}
-                                    onChange={(e) => setEditSeverity(e.target.value)}
-                                    className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none"
-                                >
-                                    <option value="low">Faible</option>
-                                    <option value="medium">Moyenne</option>
-                                    <option value="high">Élevée</option>
-                                    <option value="critical">Critique</option>
-                                </select>
-                            </div>
+                            {/* Gravité (Admin only) */}
+                            {isAdmin && (
+                                <div className="space-y-1">
+                                    <label className="block text-xs font-bold text-gray-400 uppercase">Niveau de gravité</label>
+                                    <select 
+                                        value={editSeverity}
+                                        onChange={(e) => setEditSeverity(e.target.value)}
+                                        className="w-full bg-gray-800 border border-white/20 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none cursor-pointer"
+                                    >
+                                        <option value="low">Faible</option>
+                                        <option value="medium">Moyenne</option>
+                                        <option value="high">Élevée</option>
+                                        <option value="critical">Critique</option>
+                                    </select>
+                                </div>
+                            )}
 
                             {/* Lieu */}
                             <div className="space-y-1">
@@ -908,6 +964,55 @@ export default function ReportListView() {
                                     required
                                 />
                             </div>
+
+                            {/* Photos (Admin only) */}
+                            {isAdmin && (
+                                <div className="space-y-2 border-t border-white/10 pt-4">
+                                    <label className="block text-xs font-bold text-gray-400 uppercase">Photos de la remontée</label>
+                                    
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {(editingReport.photos || []).map(photo => {
+                                            const imgUrl = photo.image.startsWith('http') ? photo.image : `${getBaseURL()}${photo.image}`;
+                                            return (
+                                                <div key={photo.id} className="relative group aspect-square bg-gray-800 rounded-lg overflow-hidden border border-white/10">
+                                                    <img src={imgUrl} alt="Report attachment" className="w-full h-full object-cover" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeletePhoto(editingReport.id, photo.id)}
+                                                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-500 hover:text-red-400 transition-opacity border-0 cursor-pointer"
+                                                        title="Supprimer la photo"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    
+                                    <div className="pt-2">
+                                        <input 
+                                            type="file"
+                                            id="add-photo-edit"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    handleAddPhoto(editingReport.id, e.target.files[0]);
+                                                }
+                                            }}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => document.getElementById('add-photo-edit')?.click()}
+                                            className="w-full border-dashed border-white/20 text-xs py-2 h-auto text-gray-300 hover:text-white cursor-pointer"
+                                        >
+                                            + Ajouter une photo
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Submit */}
                             <div className="flex gap-3 justify-end pt-2">

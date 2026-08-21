@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, status
+from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.db.models import Q
 from django.http import FileResponse
@@ -92,6 +93,59 @@ class AccidentReportViewSet(viewsets.ModelViewSet):
         
         return FileResponse(buffer, as_attachment=True, filename=filename)
 
+    def perform_update(self, serializer):
+        user = self.request.user
+        if not (user.is_staff or user.is_superuser):
+            # Normal user can only modify: location, incident_date, description
+            allowed_fields = {'location', 'incident_date', 'description'}
+            for field in serializer.validated_data.keys():
+                if field not in allowed_fields:
+                    current_val = getattr(serializer.instance, field)
+                    new_val = serializer.validated_data[field]
+                    if current_val != new_val:
+                        from rest_framework.exceptions import PermissionDenied
+                        raise PermissionDenied(f"Vous n'avez pas l'autorisation de modifier le champ : {field}")
+        serializer.save()
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def add_photo(self, request, pk=None):
+        report = self.get_object()
+        user = request.user
+        if not (user.is_staff or user.is_superuser):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les administrateurs peuvent ajouter des photos à une remontée existante.")
+            
+        photo_file = request.FILES.get('photo')
+        if not photo_file:
+            return Response({'detail': "Aucun fichier photo fourni."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from .models import AccidentReportPhoto
+        new_photo = AccidentReportPhoto.objects.create(report=report, image=photo_file)
+        return Response({
+            'detail': "Photo ajoutée avec succès.",
+            'photo': {
+                'id': new_photo.id,
+                'image': request.build_absolute_uri(new_photo.image.url) if new_photo.image else None
+            }
+        }, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path=r'delete_photo/(?P<photo_id>\d+)', permission_classes=[permissions.IsAuthenticated])
+    def delete_photo(self, request, pk=None, photo_id=None):
+        report = self.get_object()
+        user = request.user
+        if not (user.is_staff or user.is_superuser):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les administrateurs peuvent supprimer des photos d'une remontée.")
+            
+        from .models import AccidentReportPhoto
+        try:
+            photo = AccidentReportPhoto.objects.get(id=photo_id, report=report)
+            photo.image.delete(save=False) # delete physical file
+            photo.delete()
+            return Response({'detail': "Photo supprimée avec succès."})
+        except AccidentReportPhoto.DoesNotExist:
+            return Response({'detail': "Photo introuvable."}, status=status.HTTP_404_NOT_FOUND)
+
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def close_report(self, request, pk=None):
         report = self.get_object()
@@ -108,7 +162,7 @@ class ActionViewSet(viewsets.ModelViewSet):
         user = self.request.user
         show_archived = self.request.query_params.get('archived') == 'true'
         qs = Action.objects.filter(is_archived=show_archived)
-        if user.is_staff or user.is_superuser:
+        if user.is_staff or user.is_superuser or user.role == 'admin':
             return qs
         if user.agency:
             return qs.filter(
@@ -123,9 +177,22 @@ class ActionViewSet(viewsets.ModelViewSet):
         serializer.save(reporter=self.request.user)
 
     def perform_update(self, serializer):
-        if not (self.request.user.is_staff or self.request.user.is_superuser):
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Seuls les administrateurs peuvent modifier des actions.")
+        user = self.request.user
+        if not (user.is_staff or user.is_superuser):
+            action_obj = serializer.instance
+            if action_obj.assigned_to != user and action_obj.reporter != user:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Seuls les administrateurs peuvent modifier des actions.")
+            
+            # Check if they are trying to modify any field other than status, completion_proof_text, completion_proof_file
+            allowed_fields = {'status', 'completion_proof_text', 'completion_proof_file'}
+            for field in serializer.validated_data.keys():
+                if field not in allowed_fields:
+                    current_val = getattr(action_obj, field)
+                    new_val = serializer.validated_data[field]
+                    if current_val != new_val:
+                        from rest_framework.exceptions import PermissionDenied
+                        raise PermissionDenied(f"Vous n'avez pas l'autorisation de modifier le champ : {field}")
         serializer.save()
 
     def perform_destroy(self, instance):
@@ -165,18 +232,24 @@ class ActionViewSet(viewsets.ModelViewSet):
         action_item.completion_proof_text = proof_text
         action_item.completion_proof_file = proof_file
         
-        if request.user.is_staff or request.user.is_superuser:
+        user = request.user
+        if user.is_staff or user.is_superuser or user.role == 'admin' or user.role == 'agency':
             action_item.status = 'done'
             message = "Preuve soumise avec succès, l'action est clôturée."
         else:
             action_item.status = 'pending_validation'
-            message = "Preuve soumise avec succès, en attente de validation par l'administrateur."
+            message = "Preuve soumise avec succès, en attente de validation."
             
         action_item.save()
         return Response({'detail': message})
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def validate_action(self, request, pk=None):
+        user = request.user
+        if not (user.is_staff or user.is_superuser or user.role == 'admin' or user.role == 'agency'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Seuls les administrateurs et membres d'agence peuvent valider les actions.")
+            
         action_item = self.get_object()
         decision = request.data.get('decision')
         rejection_reason = request.data.get('rejection_reason', '')
@@ -190,7 +263,7 @@ class ActionViewSet(viewsets.ModelViewSet):
         elif decision == 'reject':
             action_item.status = 'in_progress'
             if rejection_reason:
-                action_item.description += f"\n\n[Rejet Admin - {timezone.now().date().strftime('%d/%m/%Y')}]: {rejection_reason}"
+                action_item.description += f"\n\n[Rejet - {timezone.now().date().strftime('%d/%m/%Y')}]: {rejection_reason}"
             action_item.save()
             return Response({'detail': "Action rejetée et renvoyée en cours."})
         else:

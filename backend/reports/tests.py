@@ -139,3 +139,129 @@ class ActionAPITestCase(APITestCase):
         self.assertEqual(self.action.status, 'done')
         self.assertEqual(self.action.completion_proof_text, "Action clôturée par l'admin.")
 
+    def test_regular_user_can_start_assigned_action(self):
+        self.client.force_authenticate(user=self.user)
+        url = f"/api/actions/{self.action.id}/"
+        response = self.client.patch(url, {'status': 'in_progress'})
+        self.assertEqual(response.status_code, 200)
+        self.action.refresh_from_db()
+        self.assertEqual(self.action.status, 'in_progress')
+
+    def test_regular_user_cannot_modify_other_action_fields(self):
+        self.client.force_authenticate(user=self.user)
+        url = f"/api/actions/{self.action.id}/"
+        response = self.client.patch(url, {'title': 'Nouveau titre'})
+        self.assertEqual(response.status_code, 403)
+
+    def test_agency_user_can_validate_action(self):
+        # Create agency
+        from users.models import Agency
+        agency = Agency.objects.create(name="Agence Test", region="Nord")
+        
+        # Link users to agency
+        self.user.agency = agency
+        self.user.save()
+        self.reporter.agency = agency
+        self.reporter.save()
+
+        # 1. First, submit proof as regular user
+        self.action.completion_proof_text = "Preuve"
+        self.action.completion_proof_file = SimpleUploadedFile("proof.jpg", b"content", content_type="image/jpeg")
+        self.action.status = 'pending_validation'
+        self.action.save()
+
+        # 2. Create agency user
+        agency_user = User.objects.create_user(
+            username='agency_user_val',
+            email='agency_val@example.com',
+            password='password123',
+            role='agency',
+            agency=agency
+        )
+
+        # 3. Try to validate as agency user
+        self.client.force_authenticate(user=agency_user)
+        url = f"/api/actions/{self.action.id}/validate_action/"
+        response = self.client.post(url, {'decision': 'approve'})
+        self.assertEqual(response.status_code, 200)
+        self.action.refresh_from_db()
+        self.assertEqual(self.action.status, 'done')
+
+    def test_technician_cannot_validate_action(self):
+        # Create a non-assigned technician user
+        other_user = User.objects.create_user(
+            username='tech_other',
+            email='tech_other@example.com',
+            password='password123',
+            role='technician'
+        )
+        self.client.force_authenticate(user=other_user)
+        url = f"/api/actions/{self.action.id}/validate_action/"
+        response = self.client.post(url, {'decision': 'approve'})
+        self.assertEqual(response.status_code, 403)
+
+
+class AccidentReportModificationPermissionsTestCase(APITestCase):
+    def setUp(self):
+        self.reporter = User.objects.create_user(
+            username='reporter_user_mod',
+            email='reporter_mod@example.com',
+            password='password123'
+        )
+        self.staff_user = User.objects.create_user(
+            username='staffuser_mod',
+            email='staff_mod@example.com',
+            password='password123',
+            is_staff=True
+        )
+        self.report = AccidentReport.objects.create(
+            reporter=self.reporter,
+            severity='medium',
+            incident_type='near_miss',
+            location='Zone A',
+            description='Un presqu\'accident à tester.',
+            incident_date=timezone.now(),
+            published=False
+        )
+
+    def test_regular_user_can_modify_only_allowed_fields(self):
+        self.client.force_authenticate(user=self.reporter)
+        url = f"/api/reports/{self.report.id}/"
+        
+        # Test modifying allowed fields
+        data = {
+            'location': 'Zone B',
+            'description': 'Description modifiée.',
+            'incident_date': timezone.now()
+        }
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.report.refresh_from_db()
+        self.assertEqual(self.report.location, 'Zone B')
+        self.assertEqual(self.report.description, 'Description modifiée.')
+
+        # Test modifying disallowed field (severity)
+        data = {
+            'severity': 'high'
+        }
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, 403)
+        self.report.refresh_from_db()
+        self.assertEqual(self.report.severity, 'medium')
+
+    def test_admin_can_modify_all_fields(self):
+        self.client.force_authenticate(user=self.staff_user)
+        url = f"/api/reports/{self.report.id}/"
+        
+        data = {
+            'severity': 'high',
+            'incident_type': 'accident',
+            'location': 'Zone C'
+        }
+        response = self.client.patch(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.report.refresh_from_db()
+        self.assertEqual(self.report.severity, 'high')
+        self.assertEqual(self.report.incident_type, 'accident')
+        self.assertEqual(self.report.location, 'Zone C')
+

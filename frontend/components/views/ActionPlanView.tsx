@@ -50,6 +50,7 @@ export default function ActionPlanView() {
     const [layoutMode, setLayoutMode] = useState<'kanban' | 'list'>('list');
     const [activeTab, setActiveTab] = useState<'all' | 'validation'>('all');
     const isAdmin = user && (user.is_staff || user.is_superuser || user.role === 'admin');
+    const isValidator = !!(user && (user.is_staff || user.is_superuser || user.role === 'admin' || user.role === 'agency'));
 
     const [proofActionId, setProofActionId] = useState<number | null>(null);
     const [proofText, setProofText] = useState('');
@@ -183,7 +184,7 @@ export default function ActionPlanView() {
                     'Content-Type': 'multipart/form-data'
                 }
             });
-            if (isAdmin) {
+            if (isValidator) {
                 alert("Preuve de complétion soumise avec succès ! L'action est clôturée.");
             } else {
                 alert("Preuve de complétion soumise avec succès ! L'action est en attente de validation.");
@@ -302,8 +303,8 @@ export default function ActionPlanView() {
                     </select>
                 </div>
 
-                {/* Validation Tabs for Admins */}
-                {isAdmin && (
+                {/* Validation Tabs */}
+                {isValidator && (
                     <div className="flex bg-white/5 border border-white/10 rounded-xl p-1 gap-1">
                         <button
                             onClick={() => { setActiveTab('all'); }}
@@ -321,7 +322,7 @@ export default function ActionPlanView() {
                 )}
 
                 {/* Layout Mode Switcher */}
-                {isAdmin && activeTab === 'all' && (
+                {isValidator && activeTab === 'all' && (
                     <div className="flex bg-white/5 border border-white/10 rounded-lg p-1 gap-1">
                         <button
                             onClick={() => setLayoutMode('kanban')}
@@ -345,7 +346,7 @@ export default function ActionPlanView() {
                 <div className="flex justify-center items-center h-48">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                 </div>
-            ) : activeTab === 'validation' && isAdmin ? (
+            ) : activeTab === 'validation' && isValidator ? (
                 /* Admin Validation view */
                 <div className="space-y-4">
                     {filteredActions.length === 0 ? (
@@ -432,7 +433,7 @@ export default function ActionPlanView() {
                                     <th className="px-6 py-4">Priorité</th>
                                     <th className="px-6 py-4">Échéance</th>
                                     <th className="px-6 py-4">Responsable</th>
-                                    {isAdmin && <th className="px-6 py-4 text-right">Actions</th>}
+                                    {isValidator && <th className="px-6 py-4 text-right">Actions</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/10">
@@ -487,7 +488,7 @@ export default function ActionPlanView() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex justify-end gap-1.5">
-                                                    {isAdmin ? (
+                                                    {isValidator ? (
                                                         <>
                                                             {act.status !== 'done' && (
                                                                 <Button 
@@ -496,7 +497,7 @@ export default function ActionPlanView() {
                                                                     className="text-green-400 border-green-500/20 bg-green-500/10 hover:bg-green-500 hover:text-white"
                                                                     onClick={() => handleActionCompleteTrigger(act.id)}
                                                                 >
-                                                                    Clôturer
+                                                                    Transmettre
                                                                 </Button>
                                                             )}
                                                             {act.status === 'todo' && (
@@ -509,13 +510,15 @@ export default function ActionPlanView() {
                                                                     Démarrer
                                                                 </Button>
                                                             )}
-                                                            <button 
-                                                                onClick={() => handleDeleteAction(act.id)}
-                                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-lg bg-transparent border-0 cursor-pointer"
-                                                                title="Supprimer"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
+                                                            {isAdmin && (
+                                                                <button 
+                                                                    onClick={() => handleDeleteAction(act.id)}
+                                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-white/5 rounded-lg bg-transparent border-0 cursor-pointer"
+                                                                    title="Supprimer"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            )}
                                                         </>
                                                     ) : isAssigned ? (
                                                         <>
@@ -535,7 +538,7 @@ export default function ActionPlanView() {
                                                                     className="bg-green-600 hover:bg-green-700 text-white font-bold"
                                                                     onClick={() => handleActionCompleteTrigger(act.id)}
                                                                 >
-                                                                    Clôturer
+                                                                    Transmettre
                                                                 </Button>
                                                             )}
                                                             {act.status === 'pending_validation' && (
@@ -795,6 +798,7 @@ function KanbanCard({
     onProlong: (id: number) => void;
 }) {
     const isAdmin = user && (user.role === 'admin' || user.is_staff || user.is_superuser);
+    const isValidator = !!(user && (user.role === 'admin' || user.role === 'agency' || user.is_staff || user.is_superuser));
     const isAssigned = action.assigned_to === user?.id;
     
     return (
@@ -866,7 +870,7 @@ function KanbanCard({
 
             {/* Quick transition buttons */}
             <div className="flex gap-1 border-t border-white/5 pt-3">
-                {isAdmin ? (
+                {isValidator ? (
                     <>
                         {action.status === 'todo' && (
                             <Button 
@@ -892,7 +896,7 @@ function KanbanCard({
                                     className="flex-1 text-[10px] h-7 bg-green-600/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white"
                                     onClick={() => onCompleteTrigger(action.id)}
                                 >
-                                    Clôturer
+                                    Transmettre
                                 </Button>
                             </>
                         )}
@@ -933,7 +937,7 @@ function KanbanCard({
                                     className="flex-1 text-[10px] h-7 bg-green-600/20 text-green-400 border border-green-500/20 hover:bg-green-600 hover:text-white"
                                     onClick={() => onCompleteTrigger(action.id)}
                                 >
-                                    Clôturer
+                                    Transmettre
                                 </Button>
                             </>
                         )}

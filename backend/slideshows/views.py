@@ -55,10 +55,31 @@ class SlideshowViewSet(viewsets.ModelViewSet):
             
         show_archived = self.request.query_params.get('archived') == 'true'
         
-        # Archivage automatique à la volée des causeries de plus de 30 jours
+        # Archivage automatique à la volée des causeries de plus de 30 jours si tous les invités ont fait le quiz
         archive_limit = timezone.now() - timezone.timedelta(days=30)
-        Slideshow.objects.filter(scheduled_date__lte=archive_limit, is_archived=False).update(is_archived=True)
-        Slideshow.objects.filter(scheduled_date__isnull=True, created_at__lte=archive_limit, is_archived=False).update(is_archived=True)
+        from django.db.models import Q
+        candidates = Slideshow.objects.filter(
+            Q(scheduled_date__lte=archive_limit) | Q(scheduled_date__isnull=True, created_at__lte=archive_limit),
+            is_archived=False
+        )
+        for slideshow in candidates:
+            if not hasattr(slideshow, 'quiz') or not slideshow.quiz:
+                slideshow.is_archived = True
+                slideshow.save()
+            else:
+                invited_count = slideshow.invited_users.count()
+                if invited_count == 0:
+                    slideshow.is_archived = True
+                    slideshow.save()
+                else:
+                    from .models import QuizSubmission
+                    submitted_invited_count = QuizSubmission.objects.filter(
+                        quiz=slideshow.quiz,
+                        user__in=slideshow.invited_users.all()
+                    ).values('user').distinct().count()
+                    if submitted_invited_count >= invited_count:
+                        slideshow.is_archived = True
+                        slideshow.save()
 
         if user.is_staff or user.is_superuser:
             return Slideshow.objects.filter(is_archived=show_archived).order_by('-created_at')

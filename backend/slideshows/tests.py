@@ -154,6 +154,35 @@ class SlideshowVisibilityAndParticipationTestCase(APITestCase):
         # On doit pouvoir la récupérer en direct par son ID
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['id'], self.public_slideshow.id)
+
+    def test_automatic_archiving_rules(self):
+        # 1. Causerie with invited users but no quiz submissions
+        # Set scheduled_date to 40 days ago
+        self.private_slideshow.scheduled_date = timezone.now() - datetime.timedelta(days=40)
+        self.private_slideshow.save()
+        
+        # Trigger get_queryset logic by listing slideshows
+        self.client.force_authenticate(user=self.creator)
+        response = self.client.get('/api/slideshows/')
+        self.private_slideshow.refresh_from_db()
+        # Should NOT be archived because invited_user has not done the quiz
+        self.assertFalse(self.private_slideshow.is_archived)
+
+        # 2. Invited user does the quiz (record submission)
+        from .models import QuizSubmission
+        QuizSubmission.objects.create(
+            user=self.invited_user,
+            quiz=self.quiz,
+            score=1,
+            total_questions=1,
+            is_passed=True
+        )
+        
+        # Trigger get_queryset logic again
+        response = self.client.get('/api/slideshows/')
+        self.private_slideshow.refresh_from_db()
+        # Should now be archived because all invited users completed the quiz
+        self.assertTrue(self.private_slideshow.is_archived)
         
     def test_quiz_submission_recorded_and_report_generated(self):
         # 1. Soumettre le quiz pour l'utilisateur invité (générer le PDF)

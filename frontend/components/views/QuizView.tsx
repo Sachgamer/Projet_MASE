@@ -71,6 +71,7 @@ export default function QuizView() {
     const [answers, setAnswers] = useState<{ question_id: number; choice_id: number }[]>([]);
     const [selectedChoice, setSelectedChoice] = useState<Choice | null>(null);
     const [downloading, setDownloading] = useState(false);
+    const [isArchived, setIsArchived] = useState(false);
     const [attempts, setAttempts] = useState<QuizSubmission[]>([]);
 
     // Canvas signature state
@@ -86,10 +87,15 @@ export default function QuizView() {
         setLoading(true);
         try {
             const response = await api.get(`/api/slideshows/${id}/`);
+            setIsArchived(response.data.is_archived || false);
             if (response.data.quiz) {
                 const quizData = response.data.quiz;
                 if (quizData.questions) {
-                    quizData.questions = shuffleArray(quizData.questions);
+                    if (response.data.is_archived) {
+                        quizData.questions = [...quizData.questions].sort((a, b) => a.order - b.order);
+                    } else {
+                        quizData.questions = shuffleArray(quizData.questions);
+                    }
                 }
                 setQuiz(quizData);
                 setAttempts(quizData.user_submissions || []);
@@ -217,6 +223,63 @@ export default function QuizView() {
         return (
             <div className="max-w-xl mx-auto px-4 py-16 text-center text-white">
                 <p className="text-gray-400">Aucun quiz n'est disponible pour cette causerie.</p>
+            </div>
+        );
+    }
+
+    if (isArchived) {
+        return (
+            <div className="max-w-2xl mx-auto px-4 py-8 text-white space-y-8 animate-in fade-in duration-300">
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md space-y-4">
+                    <h1 className="text-2xl font-extrabold text-white flex items-center gap-2">
+                        <BookOpen className="w-6 h-6 text-primary" />
+                        Récapitulatif du Quiz (Archivé) : {quiz.title}
+                    </h1>
+                    <p className="text-xs text-gray-400">
+                        Cette causerie est archivée. Voici le récapitulatif des questions et des bonnes réponses correspondantes.
+                    </p>
+                </div>
+
+                <div className="space-y-6">
+                    {quiz.questions.map((question, index) => {
+                        const correctChoice = question.choices.find(c => c.is_correct);
+                        return (
+                            <div key={question.id} className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md space-y-4">
+                                <h3 className="text-lg font-bold text-white">
+                                    {index + 1}. {question.text}
+                                </h3>
+                                <div className="space-y-2">
+                                    {question.choices.map((choice) => {
+                                        const isCorrect = choice.is_correct;
+                                        return (
+                                            <div 
+                                                key={choice.id}
+                                                className={`px-4 py-3 rounded-xl border text-sm flex justify-between items-center ${
+                                                    isCorrect 
+                                                        ? 'bg-green-500/10 border-green-500 text-green-400 font-bold' 
+                                                        : 'bg-white/5 border-white/5 text-gray-400 opacity-60'
+                                                }`}
+                                            >
+                                                <span>{choice.text}</span>
+                                                {isCorrect && <CheckCircle2 className="w-4 h-4 text-green-400" />}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <div className="flex justify-center pt-4">
+                    <Button 
+                        variant="outline" 
+                        onClick={() => setView('dashboard')} 
+                        className="w-full sm:w-auto border-white/20 text-white hover:bg-white/5 py-3.5 px-8 rounded-xl text-sm cursor-pointer font-bold"
+                    >
+                        Retour au Tableau de bord
+                    </Button>
+                </div>
             </div>
         );
     }
