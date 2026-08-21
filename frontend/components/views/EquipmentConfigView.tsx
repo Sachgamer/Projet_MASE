@@ -34,9 +34,7 @@ export default function EquipmentConfigView() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [createForm, setCreateForm] = useState({
         category: 'EQUIPEMENT',
-        type_name: '',
-        serial_number: '',
-        expiration_date: ''
+        type_name: ''
     });
     const [assignForm, setAssignForm] = useState({
         equipmentId: '',
@@ -214,17 +212,11 @@ export default function EquipmentConfigView() {
         try {
             const payload = { 
                 category: createForm.category,
-                type_name: createForm.type_name,
-                serial_number: createForm.serial_number,
-                expiration_date: createForm.expiration_date || null
+                type_name: createForm.type_name
             };
-            if (payload.category === 'VEHICULE' || !payload.expiration_date) {
-                // @ts-ignore
-                delete payload.expiration_date;
-            }
             await api.post('/api/controls/equipment/', payload);
             alert("Équipement enregistré avec succès dans le stock !");
-            setCreateForm({ category: 'EQUIPEMENT', type_name: '', serial_number: '', expiration_date: '' });
+            setCreateForm({ category: 'EQUIPEMENT', type_name: '' });
             setShowCreateModal(false);
             fetchEquipment();
         } catch (error) {
@@ -663,32 +655,6 @@ export default function EquipmentConfigView() {
                                     required
                                 />
                             </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs text-gray-400">
-                                    {createForm.category === 'VEHICULE' ? "Plaque d'immatriculation *" : "Numéro de série (Optionnel)"}
-                                </label>
-                                <input
-                                    type="text"
-                                    value={createForm.serial_number}
-                                    onChange={e => setCreateForm({ ...createForm, serial_number: e.target.value })}
-                                    className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary text-sm"
-                                    placeholder={createForm.category === 'VEHICULE' ? "ex: AB-123-CD" : "S/N..."}
-                                    required={createForm.category === 'VEHICULE'}
-                                />
-                            </div>
-
-                            {createForm.category !== 'VEHICULE' && (
-                                <div className="space-y-1">
-                                    <label className="text-xs text-gray-400">Date limite de contrôle (Optionnel)</label>
-                                    <input
-                                        type="date"
-                                        value={createForm.expiration_date}
-                                        onChange={e => setCreateForm({ ...createForm, expiration_date: e.target.value })}
-                                        className="w-full bg-secondary/50 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-primary text-sm"
-                                    />
-                                </div>
-                            )}
 
                             <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
                                 <Button
