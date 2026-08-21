@@ -98,11 +98,13 @@ export default function EquipmentConfigView() {
         setSubmitting(true);
         try {
             const payload = {
+                category: assigningItem.category,
+                type_name: assigningItem.type_name,
                 technician: assignmentForm.technician ? parseInt(assignmentForm.technician) : null,
                 serial_number: assignmentForm.serial_number,
                 expiration_date: assignmentForm.expiration_date || null
             };
-            if (assigningItem.category === 'VEHICULE' || !payload.expiration_date) {
+            if (payload.category === 'VEHICULE' || !payload.expiration_date) {
                 // @ts-ignore
                 delete payload.expiration_date;
             }
@@ -111,7 +113,7 @@ export default function EquipmentConfigView() {
                 setSubmitting(false);
                 return;
             }
-            await api.patch(`/api/controls/equipment/${assigningItem.id}/`, payload);
+            await api.post('/api/controls/equipment/', payload);
             alert(`L'équipement "${assigningItem.type_name}" a été attribué avec succès !`);
             setAssigningItem(null);
             setAssignmentForm({ technician: '', serial_number: '', expiration_date: '' });
@@ -185,16 +187,18 @@ export default function EquipmentConfigView() {
             if (!selectedItem) return;
 
             const payload = {
+                category: selectedItem.category,
+                type_name: selectedItem.type_name,
                 technician: techId,
                 serial_number: assignForm.serial_number,
                 expiration_date: assignForm.expiration_date || null
             };
-            if (selectedItem.category === 'VEHICULE' || !payload.expiration_date) {
+            if (payload.category === 'VEHICULE' || !payload.expiration_date) {
                 // @ts-ignore
                 delete payload.expiration_date;
             }
 
-            await api.patch(`/api/controls/equipment/${eqId}/`, payload);
+            await api.post('/api/controls/equipment/', payload);
             alert(`L'équipement "${selectedItem.type_name}" a été attribué avec succès !`);
             setAssignForm({ equipmentId: '', technician: '', serial_number: '', expiration_date: '' });
             fetchEquipment();
@@ -538,7 +542,7 @@ export default function EquipmentConfigView() {
                                 Attribuer ce matériel
                             </h3>
                             <p className="text-xs text-gray-400 mt-1">
-                                Affectez <strong>{assigningItem.type_name}</strong> à un collaborateur et renseignez le numéro de série et la date limite de contrôle.
+                                Créez une instance physique de <strong>{assigningItem.type_name}</strong> pour un collaborateur en renseignant le numéro de série et la date limite de contrôle.
                             </p>
                         </div>
 
